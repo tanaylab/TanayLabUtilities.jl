@@ -1,0 +1,13 @@
+*.jl.*.cov
+*.jl.cov
+.*.swo
+.*.swp
+.DS_Store
+TAGS
+deps/.did.*
+deps/build.log
+junk*
+tags
+tracefile.info
+Manifest.toml
+src/assets/modules.svg
