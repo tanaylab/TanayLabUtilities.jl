@@ -17,9 +17,9 @@ global_logger(detect_problems)
 push!(LOAD_PATH, ".")
 
 using JET
-using DataAxesFormats
+using TanayLabUtilities
 
-println(report_package("DataAxesFormats"))
+println(report_package("TanayLabUtilities"))
 
 if seen_problems
     exit(1)

@@ -6,13 +6,11 @@ provide an implementation for `summary` as that is the "right thing to do".
 """
 module Brief
 
+export MAX_BRIEF_STRING
 export brief
 export percent
 
 using Distributed
-#using LinearAlgebra
-#using NamedArrays
-#using SparseArrays
 
 """
     brief(value::Any)::String
@@ -21,18 +19,14 @@ Provide a brief description of a `value`. This is basically `summary` but modifi
 vectors and matrices) to give "better" results.
 
 ```jldoctest
-using TanayLabUtilities.Brief
-
 brief(1.0)
 
 # output
 
-"1.0 (Float64)"
+"1.0"
 ```
 
 ```jldoctest
-using TanayLabUtilities.Brief
-
 brief(true)
 
 # output
@@ -41,8 +35,6 @@ brief(true)
 ```
 
 ```jldoctest
-using TanayLabUtilities.Brief
-
 brief(:foo)
 
 # output
@@ -51,8 +43,6 @@ brief(:foo)
 ```
 
 ```jldoctest
-using TanayLabUtilities.Brief
-
 brief(nothing)
 
 # output
@@ -61,8 +51,6 @@ brief(nothing)
 ```
 
 ```jldoctest
-using TanayLabUtilities.Brief
-
 brief(missing)
 
 # output
@@ -71,8 +59,6 @@ brief(missing)
 ```
 
 ```jldoctest
-using TanayLabUtilities.Brief
-
 brief(undef)
 
 # output
@@ -81,36 +67,50 @@ brief(undef)
 ```
 
 ```jldoctest
-using TanayLabUtilities.Brief
-
 brief(("foo", :bar))
 
 # output
 
-"(\"foo\", :bar)"
+"(\\"foo\\", :bar)"
 ```
 
 ```jldoctest
-using TanayLabUtilities.Brief
-
 brief("foo")
 
 # output
 
-"\"foo\""
+"\\"foo\\""
+```
 
 ```jldoctest
-using TanayLabUtilities.Brief
-
-brief("foo " ^ 10)
+brief("foo "^10)
 
 # output
 
-"\"foo foo foo foo ...\"" (40)
+"\\"foo foo foo foo ...\\" (40)"
+```
+
+```jldoctest
+@enum Foo Bar Baz
+
+brief(Bar)
+
+# output
+
+"Foo::Bar"
+```
+
+```jldoctest
+struct Foo end
+
+brief(Foo())
+
+# output
+
+"Foo"
 ```
 """
 function brief(value::Any)::String
-    return summary(value)
     try
         return "$(eltype(value)) x $(join(string.(size(value)), " x ")) $(nameof(typeof(value)))"
     catch
@@ -122,27 +122,33 @@ function brief(value::Any)::String
     end
 end
 
-function brief(value::Real)::String
-    return "$(value) ($(typeof(value)))"
-end
-
 function brief(value::Tuple)::String
     return "(" * join([brief(entry) for entry in value], ", ") * ")"
 end
 
-function brief(value::Union{Bool, Type, Nothing, Missing})::String
+function brief(value::Union{Real, Type, Nothing, Missing})::String
     return "$(value)"
+end
+
+function brief(value::Enum)::String
+    return "$(nameof(typeof(value)))::$(value)"
 end
 
 function brief(::UndefInitializer)::String
     return "undef"
 end
 
+"""
+The maximal length of strings we show as-is in [`brief`](@ref). We only show a prefix of longer strings (followed by
+their length).
+"""
+MAX_BRIEF_STRING::Integer = 16
+
 function brief(value::AbstractString)::String
-    if length(value) < 16
+    if length(value) <= MAX_BRIEF_STRING
         return "\"$(value)\""
     else
-        return "\"$(value[1:16])...\" ($(length(value)))"
+        return "\"$(value[1:MAX_BRIEF_STRING])...\" ($(length(value)))"
     end
 end
 
@@ -150,14 +156,14 @@ function brief(value::Symbol)::String
     return ":$(value)"
 end
 
-function brief(array::AbstractArray)::String
+function brief(array::AbstractArray)::String  # UNTESTED
     if eltype(array) == Bool
         n_trues = sum(array)  # NOJET
         suffix = " ($(n_trues) true, $(percent(n_trues, length(array))))"
     else
         suffix = ""
     end
-    return "$(eltype(value)) x $(join(string.(size(value)), " x ")) $(nameof(typeof(value)))$(suffix)"
+    return "$(eltype(array)) x $(join(string.(size(array)), " x ")) $(nameof(typeof(array)))$(suffix)"
 end
 
 """
@@ -168,8 +174,6 @@ Format a fraction of `used` amount `out_of` some total, as an integer percent va
 percent of non-zero entries in sparse arrays.
 
 ```jldoctest
-using TanayLabUtilities.Brief
-
 percent(0, 0)
 
 # output
@@ -178,8 +182,6 @@ percent(0, 0)
 ```
 
 ```jldoctest
-using TanayLabUtilities.Brief
-
 percent(0, 1000)
 
 # output
@@ -188,8 +190,6 @@ percent(0, 1000)
 ```
 
 ```jldoctest
-using TanayLabUtilities.Brief
-
 percent(9, 1000)
 
 # output
@@ -198,8 +198,6 @@ percent(9, 1000)
 ```
 
 ```jldoctest
-using TanayLabUtilities.Brief
-
 percent(10, 1000)
 
 # output
@@ -208,8 +206,6 @@ percent(10, 1000)
 ```
 
 ```jldoctest
-using TanayLabUtilities.Brief
-
 percent(11, 1000)
 
 # output
@@ -218,8 +214,6 @@ percent(11, 1000)
 ```
 
 ```jldoctest
-using TanayLabUtilities.Brief
-
 percent(990, 1000)
 
 # output
@@ -228,8 +222,6 @@ percent(990, 1000)
 ```
 
 ```jldoctest
-using TanayLabUtilities.Brief
-
 percent(991, 1000)
 
 # output
@@ -238,8 +230,6 @@ percent(991, 1000)
 ```
 
 ```jldoctest
-using TanayLabUtilities.Brief
-
 percent(1000, 1000)
 
 # output

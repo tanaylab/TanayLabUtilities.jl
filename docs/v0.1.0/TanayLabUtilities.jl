@@ -25,8 +25,8 @@ include("brief.jl")
 include("logger.jl")
 @reexport using .Logger
 
-#TODOX include("parallel.jl")
-#TODOX @reexport using .Parallel
+include("parallel_storage.jl")
+@reexport using .ParallelStorage
 
 include("locks.jl")
 @reexport using .Locks
@@ -36,5 +36,8 @@ include("names.jl")
 
 include("handlers.jl")
 @reexport using .Handlers
+
+include("documentation.jl")
+@reexport using .Documentation
 
 end  # module

@@ -7,6 +7,7 @@ export @logged
 export setup_logger
 
 using ..Brief
+using ..Types
 using Base.Threads
 using Dates
 using Distributed
@@ -61,6 +62,34 @@ end
 
 Automatically log (in `Debug` level) every invocation to the function. This will also log the values of the arguments.
 Emits a second log entry when the function returns, with the result (if any).
+
+```jldoctest
+@logged function bar()::Nothing
+    return nothing
+end
+
+@logged function foo(positional; named = 1 + 2)
+    bar()
+    return positional + named
+end
+
+using Logging
+using Test
+logger = TestLogger(; min_level = Logging.Debug)
+with_logger(logger) do
+    return foo(1; named = 2)
+end
+print(join(["\$(record.level) : \$(record.message)" for record in logger.logs], "\n"))
+
+# output
+
+Debug : foo {
+Debug : - positional: 1
+Debug : - named: 2
+Debug : bar {
+Debug : bar return }
+Debug : foo return: 3 }
+```
 """
 macro logged(definition)
     while definition.head === :macrocall
@@ -83,7 +112,7 @@ macro logged(definition)
     has_result = get(inner_definition, :rtype, :Any) != :Nothing
     arg_names = [parse_arg(arg) for arg in get(outer_definition, :args, [])]
     inner_definition[:name] = Symbol(function_name, :_logged)
-    if startswith(full_name, "DataAxesFormats.") || contains(full_name, ".DataAxesFormats.")
+    if startswith(full_name, "TanayLabUtilities.") || contains(full_name, ".TanayLabUtilities.")
         outer_definition[:body] = Expr(
             :call,
             :(GenericLogging.logged_wrapper(
@@ -101,7 +130,7 @@ macro logged(definition)
     else
         outer_definition[:body] = Expr(
             :call,
-            :(DataAxesFormats.GenericLogging.logged_wrapper(
+            :(TanayLabUtilities.Logger.logged_wrapper(
                 $function_module,
                 $function_file,
                 $function_line,
@@ -122,7 +151,7 @@ function parse_arg(arg::Symbol)::AbstractString
     return split(string(arg), "::"; limit = 2)[1]
 end
 
-function parse_arg(arg::Expr)::AbstractString
+function parse_arg(arg::Expr)::AbstractString  # UNTESTED
     return parse_arg(arg.args[1])
 end
 
@@ -162,7 +191,7 @@ function metafmt(
     ::Symbol,
     ::Symbol,
     file::AbstractString,
-    line::Integer,
+    line::Maybe{Integer},
 )::Tuple{Symbol, AbstractString, AbstractString}
     @nospecialize
     color = Logging.default_logcolor(level)
@@ -185,7 +214,11 @@ function metafmt(
         push!(prefix_parts, string(_module))
     end
     if show_location
-        push!(prefix_parts, "$(file):$(line)")  # UNTESTED
+        if line === nothing  # UNTESTED
+            push!(prefix_parts, "$(file)")  # UNTESTED
+        else
+            push!(prefix_parts, "$(file):$(line)")  # UNTESTED
+        end
     end
     prefix = join(prefix_parts, ": ") * ":"
     return color, prefix, ""

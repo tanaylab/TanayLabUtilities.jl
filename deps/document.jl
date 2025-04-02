@@ -18,7 +18,7 @@ end
 
 global_logger(detect_problems)
 
-push!(LOAD_PATH, ".")
+push!(LOAD_PATH, joinpath(@__DIR__, ".."))
 
 using TanayLabUtilities
 using Pkg
@@ -28,6 +28,8 @@ VERSION = PROJECT_TOML["version"]
 NAME = PROJECT_TOML["name"]
 AUTHORS = PROJECT_TOML["authors"]
 REPO = "https://github.com/tanaylab/$(NAME).jl"
+
+DocMeta.setdocmeta!(TanayLabUtilities, :DocTestSetup, :(using TanayLabUtilities); recursive = true)
 
 makedocs(;
     authors = join(" ", AUTHORS),
@@ -46,9 +48,17 @@ makedocs(;
         prettyurls = false,
         size_threshold_warn = 200 * 2^10,
     ),
-    pages = ["index.md", "types.md", "brief.md", "logger.md",
-    # "parallel.md",
-    "locks.md", "names.md", "handlers.md"],
+    pages = [
+        "index.md",
+        "types.md",
+        "brief.md",
+        "logger.md",
+        "parallel_storage.md",
+        "locks.md",
+        "names.md",
+        "documentation.md",
+        "handlers.md",
+    ],
 )
 
 if seen_problems

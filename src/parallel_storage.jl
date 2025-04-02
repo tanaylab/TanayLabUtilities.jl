@@ -1,19 +1,13 @@
 """
-Allow reusing large data between parallel tasks, which arguably should belong in a more general-purpose package.
+Allow reusing large data between parallel tasks.
 
-!!! note
-
-    We do not re-export the types and functions defined here from the top-level `DataAxesFormats` namespace. That is,
-    even if `using DataAxesFormats`, you will **not** have these generic names polluting your namespace. If you do want
-    to reuse them in your code, explicitly write `using DataAxesFormats.GenericTypes`.
-
-Using task local storage will re-allocate and re-initialize this data for each iteration, which is slow. Using thread
-local storage is no longer safe because Julia has moved away from "sticky" threads (that is, a task may migrate between
-threads); if naively implemented, it also create an instance per thread regardless whether it is actually used. The
-[`ReusableStorage`](@ref) allows allocating the minimal number of instances, reusing them in multiple tasks, and
-automates resetting the data each time it is used by a new task.
+Using task local storage will re-allocate and re-initialize this data for each iteration, which is slow, and overwork
+the garbage collector. Using thread local storage is no longer safe because Julia has moved away from "sticky" threads
+(that is, a task may migrate between threads); if naively implemented, it also create an instance per thread regardless
+whether it is actually used. The [`ReusableStorage`](@ref) allows allocating the minimal number of instances, reusing
+them in multiple tasks, and automates resetting the data each time it is used by a new task (if needed).
 """
-module GenericStorage
+module ParallelStorage
 
 export ReusableStorage
 export get_reusable!
@@ -21,7 +15,7 @@ export put_reusable!
 export with_reusable
 
 using Base.Threads
-using ..GenericTypes
+using ..Types
 
 """
     ReusableStorage(create::Function)::ReusableStorage
@@ -32,7 +26,54 @@ has used the data, we will `reset` it to bring it back it to its initial state.
 
 !!! note
 
-    The `create` and `reset` functions must be thread safe. We intentionally do not
+    The `create` and `reset` functions must be thread safe. We intentionally do not perform them while holding the
+    global lock to maximize performance.
+
+```jldoctest
+mutable struct ExampleStorage
+    is_clean::Bool
+end
+
+function reset(storage::ExampleStorage)::Nothing
+    @assert !storage.is_clean
+    storage.is_clean = true
+    return nothing
+end
+
+reusable_storage = ReusableStorage(reset) do
+    return ExampleStorage(true)
+end
+
+first = nothing
+second = nothing
+
+with_reusable(reusable_storage) do storage_1
+    @assert storage_1.is_clean
+    storage_1.is_clean = false
+    global first
+    first = storage_1
+
+    with_reusable(reusable_storage) do storage_2
+        @assert storage_2.is_clean
+        storage_2.is_clean = false
+        global second
+        second = storage_2
+        @assert second !== first
+    end
+
+    with_reusable(reusable_storage) do storage_3
+        @assert storage_3.is_clean
+        storage_3.is_clean = false
+        @assert storage_3 === second
+    end
+end
+
+@assert !first.is_clean
+@assert !second.is_clean
+
+# output
+
+```
 """
 mutable struct ReusableStorage{T}
     lock::SpinLock

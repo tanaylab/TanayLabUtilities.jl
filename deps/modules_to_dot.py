@@ -67,7 +67,7 @@ print("digraph {")
 print("node [ fontname = \"Sans-Serif\" ];")
 
 for mod, deps in deps_of.items():
-    if mod != "DataAxesFormats":
+    if mod != "TanayLabUtilities":
         print(f"{mod} [ shape = box, color = white, margin = 0.03, width = 0, height = 0, URL = \"../{paths[mod]}.html\" target = _top ];")
     for dep in deps:
         prefix = mod[:-3]

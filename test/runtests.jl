@@ -14,6 +14,6 @@ setup_logger(; level = Info)
 abort_on_first_failure(true)
 
 nested_test("doctests") do
-    DocMeta.setdocmeta!(TanayLabUtilities, :DocTestSetup, :(using TanayLabUtilities); recursive=true)
-    doctest(TanayLabUtilities; manual = false)
+    DocMeta.setdocmeta!(TanayLabUtilities, :DocTestSetup, :(using TanayLabUtilities); recursive = true)
+    return doctest(TanayLabUtilities; manual = false)
 end

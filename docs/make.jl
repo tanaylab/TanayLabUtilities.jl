@@ -33,9 +33,17 @@ makedocs(;
     strict = true,
     linkcheck = true,
     format = Documenter.HTML(; prettyurls = false),
-    pages = ["index.md", "types.md", "brief.md", "logger.md",
-    # "parallel.md",
-    "locks.md", "names.md", "handlers.md"],
+    pages = [
+        "index.md",
+        "types.md",
+        "brief.md",
+        "logger.md",
+        "parallel_storage.md",
+        "locks.md",
+        "names.md",
+        "documentation.md",
+        "handlers.md",
+    ],
 )
 
 for file in readdir("docs/build"; join = true)

@@ -1,4 +1,5 @@
-"""ma
+"""
+ma
 Functions for handling abnormal conditions.
 """
 module Handlers
@@ -39,6 +40,7 @@ If `message` is a function, it should return the actual message to `error` with.
 handle_abnormal(IgnoreHandler, "message")
 
 # output
+
 ```
 
 ```jldoctest
@@ -47,6 +49,7 @@ handle_abnormal(IgnoreHandler) do
 end
 
 # output
+
 ```
 
 ```jldoctest

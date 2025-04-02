@@ -1,9 +1,8 @@
 # Text
 
 ```@docs
-TanayLabUtilities.Text
-TanayLabUtilities.Text.dedent
-TanayLabUtilities.Text.unique_name
+TanayLabUtilities.Names
+TanayLabUtilities.Names.unique_name
 ```
 
 ## Index

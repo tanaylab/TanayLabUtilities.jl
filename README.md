@@ -5,7 +5,7 @@ Generic utilities used by the Julia code for the Tanay lab.
 This is a somewhat arbitrary collection of "generally useful" functions, created on an as-needed bases. No claim is made
 for true universality or for suitability for a particular purpose.
 
-See the [v0.1.0 documentation](https://tanaylab.github.io/DataAxesFormats.jl/v0.1.0) for details.
+See the [v0.1.0 documentation](https://tanaylab.github.io/TanayLabUtilities.jl/v0.1.0) for details.
 
 ## Installation
 
