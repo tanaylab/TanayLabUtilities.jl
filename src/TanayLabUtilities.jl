@@ -28,6 +28,9 @@ include("logger.jl")
 include("parallel_storage.jl")
 @reexport using .ParallelStorage
 
+include("parallel_rng.jl")
+@reexport using .ParallelRNG
+
 include("locks.jl")
 @reexport using .Locks
 
@@ -39,5 +42,14 @@ include("handlers.jl")
 
 include("documentation.jl")
 @reexport using .Documentation
+
+include("read_only_arrays.jl")
+@reexport using .ReadOnlyArrays
+
+include("matrix_layouts.jl")
+@reexport using .MatrixLayouts
+
+include("matrix_formats.jl")
+@reexport using .MatrixFormats
 
 end  # module

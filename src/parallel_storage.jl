@@ -1,11 +1,10 @@
 """
-Allow reusing large data between parallel tasks.
-
-Using task local storage will re-allocate and re-initialize this data for each iteration, which is slow, and overwork
-the garbage collector. Using thread local storage is no longer safe because Julia has moved away from "sticky" threads
-(that is, a task may migrate between threads); if naively implemented, it also create an instance per thread regardless
-whether it is actually used. The [`ReusableStorage`](@ref) allows allocating the minimal number of instances, reusing
-them in multiple tasks, and automates resetting the data each time it is used by a new task (if needed).
+Allow reusing large data between parallel tasks. Using task local storage will re-allocate and re-initialize this data
+for each iteration, which is slow, and overwork the garbage collector. Using thread local storage is no longer safe
+because Julia has moved away from "sticky" threads (that is, a task may migrate between threads); if naively
+implemented, it also create an instance per thread regardless whether it is actually used. The [`ReusableStorage`](@ref)
+allows allocating the minimal number of instances, reusing them in multiple tasks, and automates resetting the data each
+time it is used by a new task (if needed).
 """
 module ParallelStorage
 

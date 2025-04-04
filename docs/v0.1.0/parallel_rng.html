@@ -5,11 +5,11 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Text · TanayLabUtilities.jl v0.1.0
+<title>ParallelRNG · TanayLabUtilities.jl v0.1.0
 </title>
-<meta name="title" content="Text · TanayLabUtilities.jl v0.1.0"/>
-<meta property="og:title" content="Text · TanayLabUtilities.jl v0.1.0"/>
-<meta property="twitter:title" content="Text · TanayLabUtilities.jl v0.1.0"/>
+<meta name="title" content="ParallelRNG · TanayLabUtilities.jl v0.1.0"/>
+<meta property="og:title" content="ParallelRNG · TanayLabUtilities.jl v0.1.0"/>
+<meta property="twitter:title" content="ParallelRNG · TanayLabUtilities.jl v0.1.0"/>
 <meta name="description" content="Documentation for TanayLabUtilities.jl v0.1.0."/>
 <meta property="og:description" content="Documentation for TanayLabUtilities.jl v0.1.0."/>
 <meta property="twitter:description" content="Documentation for TanayLabUtilities.jl v0.1.0."/>
@@ -72,16 +72,8 @@
 <a class="tocitem" href="parallel_storage.html">Parallel Storage
 </a>
 </li>
-<li>
-<a class="tocitem" href="parallel_rng.html">ParallelRNG
-</a>
-</li>
-<li>
-<a class="tocitem" href="locks.html">Locks
-</a>
-</li>
 <li class="is-active">
-<a class="tocitem" href="names.html">Text
+<a class="tocitem" href="parallel_rng.html">ParallelRNG
 </a>
 <ul class="internal">
 <li>
@@ -91,6 +83,14 @@
 </a>
 </li>
 </ul>
+</li>
+<li>
+<a class="tocitem" href="locks.html">Locks
+</a>
+</li>
+<li>
+<a class="tocitem" href="names.html">Text
+</a>
 </li>
 <li>
 <a class="tocitem" href="documentation.html">Documentation
@@ -125,13 +125,13 @@
 <nav class="breadcrumb">
 <ul class="is-hidden-mobile">
 <li class="is-active">
-<a href="names.html">Text
+<a href="parallel_rng.html">ParallelRNG
 </a>
 </li>
 </ul>
 <ul class="is-hidden-tablet">
 <li class="is-active">
-<a href="names.html">Text
+<a href="parallel_rng.html">ParallelRNG
 </a>
 </li>
 </ul>
@@ -150,20 +150,20 @@
 </div>
 </header>
 <article class="content" id="documenter-page">
-<h1 id="Text">
-<a class="docs-heading-anchor" href="#Text">Text
+<h1 id="ParallelRNG">
+<a class="docs-heading-anchor" href="#ParallelRNG">ParallelRNG
 </a>
-<a id="Text-1">
+<a id="ParallelRNG-1">
 </a>
-<a class="docs-heading-anchor-permalink" href="#Text" title="Permalink">
+<a class="docs-heading-anchor-permalink" href="#ParallelRNG" title="Permalink">
 </a>
 </h1>
 <article class="docstring">
 <header>
 <a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring">
 </a>
-<a class="docstring-binding" id="TanayLabUtilities.Names" href="#TanayLabUtilities.Names">
-<code>TanayLabUtilities.Names
+<a class="docstring-binding" id="TanayLabUtilities.ParallelRNG" href="#TanayLabUtilities.ParallelRNG">
+<code>TanayLabUtilities.ParallelRNG
 </code>
 </a> — 
 <span class="docstring-category">Module
@@ -173,7 +173,9 @@
 </header>
 <section>
 <div>
-<p>Functions for generating names.
+<p>Reproducible random number generator for parallel loops. Yes, the 
+<code>TaskLocalRNG
+</code> is supposed to do this, but, it actually depends on the way tasks are allocated to threads. The implementation here will give the same results regardless of the thread scheduling policy.
 </p>
 </div>
 </section>
@@ -182,8 +184,8 @@
 <header>
 <a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring">
 </a>
-<a class="docstring-binding" id="TanayLabUtilities.Names.unique_name" href="#TanayLabUtilities.Names.unique_name">
-<code>TanayLabUtilities.Names.unique_name
+<a class="docstring-binding" id="TanayLabUtilities.ParallelRNG.parallel_loop_with_rng" href="#TanayLabUtilities.ParallelRNG.parallel_loop_with_rng">
+<code>TanayLabUtilities.ParallelRNG.parallel_loop_with_rng
 </code>
 </a> — 
 <span class="docstring-category">Function
@@ -194,91 +196,70 @@
 <section>
 <div>
 <pre>
-<code class="language-julia hljs">unique_name(prefix::AbstractString, separator::AbstractString = &quot;#&quot;)::AbstractString
+<code class="language-julia hljs">parallel_loop_with_rng(
+    body::Function,
+    size::Maybe{Integer} = nothing;
+    policy::Symbol = :greedy,
+    seed::Maybe{Integer} = nothing,
+    rng::Maybe{AbstractRNG} = nothing
+)::Nothing
 </code>
 </pre>
-<p>Using short, human-readable unique names for things is a great help when debugging. Normally one has to choose between using a human-provided short non-unique name, and an opaque object identifier, or a combination thereof. This function replaces the opaque object identifier with a short counter, which gives names that are both unique and short.
-</p>
-<p>That is, this will return a unique name starting with the 
-<code>prefix
-</code> and followed by the 
-<code>separator
-</code> (by default, 
-<code>#
-</code>), the process index (if using multiple processes), and an index (how many times this name was used in the process). For example, 
-<code>unique_name(&quot;foo&quot;)
-</code> will return 
-<code>foo
-</code> for the first usage, 
-<code>foo#2
-</code> for the 2nd, etc. If using multiple processes, it will return 
-<code>foo
-</code>, 
-<code>foo#1.2
-</code>, etc.
-</p>
-<p>That is, for code where the names are unique (e.g., a simple script or Jupyter notebook), this doesn&#39;t mess up the names. It only appends a suffix to the names if it is needed to disambiguate between multiple uses of the same name.
-</p>
-<p>To help with tests, if the 
-<code>prefix
-</code> contains 
-<code>!
-</code>, we return it as-is, accepting it may not be unique.
-</p>
-<p>
-<strong>Example
-</strong>
+<p>Run the 
+<code>body
+</code> in parallel (using the 
+<code>@threads policy
+</code>) 
+<code>size
+</code> times, passing it the iteration index, and a separate 
+<code>rng
+</code> that is seeded to a reproducible state regardless of the allocation of tasks to threads. A copy of this 
+<code>rng
+</code> is given to each iteration, after being reset to 
+<code>seed + index
+</code> for reproducibility. If no 
+<code>seed
+</code> is specified, it is just sampled 
+<code>rng
+</code> before the loop starts. If the 
+<code>rng
+</code> isn&#39;t given, then this uses (and sets for each iteration) the 
+<code>default_rng()
+</code>. In this case passing it to the body is redundant but is still done for consistency.
 </p>
 <pre>
-<code class="language-julia hljs">using TanayLabUtilities.Names
+<code class="language-julia hljs">using Test
+using Random
 
-unique_name(&quot;foo&quot;)
+size = 10
+
+function collect_rng(rng::AbstractRNG)::Vector{Float64}
+    results = zeros(Float64, size)
+    parallel_loop_with_rng(size; rng) do index, rng
+        results[index] = rand(rng)
+    end
+    @test results[1] != results[2]
+    return results
+end
+
+@test collect_rng(MersenneTwister(1)) == collect_rng(MersenneTwister(1))
+
+function collect_default_rng()::Vector{Float64}
+    results = zeros(Float64, size)
+    parallel_loop_with_rng(size; seed = 123456, policy = :dynamic) do index, _
+        results[index] = rand()
+    end
+    @test results[1] != results[2]
+    return results
+end
+
+@test collect_default_rng() == collect_default_rng()
+
+println(&quot;OK&quot;)
 
 # output
 
-&quot;foo&quot;
-</code>
-</pre>
-<p>
-<strong>Second usage
-</strong>
-</p>
-<pre>
-<code class="language-julia hljs">using TanayLabUtilities.Names
-
-unique_name(&quot;foo&quot;)
-
-# output
-
-&quot;foo#2&quot;
-</code>
-</pre>
-<p>
-<strong>Force not unique
-</strong>
-</p>
-<pre>
-<code class="language-julia hljs">using TanayLabUtilities.Names
-
-unique_name(&quot;foo!&quot;)
-
-# output
-
-&quot;foo!&quot;
-</code>
-</pre>
-<p>
-<strong>Second usage
-</strong>
-</p>
-<pre>
-<code class="language-julia hljs">using TanayLabUtilities.Names
-
-unique_name(&quot;foo!&quot;)
-
-# output
-
-&quot;foo!&quot;
+OK
 </code>
 </pre>
 </div>
@@ -294,23 +275,23 @@ unique_name(&quot;foo!&quot;)
 </h2>
 <ul>
 <li>
-<a href="names.html#TanayLabUtilities.Names">
-<code>TanayLabUtilities.Names
+<a href="parallel_rng.html#TanayLabUtilities.ParallelRNG">
+<code>TanayLabUtilities.ParallelRNG
 </code>
 </a>
 </li>
 <li>
-<a href="names.html#TanayLabUtilities.Names.unique_name">
-<code>TanayLabUtilities.Names.unique_name
+<a href="parallel_rng.html#TanayLabUtilities.ParallelRNG.parallel_loop_with_rng">
+<code>TanayLabUtilities.ParallelRNG.parallel_loop_with_rng
 </code>
 </a>
 </li>
 </ul>
 </article>
 <nav class="docs-footer">
-<a class="docs-footer-prevpage" href="locks.html">« Locks
+<a class="docs-footer-prevpage" href="parallel_storage.html">« Parallel Storage
 </a>
-<a class="docs-footer-nextpage" href="documentation.html">Documentation »
+<a class="docs-footer-nextpage" href="locks.html">Locks »
 </a>
 <div class="flexbox-break">
 </div>

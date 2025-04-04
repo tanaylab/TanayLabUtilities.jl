@@ -1,82 +1,536 @@
+
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Brief · TanayLabUtilities.jl v0.1.0</title><meta name="title" content="Brief · TanayLabUtilities.jl v0.1.0"/><meta property="og:title" content="Brief · TanayLabUtilities.jl v0.1.0"/><meta property="twitter:title" content="Brief · TanayLabUtilities.jl v0.1.0"/><meta name="description" content="Documentation for TanayLabUtilities.jl v0.1.0."/><meta property="og:description" content="Documentation for TanayLabUtilities.jl v0.1.0."/><meta property="twitter:description" content="Documentation for TanayLabUtilities.jl v0.1.0."/><script data-outdated-warner src="assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="assets/documenter.js"></script><script src="search_index.js"></script><script src="siteinfo.js"></script><script src="../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="index.html">TanayLabUtilities.jl v0.1.0</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="index.html">TanayLabUtilities</a></li><li><a class="tocitem" href="types.html">Types</a></li><li class="is-active"><a class="tocitem" href="brief.html">Brief</a><ul class="internal"><li><a class="tocitem" href="#Index"><span>Index</span></a></li></ul></li><li><a class="tocitem" href="logger.html">Logger</a></li><li><a class="tocitem" href="parallel_storage.html">Parallel Storage</a></li><li><a class="tocitem" href="locks.html">Locks</a></li><li><a class="tocitem" href="names.html">Text</a></li><li><a class="tocitem" href="documentation.html">Documentation</a></li><li><a class="tocitem" href="handlers.html">Handlers</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href="brief.html">Brief</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href="brief.html">Brief</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/tanaylab/TanayLabUtilities.jl/blob/main{path}?plain=1#L{line}" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Brief"><a class="docs-heading-anchor" href="#Brief">Brief</a><a id="Brief-1"></a><a class="docs-heading-anchor-permalink" href="#Brief" title="Permalink"></a></h1><article class="docstring"><header><a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring"></a><a class="docstring-binding" id="TanayLabUtilities.Brief" href="#TanayLabUtilities.Brief"><code>TanayLabUtilities.Brief</code></a> — <span class="docstring-category">Module</span><span class="is-flex-grow-1 docstring-article-toggle-button" title="Collapse docstring"></span></header><section><div><p>Functions for generating a brief description of arbitrary data. Yes, this is what the builtin <code>summary</code> is expected to do. However, <code>summary</code> doesn&#39;t summarize arrays that well. As we don&#39;t want to override it for types we don&#39;t own, we default <code>brief</code> to call <code>summary</code> and can then override it for whatever types we feel is necessary. For your own types, provide an implementation for <code>summary</code> as that is the &quot;right thing to do&quot;.</p></div></section></article><article class="docstring"><header><a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring"></a><a class="docstring-binding" id="TanayLabUtilities.Brief.brief" href="#TanayLabUtilities.Brief.brief"><code>TanayLabUtilities.Brief.brief</code></a> — <span class="docstring-category">Function</span><span class="is-flex-grow-1 docstring-article-toggle-button" title="Collapse docstring"></span></header><section><div><pre><code class="language-julia hljs">brief(value::Any)::String</code></pre><p>Provide a brief description of a <code>value</code>. This is basically <code>summary</code> but modified for specific types (in particular, vectors and matrices) to give &quot;better&quot; results.</p><pre><code class="language-julia hljs">brief(1.0)
+
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Brief · TanayLabUtilities.jl v0.1.0
+</title>
+<meta name="title" content="Brief · TanayLabUtilities.jl v0.1.0"/>
+<meta property="og:title" content="Brief · TanayLabUtilities.jl v0.1.0"/>
+<meta property="twitter:title" content="Brief · TanayLabUtilities.jl v0.1.0"/>
+<meta name="description" content="Documentation for TanayLabUtilities.jl v0.1.0."/>
+<meta property="og:description" content="Documentation for TanayLabUtilities.jl v0.1.0."/>
+<meta property="twitter:description" content="Documentation for TanayLabUtilities.jl v0.1.0."/>
+<script data-outdated-warner src="assets/warner.js">
+</script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/>
+<script>documenterBaseURL="."
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="assets/documenter.js">
+</script>
+<script src="search_index.js">
+</script>
+<script src="siteinfo.js">
+</script>
+<script src="../versions.js">
+</script>
+<link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/>
+<link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/>
+<link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/>
+<link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/>
+<link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/>
+<link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/>
+<script src="assets/themeswap.js">
+</script>
+</head>
+<body>
+<div id="documenter">
+<nav class="docs-sidebar">
+<div class="docs-package-name">
+<span class="docs-autofit">
+<a href="index.html">TanayLabUtilities.jl v0.1.0
+</a>
+</span>
+</div>
+<button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)
+</button>
+<ul class="docs-menu">
+<li>
+<a class="tocitem" href="index.html">TanayLabUtilities
+</a>
+</li>
+<li>
+<a class="tocitem" href="types.html">Types
+</a>
+</li>
+<li class="is-active">
+<a class="tocitem" href="brief.html">Brief
+</a>
+<ul class="internal">
+<li>
+<a class="tocitem" href="#Index">
+<span>Index
+</span>
+</a>
+</li>
+</ul>
+</li>
+<li>
+<a class="tocitem" href="logger.html">Logger
+</a>
+</li>
+<li>
+<a class="tocitem" href="parallel_storage.html">Parallel Storage
+</a>
+</li>
+<li>
+<a class="tocitem" href="parallel_rng.html">ParallelRNG
+</a>
+</li>
+<li>
+<a class="tocitem" href="locks.html">Locks
+</a>
+</li>
+<li>
+<a class="tocitem" href="names.html">Text
+</a>
+</li>
+<li>
+<a class="tocitem" href="documentation.html">Documentation
+</a>
+</li>
+<li>
+<a class="tocitem" href="handlers.html">Handlers
+</a>
+</li>
+<li>
+<a class="tocitem" href="read_only_arrays.html">Read-Only Arrays
+</a>
+</li>
+</ul>
+<div class="docs-version-selector field has-addons">
+<div class="control">
+<span class="docs-label button is-static is-size-7">Version
+</span>
+</div>
+<div class="docs-selector control is-expanded">
+<div class="select is-fullwidth is-size-7">
+<select id="documenter-version-selector">
+</select>
+</div>
+</div>
+</div>
+</nav>
+<div class="docs-main">
+<header class="docs-navbar">
+<a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#">
+</a>
+<nav class="breadcrumb">
+<ul class="is-hidden-mobile">
+<li class="is-active">
+<a href="brief.html">Brief
+</a>
+</li>
+</ul>
+<ul class="is-hidden-tablet">
+<li class="is-active">
+<a href="brief.html">Brief
+</a>
+</li>
+</ul>
+</nav>
+<div class="docs-right">
+<a class="docs-navbar-link" href="https://github.com/tanaylab/TanayLabUtilities.jl/blob/main{path}?plain=1#L{line}" title="View the repository on GitHub">
+<span class="docs-icon fa-brands">
+</span>
+<span class="docs-label is-hidden-touch">GitHub
+</span>
+</a>
+<a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings">
+</a>
+<a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings">
+</a>
+</div>
+</header>
+<article class="content" id="documenter-page">
+<h1 id="Brief">
+<a class="docs-heading-anchor" href="#Brief">Brief
+</a>
+<a id="Brief-1">
+</a>
+<a class="docs-heading-anchor-permalink" href="#Brief" title="Permalink">
+</a>
+</h1>
+<article class="docstring">
+<header>
+<a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring">
+</a>
+<a class="docstring-binding" id="TanayLabUtilities.Brief" href="#TanayLabUtilities.Brief">
+<code>TanayLabUtilities.Brief
+</code>
+</a> — 
+<span class="docstring-category">Module
+</span>
+<span class="is-flex-grow-1 docstring-article-toggle-button" title="Collapse docstring">
+</span>
+</header>
+<section>
+<div>
+<p>Functions for generating a brief description of arbitrary data. Yes, this is what the builtin 
+<code>summary
+</code> is expected to do. However, 
+<code>summary
+</code> doesn&#39;t summarize arrays that well. As we don&#39;t want to override it for types we don&#39;t own, we default 
+<code>brief
+</code> to call 
+<code>summary
+</code> and can then override it for whatever types we feel is necessary. For your own types, provide an implementation for 
+<code>summary
+</code> as that is the &quot;right thing to do&quot;.
+</p>
+</div>
+</section>
+</article>
+<article class="docstring">
+<header>
+<a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring">
+</a>
+<a class="docstring-binding" id="TanayLabUtilities.Brief.brief" href="#TanayLabUtilities.Brief.brief">
+<code>TanayLabUtilities.Brief.brief
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+<span class="is-flex-grow-1 docstring-article-toggle-button" title="Collapse docstring">
+</span>
+</header>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">brief(value::Any)::String
+</code>
+</pre>
+<p>Provide a brief description of a 
+<code>value
+</code>. This is basically 
+<code>summary
+</code> but modified for specific types (in particular, vectors and matrices) to give &quot;better&quot; results.
+</p>
+<pre>
+<code class="language-julia hljs">brief(1.0)
 
 # output
 
-&quot;1.0&quot;</code></pre><pre><code class="language-julia hljs">brief(true)
+&quot;1.0&quot;
+</code>
+</pre>
+<pre>
+<code class="language-julia hljs">brief(true)
 
 # output
 
-&quot;true&quot;</code></pre><pre><code class="language-julia hljs">brief(:foo)
+&quot;true&quot;
+</code>
+</pre>
+<pre>
+<code class="language-julia hljs">brief(:foo)
 
 # output
 
-&quot;:foo&quot;</code></pre><pre><code class="language-julia hljs">brief(nothing)
+&quot;:foo&quot;
+</code>
+</pre>
+<pre>
+<code class="language-julia hljs">brief(nothing)
 
 # output
 
-&quot;nothing&quot;</code></pre><pre><code class="language-julia hljs">brief(missing)
+&quot;nothing&quot;
+</code>
+</pre>
+<pre>
+<code class="language-julia hljs">brief(missing)
 
 # output
 
-&quot;missing&quot;</code></pre><pre><code class="language-julia hljs">brief(undef)
+&quot;missing&quot;
+</code>
+</pre>
+<pre>
+<code class="language-julia hljs">brief(undef)
 
 # output
 
-&quot;undef&quot;</code></pre><pre><code class="language-julia hljs">brief((&quot;foo&quot;, :bar))
+&quot;undef&quot;
+</code>
+</pre>
+<pre>
+<code class="language-julia hljs">brief((&quot;foo&quot;, :bar))
 
 # output
 
-&quot;(\&quot;foo\&quot;, :bar)&quot;</code></pre><pre><code class="language-julia hljs">brief(&quot;foo&quot;)
+&quot;(\&quot;foo\&quot;, :bar)&quot;
+</code>
+</pre>
+<pre>
+<code class="language-julia hljs">brief(&quot;foo&quot;)
 
 # output
 
-&quot;\&quot;foo\&quot;&quot;</code></pre><pre><code class="language-julia hljs">brief(&quot;foo &quot;^10)
+&quot;\&quot;foo\&quot;&quot;
+</code>
+</pre>
+<pre>
+<code class="language-julia hljs">brief(&quot;foo &quot;^10)
 
 # output
 
-&quot;\&quot;foo foo foo foo ...\&quot; (40)&quot;</code></pre><pre><code class="language-julia hljs">@enum Foo Bar Baz
+&quot;\&quot;foo foo foo foo ...\&quot; (40)&quot;
+</code>
+</pre>
+<pre>
+<code class="language-julia hljs">@enum Foo Bar Baz
 
 brief(Bar)
 
 # output
 
-&quot;Foo::Bar&quot;</code></pre><pre><code class="language-julia hljs">struct Foo end
+&quot;Foo::Bar&quot;
+</code>
+</pre>
+<pre>
+<code class="language-julia hljs">struct Foo end
 
 brief(Foo())
 
 # output
 
-&quot;Foo&quot;</code></pre></div></section></article><article class="docstring"><header><a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring"></a><a class="docstring-binding" id="TanayLabUtilities.Brief.MAX_BRIEF_STRING" href="#TanayLabUtilities.Brief.MAX_BRIEF_STRING"><code>TanayLabUtilities.Brief.MAX_BRIEF_STRING</code></a> — <span class="docstring-category">Constant</span><span class="is-flex-grow-1 docstring-article-toggle-button" title="Collapse docstring"></span></header><section><div><p>The maximal length of strings we show as-is in <a href="brief.html#TanayLabUtilities.Brief.brief"><code>brief</code></a>. We only show a prefix of longer strings (followed by their length).</p></div></section></article><article class="docstring"><header><a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring"></a><a class="docstring-binding" id="TanayLabUtilities.Brief.percent" href="#TanayLabUtilities.Brief.percent"><code>TanayLabUtilities.Brief.percent</code></a> — <span class="docstring-category">Function</span><span class="is-flex-grow-1 docstring-article-toggle-button" title="Collapse docstring"></span></header><section><div><pre><code class="language-julia hljs">percent(used::Real, out_of::Real)::String</code></pre><p>Format a fraction of <code>used</code> amount <code>out_of</code> some total, as an integer percent value. Very small fractions are denoted as <code>&lt;1%</code> and very large fractions are denoted as <code>&gt;99%</code>. We use this to show the percent of <code>true</code> values in masks, and the percent of non-zero entries in sparse arrays.</p><pre><code class="language-julia hljs">percent(0, 0)
+&quot;Foo&quot;
+</code>
+</pre>
+<pre>
+<code class="language-julia hljs">brief([true, false])
 
 # output
 
-&quot;NA%&quot;</code></pre><pre><code class="language-julia hljs">percent(0, 1000)
+&quot;2 x Bool (Dense; 50% true)&quot;
+</code>
+</pre>
+</div>
+</section>
+</article>
+<article class="docstring">
+<header>
+<a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring">
+</a>
+<a class="docstring-binding" id="TanayLabUtilities.Brief.MAX_BRIEF_STRING" href="#TanayLabUtilities.Brief.MAX_BRIEF_STRING">
+<code>TanayLabUtilities.Brief.MAX_BRIEF_STRING
+</code>
+</a> — 
+<span class="docstring-category">Constant
+</span>
+<span class="is-flex-grow-1 docstring-article-toggle-button" title="Collapse docstring">
+</span>
+</header>
+<section>
+<div>
+<p>The maximal length of strings we show as-is in 
+<a href="brief.html#TanayLabUtilities.Brief.brief">
+<code>brief
+</code>
+</a>. We only show a prefix of longer strings (followed by their length).
+</p>
+</div>
+</section>
+</article>
+<article class="docstring">
+<header>
+<a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring">
+</a>
+<a class="docstring-binding" id="TanayLabUtilities.Brief.percent" href="#TanayLabUtilities.Brief.percent">
+<code>TanayLabUtilities.Brief.percent
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+<span class="is-flex-grow-1 docstring-article-toggle-button" title="Collapse docstring">
+</span>
+</header>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">percent(used::Real, out_of::Real)::String
+</code>
+</pre>
+<p>Format a fraction of 
+<code>used
+</code> amount 
+<code>out_of
+</code> some total, as an integer percent value. Very small fractions are denoted as 
+<code>&lt;1%
+</code> and very large fractions are denoted as 
+<code>&gt;99%
+</code>. We use this to show the percent of 
+<code>true
+</code> values in masks, and the percent of non-zero entries in sparse arrays.
+</p>
+<pre>
+<code class="language-julia hljs">percent(0, 0)
 
 # output
 
-&quot;0%&quot;</code></pre><pre><code class="language-julia hljs">percent(9, 1000)
+&quot;NA%&quot;
+</code>
+</pre>
+<pre>
+<code class="language-julia hljs">percent(0, 1000)
 
 # output
 
-&quot;&lt;1%&quot;</code></pre><pre><code class="language-julia hljs">percent(10, 1000)
+&quot;0%&quot;
+</code>
+</pre>
+<pre>
+<code class="language-julia hljs">percent(9, 1000)
 
 # output
 
-&quot;1%&quot;</code></pre><pre><code class="language-julia hljs">percent(11, 1000)
+&quot;&lt;1%&quot;
+</code>
+</pre>
+<pre>
+<code class="language-julia hljs">percent(10, 1000)
 
 # output
 
-&quot;1%&quot;</code></pre><pre><code class="language-julia hljs">percent(990, 1000)
+&quot;1%&quot;
+</code>
+</pre>
+<pre>
+<code class="language-julia hljs">percent(11, 1000)
 
 # output
 
-&quot;99%&quot;</code></pre><pre><code class="language-julia hljs">percent(991, 1000)
+&quot;1%&quot;
+</code>
+</pre>
+<pre>
+<code class="language-julia hljs">percent(990, 1000)
 
 # output
 
-&quot;&gt;99%&quot;</code></pre><pre><code class="language-julia hljs">percent(1000, 1000)
+&quot;99%&quot;
+</code>
+</pre>
+<pre>
+<code class="language-julia hljs">percent(991, 1000)
 
 # output
 
-&quot;100%&quot;</code></pre></div></section></article><h2 id="Index"><a class="docs-heading-anchor" href="#Index">Index</a><a id="Index-1"></a><a class="docs-heading-anchor-permalink" href="#Index" title="Permalink"></a></h2><ul><li><a href="brief.html#TanayLabUtilities.Brief"><code>TanayLabUtilities.Brief</code></a></li><li><a href="brief.html#TanayLabUtilities.Brief.MAX_BRIEF_STRING"><code>TanayLabUtilities.Brief.MAX_BRIEF_STRING</code></a></li><li><a href="brief.html#TanayLabUtilities.Brief.brief"><code>TanayLabUtilities.Brief.brief</code></a></li><li><a href="brief.html#TanayLabUtilities.Brief.percent"><code>TanayLabUtilities.Brief.percent</code></a></li></ul></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="types.html">« Types</a><a class="docs-footer-nextpage" href="logger.html">Logger »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.9.0 on <span class="colophon-date" title="Wednesday 2 April 2025 08:04">Wednesday 2 April 2025</span>. Using Julia version 1.11.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+&quot;&gt;99%&quot;
+</code>
+</pre>
+<pre>
+<code class="language-julia hljs">percent(1000, 1000)
+
+# output
+
+&quot;100%&quot;
+</code>
+</pre>
+</div>
+</section>
+</article>
+<h2 id="Index">
+<a class="docs-heading-anchor" href="#Index">Index
+</a>
+<a id="Index-1">
+</a>
+<a class="docs-heading-anchor-permalink" href="#Index" title="Permalink">
+</a>
+</h2>
+<ul>
+<li>
+<a href="brief.html#TanayLabUtilities.Brief">
+<code>TanayLabUtilities.Brief
+</code>
+</a>
+</li>
+<li>
+<a href="brief.html#TanayLabUtilities.Brief.MAX_BRIEF_STRING">
+<code>TanayLabUtilities.Brief.MAX_BRIEF_STRING
+</code>
+</a>
+</li>
+<li>
+<a href="brief.html#TanayLabUtilities.Brief.brief">
+<code>TanayLabUtilities.Brief.brief
+</code>
+</a>
+</li>
+<li>
+<a href="brief.html#TanayLabUtilities.Brief.percent">
+<code>TanayLabUtilities.Brief.percent
+</code>
+</a>
+</li>
+</ul>
+</article>
+<nav class="docs-footer">
+<a class="docs-footer-prevpage" href="types.html">« Types
+</a>
+<a class="docs-footer-nextpage" href="logger.html">Logger »
+</a>
+<div class="flexbox-break">
+</div>
+<p class="footer-message">Powered by 
+<a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl
+</a> and the 
+<a href="https://julialang.org/">Julia Programming Language
+</a>.
+</p>
+</nav>
+</div>
+<div class="modal" id="documenter-settings">
+<div class="modal-background">
+</div>
+<div class="modal-card">
+<header class="modal-card-head">
+<p class="modal-card-title">Settings
+</p>
+<button class="delete">
+</button>
+</header>
+<section class="modal-card-body">
+<p>
+<label class="label">Theme
+</label>
+<div class="select">
+<select id="documenter-themepicker">
+<option value="auto">Automatic (OS)
+</option>
+<option value="documenter-light">documenter-light
+</option>
+<option value="documenter-dark">documenter-dark
+</option>
+<option value="catppuccin-latte">catppuccin-latte
+</option>
+<option value="catppuccin-frappe">catppuccin-frappe
+</option>
+<option value="catppuccin-macchiato">catppuccin-macchiato
+</option>
+<option value="catppuccin-mocha">catppuccin-mocha
+</option>
+</select>
+</div>
+</p>
+<hr/>
+<p>This document was generated with 
+<a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl
+</a> version 1.9.0. Using Julia version 1.11.4.
+</p>
+</section>
+<footer class="modal-card-foot">
+</footer>
+</div>
+</div>
+</div>
+</body>
+</html>

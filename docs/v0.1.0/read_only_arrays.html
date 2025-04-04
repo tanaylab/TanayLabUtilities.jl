@@ -1,0 +1,573 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Read-Only Arrays · TanayLabUtilities.jl v0.1.0
+</title>
+<meta name="title" content="Read-Only Arrays · TanayLabUtilities.jl v0.1.0"/>
+<meta property="og:title" content="Read-Only Arrays · TanayLabUtilities.jl v0.1.0"/>
+<meta property="twitter:title" content="Read-Only Arrays · TanayLabUtilities.jl v0.1.0"/>
+<meta name="description" content="Documentation for TanayLabUtilities.jl v0.1.0."/>
+<meta property="og:description" content="Documentation for TanayLabUtilities.jl v0.1.0."/>
+<meta property="twitter:description" content="Documentation for TanayLabUtilities.jl v0.1.0."/>
+<script data-outdated-warner src="assets/warner.js">
+</script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/>
+<script>documenterBaseURL="."
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="assets/documenter.js">
+</script>
+<script src="search_index.js">
+</script>
+<script src="siteinfo.js">
+</script>
+<script src="../versions.js">
+</script>
+<link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/>
+<link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/>
+<link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/>
+<link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/>
+<link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/>
+<link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/>
+<script src="assets/themeswap.js">
+</script>
+</head>
+<body>
+<div id="documenter">
+<nav class="docs-sidebar">
+<div class="docs-package-name">
+<span class="docs-autofit">
+<a href="index.html">TanayLabUtilities.jl v0.1.0
+</a>
+</span>
+</div>
+<button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)
+</button>
+<ul class="docs-menu">
+<li>
+<a class="tocitem" href="index.html">TanayLabUtilities
+</a>
+</li>
+<li>
+<a class="tocitem" href="types.html">Types
+</a>
+</li>
+<li>
+<a class="tocitem" href="brief.html">Brief
+</a>
+</li>
+<li>
+<a class="tocitem" href="logger.html">Logger
+</a>
+</li>
+<li>
+<a class="tocitem" href="parallel_storage.html">Parallel Storage
+</a>
+</li>
+<li>
+<a class="tocitem" href="parallel_rng.html">ParallelRNG
+</a>
+</li>
+<li>
+<a class="tocitem" href="locks.html">Locks
+</a>
+</li>
+<li>
+<a class="tocitem" href="names.html">Text
+</a>
+</li>
+<li>
+<a class="tocitem" href="documentation.html">Documentation
+</a>
+</li>
+<li>
+<a class="tocitem" href="handlers.html">Handlers
+</a>
+</li>
+<li class="is-active">
+<a class="tocitem" href="read_only_arrays.html">Read-Only Arrays
+</a>
+<ul class="internal">
+<li>
+<a class="tocitem" href="#Index">
+<span>Index
+</span>
+</a>
+</li>
+</ul>
+</li>
+</ul>
+<div class="docs-version-selector field has-addons">
+<div class="control">
+<span class="docs-label button is-static is-size-7">Version
+</span>
+</div>
+<div class="docs-selector control is-expanded">
+<div class="select is-fullwidth is-size-7">
+<select id="documenter-version-selector">
+</select>
+</div>
+</div>
+</div>
+</nav>
+<div class="docs-main">
+<header class="docs-navbar">
+<a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#">
+</a>
+<nav class="breadcrumb">
+<ul class="is-hidden-mobile">
+<li class="is-active">
+<a href="read_only_arrays.html">Read-Only Arrays
+</a>
+</li>
+</ul>
+<ul class="is-hidden-tablet">
+<li class="is-active">
+<a href="read_only_arrays.html">Read-Only Arrays
+</a>
+</li>
+</ul>
+</nav>
+<div class="docs-right">
+<a class="docs-navbar-link" href="https://github.com/tanaylab/TanayLabUtilities.jl/blob/main{path}?plain=1#L{line}" title="View the repository on GitHub">
+<span class="docs-icon fa-brands">
+</span>
+<span class="docs-label is-hidden-touch">GitHub
+</span>
+</a>
+<a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings">
+</a>
+<a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings">
+</a>
+</div>
+</header>
+<article class="content" id="documenter-page">
+<h1 id="Read-Only-Arrays">
+<a class="docs-heading-anchor" href="#Read-Only-Arrays">Read-Only Arrays
+</a>
+<a id="Read-Only-Arrays-1">
+</a>
+<a class="docs-heading-anchor-permalink" href="#Read-Only-Arrays" title="Permalink">
+</a>
+</h1>
+<article class="docstring">
+<header>
+<a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring">
+</a>
+<a class="docstring-binding" id="TanayLabUtilities.ReadOnlyArrays" href="#TanayLabUtilities.ReadOnlyArrays">
+<code>TanayLabUtilities.ReadOnlyArrays
+</code>
+</a> — 
+<span class="docstring-category">Module
+</span>
+<span class="is-flex-grow-1 docstring-article-toggle-button" title="Collapse docstring">
+</span>
+</header>
+<section>
+<div>
+<p>Read-only vectors and matrices, by ab/using 
+<code>SparseArrays.ReadOnly
+</code>. We need this because we want access to shared data to be copy-free for efficiency (in particular, matrices can be several GBs). However, it would be very easy for the user code to access vector or matrix data and accidentally modify it in-place, thereby corrupting it and causing all sort of hard-to-debug hilarity. Julia in its infinite wisdom takes the view that &quot;everything is mutable&quot; so has no builtin notion of &quot;read-only view of an array&quot;, probably due to the general weakness of its type system (which might be a price paid for efficient multiple dispatch?). Luckily the 
+<code>SparseArraysReadOnly
+</code> package happens to implement something along these lines, which we shamelessly ab/use for our purposes and re-export as 
+<code>ReadOnlyArray
+</code>.
+</p>
+<div class="admonition is-info">
+<header class="admonition-header">Note
+</header>
+<div class="admonition-body">
+<p>The read-only array functions below are restricted to dealing with normal (dense) arrays, 
+<code>SparseArrays
+</code>, 
+<code>NamedArrays
+</code>, 
+<code>PermutedDimsArray
+</code>, and 
+<code>LinearAlgebra
+</code> arrays (specifically, 
+<code>Transpose
+</code> and 
+<code>Adjoint
+</code>), as these are the types we actually use. YMMV if using more exotic matrix types. In theory you could extend the implementation to cover such types as well.
+</p>
+</div>
+</div>
+<p>When using &quot;wrapper&quot; array types, we try to push the &quot;read-only-ness&quot; as far down the stack of wrappers as possible. Thus applying this to a 
+<code>NamedArray
+</code>, 
+<code>PermutedDimsArray
+</code>, 
+<code>Transpose
+</code>, 
+<code>Adjoint
+</code> will wrap the 
+<code>parent
+</code> of the array rather than the array itself. However 
+<code>SparseArrays
+</code> have chosen to implement 
+<code>ReadOnly
+</code> as a wrapper around 
+<code>SparseArray
+</code> rather than as a wrapper for the internal data, presumably because it would have required them to separately wrap each of the internal arrays. IMVHO it would have been better if they went that way anyway and in general would have allowed for a wider range of array types for the internal arrays, as that would have allowed all sort of interesting features (e.g., a sparse array whose structure is fixed but only the non-zero values are mutable, a zero-copy sparse array whose data is a slice of a larger array, etc.). In general Julia&#39;s type hierarchy for arrays has some rough spots we need to deal with, partially because of the type system limitations, and partially because of some debatable decisions made when defining the core array types and conventions.
+</p>
+</div>
+</section>
+</article>
+<article class="docstring">
+<header>
+<a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring">
+</a>
+<a class="docstring-binding" id="TanayLabUtilities.ReadOnlyArrays.ReadOnlyArray" href="#TanayLabUtilities.ReadOnlyArrays.ReadOnlyArray">
+<code>TanayLabUtilities.ReadOnlyArrays.ReadOnlyArray
+</code>
+</a> — 
+<span class="docstring-category">Type
+</span>
+<span class="is-flex-grow-1 docstring-article-toggle-button" title="Collapse docstring">
+</span>
+</header>
+<section>
+<div>
+<p>Just a rename (and re-export) of the internal 
+<span>$ReadOnlyArray$
+</span>.
+</p>
+</div>
+</section>
+</article>
+<article class="docstring">
+<header>
+<a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring">
+</a>
+<a class="docstring-binding" id="TanayLabUtilities.ReadOnlyArrays.read_only_array" href="#TanayLabUtilities.ReadOnlyArrays.read_only_array">
+<code>TanayLabUtilities.ReadOnlyArrays.read_only_array
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+<span class="is-flex-grow-1 docstring-article-toggle-button" title="Collapse docstring">
+</span>
+</header>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">read_only_array(array::AbstractArray):AbstractArray
+</code>
+</pre>
+<p>An immutable view of an 
+<code>array
+</code>, using 
+<code>SparseArrays.ReadOnly
+</code>. If the array is already immutable, it is returned as-is.
+</p>
+<pre>
+<code class="language-julia hljs"># Base
+
+base = [0 1 2; 3 4 0]
+@assert !is_read_only_array(base)
+
+read_only = read_only_array(base)
+@assert is_read_only_array(read_only)
+@assert read_only_array(read_only) === read_only
+
+# Named
+
+using NamedArrays
+
+named = NamedArray(base)
+@assert !is_read_only_array(named)
+
+named_read_only = read_only_array(named)
+@assert named_read_only isa NamedArray
+@assert is_read_only_array(named_read_only)
+@assert read_only_array(named_read_only) === named_read_only
+
+# Permuted
+
+permuted = PermutedDimsArray(base, (2, 1))
+@assert !is_read_only_array(permuted)
+
+permuted_read_only = read_only_array(permuted)
+@assert permuted_read_only isa PermutedDimsArray
+@assert is_read_only_array(permuted_read_only)
+@assert read_only_array(permuted_read_only) === permuted_read_only
+
+unpermuted = PermutedDimsArray(base, (1, 2))
+@assert !is_read_only_array(unpermuted)
+
+unpermuted_read_only = read_only_array(unpermuted)
+@assert unpermuted_read_only isa PermutedDimsArray
+@assert is_read_only_array(unpermuted_read_only)
+@assert read_only_array(unpermuted_read_only) === unpermuted_read_only
+
+# LinearAlgebra
+
+using LinearAlgebra
+
+transposed = transpose(base)
+@assert !is_read_only_array(transposed)
+
+transposed_read_only = read_only_array(transposed)
+@assert transposed_read_only isa Transpose
+@assert is_read_only_array(transposed_read_only)
+@assert read_only_array(transposed_read_only) === transposed_read_only
+
+adjointed = adjoint(base)
+@assert !is_read_only_array(adjointed)
+
+adjointed_read_only = read_only_array(adjointed)
+@assert adjointed_read_only isa Adjoint
+@assert is_read_only_array(adjointed_read_only)
+@assert read_only_array(adjointed_read_only) === adjointed_read_only
+
+# Sparse
+
+using SparseArrays
+
+sparse = SparseMatrixCSC(base)
+@assert !is_read_only_array(sparse)
+
+sparse_read_only = read_only_array(sparse)
+@assert issparse(sparse_read_only)
+@assert is_read_only_array(sparse_read_only)
+@assert is_read_only_array(sparse_read_only)
+@assert read_only_array(sparse_read_only) === sparse_read_only
+
+# output
+</code>
+</pre>
+</div>
+</section>
+</article>
+<article class="docstring">
+<header>
+<a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring">
+</a>
+<a class="docstring-binding" id="TanayLabUtilities.ReadOnlyArrays.is_read_only_array" href="#TanayLabUtilities.ReadOnlyArrays.is_read_only_array">
+<code>TanayLabUtilities.ReadOnlyArrays.is_read_only_array
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+<span class="is-flex-grow-1 docstring-article-toggle-button" title="Collapse docstring">
+</span>
+</header>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">is_read_only_array(array::AbstractArray)::Bool
+</code>
+</pre>
+<p>Return whether an 
+<code>array
+</code> is immutable. See 
+<a href="read_only_arrays.html#TanayLabUtilities.ReadOnlyArrays.ReadOnlyArray">
+<code>ReadOnlyArray
+</code>
+</a>
+</p>
+</div>
+</section>
+</article>
+<article class="docstring">
+<header>
+<a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring">
+</a>
+<a class="docstring-binding" id="TanayLabUtilities.ReadOnlyArrays.mutable_array" href="#TanayLabUtilities.ReadOnlyArrays.mutable_array">
+<code>TanayLabUtilities.ReadOnlyArrays.mutable_array
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+<span class="is-flex-grow-1 docstring-article-toggle-button" title="Collapse docstring">
+</span>
+</header>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">mutable_array(array::AbstractArray)::AbstractArray
+</code>
+</pre>
+<p>Grant mutable access to an array, even if it is a read-only array. If the array is already mutable, it is returned as-is.
+</p>
+<div class="admonition is-info">
+<header class="admonition-header">Note
+</header>
+<div class="admonition-body">
+<p>
+<strong>This should be used with great care
+</strong> because code depends on read-only arrays not changing their values.
+</p>
+</div>
+</div>
+<pre>
+<code class="language-julia hljs">base = [0 1 2; 3 4 0]
+
+@assert mutable_array(base) === base
+
+read_only = read_only_array(base)
+@assert mutable_array(read_only) === base
+
+# Named
+
+using NamedArrays
+
+named = NamedArray(base)
+@assert !is_read_only_array(named)
+
+@assert mutable_array(named) === named
+@assert mutable_array(read_only_array(named)).array === named.array
+
+# Permuted
+
+permuted = PermutedDimsArray(base, (2, 1))
+
+@assert mutable_array(permuted) === permuted
+@assert mutable_array(read_only_array(permuted)) === permuted
+
+unpermuted = PermutedDimsArray(base, (1, 2))
+@assert !is_read_only_array(unpermuted)
+
+@assert mutable_array(unpermuted) === unpermuted
+@assert mutable_array(read_only_array(unpermuted)) === unpermuted
+
+# LinearAlgebra
+
+using LinearAlgebra
+
+transposed = transpose(base)
+@assert !is_read_only_array(transposed)
+
+@assert mutable_array(transposed) === transposed
+@assert mutable_array(read_only_array(transposed)) === transposed
+
+adjointed = adjoint(base)
+@assert !is_read_only_array(adjointed)
+
+@assert mutable_array(adjointed) === adjointed
+@assert mutable_array(read_only_array(adjointed)) === adjointed
+
+# Sparse
+
+using SparseArrays
+
+sparse = SparseMatrixCSC(base)
+
+@assert mutable_array(sparse) === sparse
+@assert mutable_array(read_only_array(sparse)) === sparse
+
+# output
+</code>
+</pre>
+</div>
+</section>
+</article>
+<h2 id="Index">
+<a class="docs-heading-anchor" href="#Index">Index
+</a>
+<a id="Index-1">
+</a>
+<a class="docs-heading-anchor-permalink" href="#Index" title="Permalink">
+</a>
+</h2>
+<ul>
+<li>
+<a href="read_only_arrays.html#TanayLabUtilities.ReadOnlyArrays">
+<code>TanayLabUtilities.ReadOnlyArrays
+</code>
+</a>
+</li>
+<li>
+<a href="read_only_arrays.html#TanayLabUtilities.ReadOnlyArrays.ReadOnlyArray">
+<code>TanayLabUtilities.ReadOnlyArrays.ReadOnlyArray
+</code>
+</a>
+</li>
+<li>
+<a href="read_only_arrays.html#TanayLabUtilities.ReadOnlyArrays.is_read_only_array">
+<code>TanayLabUtilities.ReadOnlyArrays.is_read_only_array
+</code>
+</a>
+</li>
+<li>
+<a href="read_only_arrays.html#TanayLabUtilities.ReadOnlyArrays.mutable_array">
+<code>TanayLabUtilities.ReadOnlyArrays.mutable_array
+</code>
+</a>
+</li>
+<li>
+<a href="read_only_arrays.html#TanayLabUtilities.ReadOnlyArrays.read_only_array">
+<code>TanayLabUtilities.ReadOnlyArrays.read_only_array
+</code>
+</a>
+</li>
+</ul>
+</article>
+<nav class="docs-footer">
+<a class="docs-footer-prevpage" href="handlers.html">« Handlers
+</a>
+<div class="flexbox-break">
+</div>
+<p class="footer-message">Powered by 
+<a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl
+</a> and the 
+<a href="https://julialang.org/">Julia Programming Language
+</a>.
+</p>
+</nav>
+</div>
+<div class="modal" id="documenter-settings">
+<div class="modal-background">
+</div>
+<div class="modal-card">
+<header class="modal-card-head">
+<p class="modal-card-title">Settings
+</p>
+<button class="delete">
+</button>
+</header>
+<section class="modal-card-body">
+<p>
+<label class="label">Theme
+</label>
+<div class="select">
+<select id="documenter-themepicker">
+<option value="auto">Automatic (OS)
+</option>
+<option value="documenter-light">documenter-light
+</option>
+<option value="documenter-dark">documenter-dark
+</option>
+<option value="catppuccin-latte">catppuccin-latte
+</option>
+<option value="catppuccin-frappe">catppuccin-frappe
+</option>
+<option value="catppuccin-macchiato">catppuccin-macchiato
+</option>
+<option value="catppuccin-mocha">catppuccin-mocha
+</option>
+</select>
+</div>
+</p>
+<hr/>
+<p>This document was generated with 
+<a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl
+</a> version 1.9.0. Using Julia version 1.11.4.
+</p>
+</section>
+<footer class="modal-card-foot">
+</footer>
+</div>
+</div>
+</div>
+</body>
+</html>

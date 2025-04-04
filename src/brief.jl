@@ -109,6 +109,14 @@ brief(Foo())
 
 "Foo"
 ```
+
+```jldoctest
+brief([true, false])
+
+# output
+
+"2 x Bool (Dense; 50% true)"
+```
 """
 function brief(value::Any)::String
     try
@@ -154,16 +162,6 @@ end
 
 function brief(value::Symbol)::String
     return ":$(value)"
-end
-
-function brief(array::AbstractArray)::String  # UNTESTED
-    if eltype(array) == Bool
-        n_trues = sum(array)  # NOJET
-        suffix = " ($(n_trues) true, $(percent(n_trues, length(array))))"
-    else
-        suffix = ""
-    end
-    return "$(eltype(array)) x $(join(string.(size(array)), " x ")) $(nameof(typeof(array)))$(suffix)"
 end
 
 """

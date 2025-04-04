@@ -1,0 +1,1591 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Matrix Formats · TanayLabUtilities.jl v0.1.0
+</title>
+<meta name="title" content="Matrix Formats · TanayLabUtilities.jl v0.1.0"/>
+<meta property="og:title" content="Matrix Formats · TanayLabUtilities.jl v0.1.0"/>
+<meta property="twitter:title" content="Matrix Formats · TanayLabUtilities.jl v0.1.0"/>
+<meta name="description" content="Documentation for TanayLabUtilities.jl v0.1.0."/>
+<meta property="og:description" content="Documentation for TanayLabUtilities.jl v0.1.0."/>
+<meta property="twitter:description" content="Documentation for TanayLabUtilities.jl v0.1.0."/>
+<script data-outdated-warner src="assets/warner.js">
+</script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/>
+<script>documenterBaseURL="."
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="assets/documenter.js">
+</script>
+<script src="search_index.js">
+</script>
+<script src="siteinfo.js">
+</script>
+<script src="../versions.js">
+</script>
+<link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/>
+<link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/>
+<link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/>
+<link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/>
+<link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/>
+<link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/>
+<script src="assets/themeswap.js">
+</script>
+</head>
+<body>
+<div id="documenter">
+<nav class="docs-sidebar">
+<div class="docs-package-name">
+<span class="docs-autofit">
+<a href="index.html">TanayLabUtilities.jl v0.1.0
+</a>
+</span>
+</div>
+<button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)
+</button>
+<ul class="docs-menu">
+<li>
+<a class="tocitem" href="index.html">TanayLabUtilities
+</a>
+</li>
+<li>
+<a class="tocitem" href="types.html">Types
+</a>
+</li>
+<li>
+<a class="tocitem" href="brief.html">Brief
+</a>
+</li>
+<li>
+<a class="tocitem" href="logger.html">Logger
+</a>
+</li>
+<li>
+<a class="tocitem" href="parallel_storage.html">Parallel Storage
+</a>
+</li>
+<li>
+<a class="tocitem" href="parallel_rng.html">ParallelRNG
+</a>
+</li>
+<li>
+<a class="tocitem" href="locks.html">Locks
+</a>
+</li>
+<li>
+<a class="tocitem" href="names.html">Text
+</a>
+</li>
+<li>
+<a class="tocitem" href="documentation.html">Documentation
+</a>
+</li>
+<li>
+<a class="tocitem" href="handlers.html">Handlers
+</a>
+</li>
+<li>
+<a class="tocitem" href="read_only_arrays.html">Read-Only Arrays
+</a>
+</li>
+</ul>
+<div class="docs-version-selector field has-addons">
+<div class="control">
+<span class="docs-label button is-static is-size-7">Version
+</span>
+</div>
+<div class="docs-selector control is-expanded">
+<div class="select is-fullwidth is-size-7">
+<select id="documenter-version-selector">
+</select>
+</div>
+</div>
+</div>
+</nav>
+<div class="docs-main">
+<header class="docs-navbar">
+<a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#">
+</a>
+<nav class="breadcrumb">
+<ul class="is-hidden-mobile">
+<li class="is-active">
+<a href="matrix_formats.html">Matrix Formats
+</a>
+</li>
+</ul>
+<ul class="is-hidden-tablet">
+<li class="is-active">
+<a href="matrix_formats.html">Matrix Formats
+</a>
+</li>
+</ul>
+</nav>
+<div class="docs-right">
+<a class="docs-navbar-link" href="https://github.com/tanaylab/TanayLabUtilities.jl/blob/main{path}?plain=1#L{line}" title="View the repository on GitHub">
+<span class="docs-icon fa-brands">
+</span>
+<span class="docs-label is-hidden-touch">GitHub
+</span>
+</a>
+<a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings">
+</a>
+<a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings">
+</a>
+</div>
+</header>
+<article class="content" id="documenter-page">
+<h1 id="Matrix-Formats">
+<a class="docs-heading-anchor" href="#Matrix-Formats">Matrix Formats
+</a>
+<a id="Matrix-Formats-1">
+</a>
+<a class="docs-heading-anchor-permalink" href="#Matrix-Formats" title="Permalink">
+</a>
+</h1>
+<article class="docstring">
+<header>
+<a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring">
+</a>
+<a class="docstring-binding" id="TanayLabUtilities.MatrixFormats" href="#TanayLabUtilities.MatrixFormats">
+<code>TanayLabUtilities.MatrixFormats
+</code>
+</a> — 
+<span class="docstring-category">Module
+</span>
+<span class="is-flex-grow-1 docstring-article-toggle-button" title="Collapse docstring">
+</span>
+</header>
+<section>
+<div>
+<p>Deal with (some) of the matrix formats. This obviously can&#39;t be compherensive but it should cover the matrix types we have encountered so far and hopefully falls back to reasonable defaults for more exotic matrix types.
+</p>
+<p>In Julia, many array types are wrappers around &quot;parent&quot; arrays. The specific wrappers we deal with in most cases are 
+<code>NamedArray
+</code> which adds names to the rows and/or columns, 
+<code>PermutedDimsArray
+</code> which flips the order of the axes, 
+<code>Transpose
+</code> and 
+<code>Adjoint
+</code> which likewise flip the axes (
+<code>Adjoint
+</code> also transforms complex values), and 
+<code>ReadOnlyArray
+</code> which prevents mutating the array. And then there are more transformative wrappers such as 
+<code>SubArray
+</code>, 
+<code>SparseVector
+</code> and 
+<code>SparseMatrixCSC
+</code>, 
+<code>PyArray
+</code>, etc.
+</p>
+<p>This makes life difficult. Specifically, you can&#39;t rely (much) on the type system to separate code dealing with different array types. For example, not all 
+<code>issparse
+</code> arrays derive from 
+<code>AbstractSparseArray
+</code> (because you might have a sparse array wrapped in something). It would have been great if there were 
+<code>isdense
+</code> and 
+<code>isstrided
+</code> functions to match and libraries actually used them to trigger optimized code but &quot;that would have been too easy&quot;.
+</p>
+<p>The code here tries to put this under some control so we can write robust code which &quot;does the right thing&quot;, in most cases, at least when it comes to converting between formats. This means we are forced to provide alternatives to some built-in functions (for example, copying arrays). Sigh.
+</p>
+</div>
+</section>
+</article>
+<article class="docstring">
+<header>
+<a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring">
+</a>
+<a class="docstring-binding" id="TanayLabUtilities.MatrixFormats.copy_array" href="#TanayLabUtilities.MatrixFormats.copy_array">
+<code>TanayLabUtilities.MatrixFormats.copy_array
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+<span class="is-flex-grow-1 docstring-article-toggle-button" title="Collapse docstring">
+</span>
+</header>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">copy_array(array::AbstractArray; eltype::Maybe{Type} = nothing, indtype::Maybe{Type} = nothing)::AbstractArray
+</code>
+</pre>
+<p>Create a copy of an array. This differs from 
+<code>Base.copy
+</code> in the following:
+</p>
+<ul>
+<li>
+<p>Copying a read-only array returns a mutable array. In contrast, both 
+<code>Base.copy
+</code> and 
+<code>Base.deepcopy
+</code> of a 
+<a href="read_only_arrays.html#TanayLabUtilities.ReadOnlyArrays.ReadOnlyArray">
+<code>ReadOnlyArray
+</code>
+</a> array will return a 
+<a href="read_only_arrays.html#TanayLabUtilities.ReadOnlyArrays.ReadOnlyArray">
+<code>ReadOnlyArray
+</code>
+</a> array, which is technically correct, but is rather pointless.
+</p>
+</li>
+<li>
+<p>Copying a 
+<code>NamedArray
+</code> returns a 
+<code>NamedArray
+</code> that shares the names (but not the data storage).
+</p>
+</li>
+<li>
+<p>Copying will preserve the layout of the data; for example, copying a 
+<code>Transpose
+</code> array is still a 
+<code>Transpose
+</code> array. In contrast, while 
+<code>Base.deepcopy
+</code> will preserve the layout, 
+<code>Base.copy
+</code> will silently 
+<a href="matrix_layouts.html#TanayLabUtilities.MatrixLayouts.relayout">
+<code>relayout
+</code>
+</a> the matrix, which is both expensive and unexpected.
+</p>
+</li>
+<li>
+<p>Copying a sparse vector or matrix gives a sparse result. Copying anything else gives a simple dense array regardless of the original type. This is done because a 
+<code>deepcopy
+</code> of 
+<code>PyArray
+</code> will still share the underlying buffer, which removes the whole point of doing a copy. Sigh.
+</p>
+</li>
+<li>
+<p>Copying a vector of anything derived from 
+<code>AbstractString
+</code> returns a vector of 
+<code>AbstractString
+</code>.
+</p>
+</li>
+<li>
+<p>You can override the 
+<code>eltype
+</code> of the array (and/or the 
+<code>indtype
+</code>, if it is sparse).
+</p>
+</li>
+</ul>
+<pre>
+<code class="language-julia hljs">using Test
+
+base = [0 1 2; 3 4 0]
+
+# Dense
+
+@test brief(base) == &quot;2 x 3 x Int64 in Columns (Dense)&quot;
+@test brief(copy_array(base)) == &quot;2 x 3 x Int64 in Columns (Dense)&quot;
+@test copy_array(base) == base
+@test copy_array(base) !== base
+
+@test copy_array(base; eltype = Int32) == base
+@test brief(copy_array(base; eltype = Int32)) == &quot;2 x 3 x Int32 in Columns (Dense)&quot;
+
+# Sparse
+
+using SparseArrays
+
+sparse = SparseMatrixCSC(base)
+@test copy_array(sparse) == sparse
+@test copy_array(sparse) !== sparse
+@test brief(sparse) == &quot;2 x 3 x Int64 in Columns (Sparse Int64 67%)&quot;
+@test brief(copy_array(sparse)) == &quot;2 x 3 x Int64 in Columns (Sparse Int64 67%)&quot;
+
+@test copy_array(sparse; eltype = Int32) == sparse
+@test brief(copy_array(sparse; eltype = Int32)) == &quot;2 x 3 x Int32 in Columns (Sparse Int64 67%)&quot;
+
+@test copy_array(sparse; indtype = Int8) == sparse
+@test brief(copy_array(sparse; indtype = Int8)) == &quot;2 x 3 x Int64 in Columns (Sparse Int8 67%)&quot;
+
+# ReadOnly
+
+read_only = read_only_array(base)
+@test brief(read_only) == &quot;2 x 3 x Int64 in Columns (ReadOnly, Dense)&quot;
+@test brief(copy_array(read_only)) == &quot;2 x 3 x Int64 in Columns (Dense)&quot;
+@test copy_array(read_only) == read_only
+@test copy_array(read_only) !== base
+
+# Named
+
+using NamedArrays
+
+named = NamedArray(base)
+@test brief(named) == &quot;2 x 3 x Int64 in Columns (Named, Dense)&quot;
+@test brief(copy_array(named)) == &quot;2 x 3 x Int64 in Columns (Named, Dense)&quot;
+@test copy_array(named) == named
+@test parent(copy_array(named)) !== base
+
+# Permuted
+
+permuted = PermutedDimsArray(base, (2,1))
+@test brief(permuted) == &quot;3 x 2 x Int64 in Rows (Permute, Dense)&quot;
+@test brief(copy_array(permuted)) == &quot;3 x 2 x Int64 in Rows (Permute, Dense)&quot;
+@test copy_array(permuted) == permuted
+@test parent(copy_array(permuted)) !== base
+
+unpermuted = PermutedDimsArray(base, (1,2))
+@test brief(unpermuted) == &quot;2 x 3 x Int64 in Columns (!Permute, Dense)&quot;
+@test brief(copy_array(unpermuted)) == &quot;2 x 3 x Int64 in Columns (!Permute, Dense)&quot;
+@test copy_array(unpermuted) == unpermuted
+@test parent(copy_array(unpermuted)) !== base
+
+# LinearAlgebra
+
+using LinearAlgebra
+
+transposed = transpose(base)
+@test brief(transposed) == &quot;3 x 2 x Int64 in Rows (Transpose, Dense)&quot;
+@test brief(copy_array(transposed)) == &quot;3 x 2 x Int64 in Rows (Transpose, Dense)&quot;
+@test copy_array(transposed) == transposed
+@test parent(copy_array(transposed)) !== base
+
+adjointed = adjoint(base)
+@test brief(adjointed) == &quot;3 x 2 x Int64 in Rows (Adjoint, Dense)&quot;
+@test brief(copy_array(adjointed)) == &quot;3 x 2 x Int64 in Rows (Adjoint, Dense)&quot;
+@test copy_array(adjointed) == adjointed
+@test parent(copy_array(adjointed)) !== base
+
+println(&quot;OK&quot;)
+
+# output
+
+OK
+</code>
+</pre>
+<pre>
+<code class="language-julia hljs">using Test
+
+# Dense
+
+base = [0, 1, 2]
+
+@test brief(base) == &quot;3 x Int64 (Dense)&quot;
+@test brief(copy_array(base)) == &quot;3 x Int64 (Dense)&quot;
+@test copy_array(base) == base
+@test copy_array(base) !== base
+
+# Sparse
+
+using SparseArrays
+
+sparse = SparseVector(base)
+@test brief(sparse) == &quot;3 x Int64 (Sparse Int64 67%)&quot;
+@test brief(copy_array(sparse)) == &quot;3 x Int64 (Sparse Int64 67%)&quot;
+@test copy_array(sparse) == sparse
+@test copy_array(sparse) !== sparse
+
+# ReadOnly
+
+read_only = read_only_array(base)
+@test brief(read_only) == &quot;3 x Int64 (ReadOnly, Dense)&quot;
+@test brief(copy_array(read_only)) == &quot;3 x Int64 (Dense)&quot;
+@test copy_array(read_only) == read_only
+@test copy_array(read_only) !== base
+
+# Named
+
+using NamedArrays
+
+named = NamedArray(base)
+@test brief(named) == &quot;3 x Int64 (Named, Dense)&quot;
+@test brief(copy_array(named)) == &quot;3 x Int64 (Named, Dense)&quot;
+@test copy_array(named) == named
+@test parent(copy_array(named)) !== base
+
+# LinearAlgebra
+
+using LinearAlgebra
+
+transposed = transpose(base)
+@test brief(transposed) == &quot;3 x Int64 (Transpose, Dense)&quot;
+@test brief(copy_array(transposed)) == &quot;3 x Int64 (Transpose, Dense)&quot;
+@test copy_array(transposed) == transposed
+@test parent(copy_array(transposed)) !== base
+
+adjointed = adjoint(base)
+@test brief(adjointed) == &quot;3 x Int64 (Adjoint, Dense)&quot;
+@test brief(copy_array(adjointed)) == &quot;3 x Int64 (Adjoint, Dense)&quot;
+@test copy_array(adjointed) == adjointed
+@test parent(copy_array(adjointed)) !== base
+
+# String
+
+base = split(&quot;abc&quot;, &quot;&quot;)
+
+@test brief(base) == &quot;3 x Str (Dense)&quot;
+@test brief(copy_array(base)) == &quot;3 x Str (Dense)&quot;
+@test eltype(base) != AbstractString
+@test eltype(copy_array(base)) == AbstractString
+@test copy_array(base) == base
+
+println(&quot;OK&quot;)
+
+# output
+
+OK
+</code>
+</pre>
+</div>
+</section>
+</article>
+<article class="docstring">
+<header>
+<a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring">
+</a>
+<a class="docstring-binding" id="TanayLabUtilities.MatrixFormats.sparse_matrix_csc" href="#TanayLabUtilities.MatrixFormats.sparse_matrix_csc">
+<code>TanayLabUtilities.MatrixFormats.sparse_matrix_csc
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+<span class="is-flex-grow-1 docstring-article-toggle-button" title="Collapse docstring">
+</span>
+</header>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">sparse_matrix_csc(
+    matrix::AbstractMatrix;
+    eltype::Maybe{Type} = nothing,
+    indtype::Maybe{Type} = nothing
+)::SparseMatrixCSC
+
+sparse_matrix_csc(
+    colptr::AbstractVector,
+    rowval::AbstractVector,
+    nzval::AbstractVector
+)::Union{ReadOnlyArray, SparseMatrixCSC}
+</code>
+</pre>
+<p>Create a sparse column-major matrix. This differs from the simple 
+<code>SparseMatrixCSC
+</code> in the following ways:
+</p>
+<ul>
+<li>
+<p>The integer index type is 
+<code>UInt32
+</code> if possible. Only very large matrix sizes use 
+<code>UInt64
+</code>. This greatly reduces the size of large matrices.
+</p>
+</li>
+<li>
+<p>If constructing the matrix from three vectors, then if any of them are 
+<code>ReadOnlyArray
+</code>, this will return a 
+<code>ReadOnlyArray
+</code> wrapper for the result (which will internally refer to the mutable arrays).
+</p>
+</li>
+<li>
+<p>If 
+<code>eltype
+</code> is specified, this will be the element type of the result.
+</p>
+</li>
+</ul>
+<pre>
+<code class="language-julia hljs">using Test
+
+# Matrix
+
+@test brief(sparse_matrix_csc([0 1 2; 3 4 0])) == &quot;2 x 3 x Int64 in Columns (Sparse UInt32 67%)&quot;
+@test brief(sparse_matrix_csc([0 1 2; 3 4 0]; eltype = Float32)) == &quot;2 x 3 x Float32 in Columns (Sparse UInt32 67%)&quot;
+@test brief(sparse_matrix_csc([0 1 2; 3 4 0]; indtype = UInt8)) == &quot;2 x 3 x Int64 in Columns (Sparse UInt8 67%)&quot;
+
+# Vectors
+
+sparse = sparse_matrix_csc([0 1 2; 3 4 0])
+
+@test brief(sparse_matrix_csc(2, 3, sparse.colptr, sparse.rowval, sparse.nzval)) == &quot;2 x 3 x Int64 in Columns (Sparse UInt32 67%)&quot;
+@test brief(sparse_matrix_csc(2, 3, read_only_array(sparse.colptr), read_only_array(sparse.rowval), read_only_array(sparse.nzval))) ==
+      &quot;2 x 3 x Int64 in Columns (ReadOnly, Sparse UInt32 67%)&quot;
+
+println(&quot;OK&quot;)
+
+# output
+
+OK
+</code>
+</pre>
+</div>
+</section>
+</article>
+<article class="docstring">
+<header>
+<a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring">
+</a>
+<a class="docstring-binding" id="TanayLabUtilities.MatrixFormats.sparse_vector" href="#TanayLabUtilities.MatrixFormats.sparse_vector">
+<code>TanayLabUtilities.MatrixFormats.sparse_vector
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+<span class="is-flex-grow-1 docstring-article-toggle-button" title="Collapse docstring">
+</span>
+</header>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">sparse_vector(
+    vector::AbstractMatrix;
+    eltype::Maybe{Type} = nothing,
+    indtype::Maybe{Type} = nothing,
+)::SparseVector
+
+sparse_vector(
+    size::Integer,
+    inzind::AbstractVector,
+    nzval::AbstractVector
+)::Union{ReadOnlyArray, SparseVector}
+</code>
+</pre>
+<p>Create a sparse vector. This differs from the simple 
+<code>SparseVector
+</code> in the following ways:
+</p>
+<ul>
+<li>
+<p>The integer index type is 
+<code>UInt32
+</code> if possible. Only very large matrix sizes use 
+<code>UInt64
+</code>. This greatly reduces the size of large matrices.
+</p>
+</li>
+<li>
+<p>If constructing the vector from two vectors, then if any of them are 
+<code>ReadOnlyArray
+</code>, this will return a 
+<code>ReadOnlyArray
+</code> wrapper for the result (which will internally refer to the mutable arrays).
+</p>
+</li>
+<li>
+<p>If 
+<code>eltype
+</code> is specified, this will be the element type of the result.
+</p>
+</li>
+</ul>
+<pre>
+<code class="language-julia hljs">using Test
+
+# Vector
+
+@test brief(sparse_vector([0, 1, 2])) == &quot;3 x Int64 (Sparse UInt32 67%)&quot;
+@test brief(sparse_vector([0, 1, 2]; eltype = Float32)) == &quot;3 x Float32 (Sparse UInt32 67%)&quot;
+
+# Vectors
+
+@test brief(sparse_vector(3, [1, 3], [1.0, 2.0])) == &quot;3 x Float64 (Sparse Int64 67%)&quot;
+@test brief(sparse_vector(3, read_only_array([1, 3]), read_only_array([1.0, 2.0]))) == &quot;3 x Float64 (ReadOnly, Sparse Int64 67%)&quot;
+
+println(&quot;OK&quot;)
+
+# output
+
+OK
+</code>
+</pre>
+</div>
+</section>
+</article>
+<article class="docstring">
+<header>
+<a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring">
+</a>
+<a class="docstring-binding" id="TanayLabUtilities.MatrixFormats.sparse_mask_vector" href="#TanayLabUtilities.MatrixFormats.sparse_mask_vector">
+<code>TanayLabUtilities.MatrixFormats.sparse_mask_vector
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+<span class="is-flex-grow-1 docstring-article-toggle-button" title="Collapse docstring">
+</span>
+</header>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">sparse_mask_vector(
+    size::Integer,
+    inzind::AbstractVector
+)::Union{ReadOnlyArray, SparseVector{Bool}}
+</code>
+</pre>
+<p>Create a sparse mask vector using only the indices of the 
+<code>true
+</code> entries. Alas, this still needs to allocate a vector of 
+<code>Bool
+</code> for the data.
+</p>
+<pre>
+<code class="language-julia hljs">using Test
+
+@test brief(sparse_mask_vector(3, [1, 3])) == &quot;3 x Bool (Sparse Int64 67%)&quot;
+@test brief(sparse_mask_vector(3, read_only_array([1, 3]))) == &quot;3 x Bool (ReadOnly, Sparse Int64 67%)&quot;
+
+println(&quot;OK&quot;)
+
+# output
+
+OK
+</code>
+</pre>
+</div>
+</section>
+</article>
+<article class="docstring">
+<header>
+<a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring">
+</a>
+<a class="docstring-binding" id="TanayLabUtilities.MatrixFormats.dense_mask_vector" href="#TanayLabUtilities.MatrixFormats.dense_mask_vector">
+<code>TanayLabUtilities.MatrixFormats.dense_mask_vector
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+<span class="is-flex-grow-1 docstring-article-toggle-button" title="Collapse docstring">
+</span>
+</header>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">dense_mask_vector(
+    size::Integer,
+    inzind::AbstractVector
+)::Vector{Bool}
+</code>
+</pre>
+<p>Create a dense mask vector using only the indices of the 
+<code>true
+</code> entries.
+</p>
+<pre>
+<code class="language-julia hljs">println(brief(dense_mask_vector(4, [1, 3])))
+
+# output
+
+4 x Bool (Dense; 50% true)
+</code>
+</pre>
+</div>
+</section>
+</article>
+<article class="docstring">
+<header>
+<a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring">
+</a>
+<a class="docstring-binding" id="TanayLabUtilities.MatrixFormats.sparsify" href="#TanayLabUtilities.MatrixFormats.sparsify">
+<code>TanayLabUtilities.MatrixFormats.sparsify
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+<span class="is-flex-grow-1 docstring-article-toggle-button" title="Collapse docstring">
+</span>
+</header>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">sparsify(
+    matrix::AbstractMatrix;
+    copy::Bool = false,
+    eltype::Maybe{Type} = nothing,
+    indtype::Maybe{Type} = nothing
+)::AbstractMatrix
+
+sparsify(
+    vector::AbstractVector;
+    copy::Bool = false,
+    eltype::Maybe{Type} = nothing,
+    indtype::Maybe{Type} = nothing
+)::AbstractVector
+</code>
+</pre>
+<p>Return a sparse version of an array, possibly forcing a different 
+<code>eltype
+</code> and/or 
+<code>indtype
+</code>. If given a dense matrix, the default 
+<code>indtype
+</code> will be 
+<a href="matrix_formats.html#TanayLabUtilities.MatrixFormats.indtype_for_size">
+<code>indtype_for_size
+</code>
+</a> for the matrix. This will preserve the matrix layout (for example, 
+<code>sparsify
+</code> of a transposed matrix will be a transposed matrix). If 
+<code>copy
+</code>, this will create a copy even if it is already sparse and has the correct 
+<code>eltype
+</code> and 
+<code>indtype
+</code>.
+</p>
+<pre>
+<code class="language-julia hljs">using Test
+using SparseArrays
+
+# Dense
+
+dense = rand(3, 4)
+@test sparsify(dense) == dense
+@test brief(dense) == &quot;3 x 4 x Float64 in Columns (Dense)&quot;
+@test brief(sparsify(dense)) == &quot;3 x 4 x Float64 in Columns (Sparse UInt32 100%)&quot;
+
+# Sparse
+
+sparse = SparseMatrixCSC([0 1 2; 3 4 0])
+@test sparsify(sparse) === sparse
+@test brief(sparse) == &quot;2 x 3 x Int64 in Columns (Sparse Int64 67%)&quot;
+
+@test sparsify(sparse; copy = true) == sparse
+@test sparsify(sparse; copy = true) !== sparse
+@test brief(sparsify(sparse)) == &quot;2 x 3 x Int64 in Columns (Sparse Int64 67%)&quot;
+
+@test sparsify(sparse; eltype = Int8) == sparse
+@test brief(sparsify(sparse; eltype = Int8)) == &quot;2 x 3 x Int8 in Columns (Sparse Int64 67%)&quot;
+
+@test sparsify(sparse; indtype = Int8) == sparse
+@test brief(sparsify(sparse; indtype = Int8)) == &quot;2 x 3 x Int64 in Columns (Sparse Int8 67%)&quot;
+
+# ReadOnly
+
+read_only = read_only_array(sparse)
+@test sparsify(read_only) === read_only
+@test brief(read_only) == &quot;2 x 3 x Int64 in Columns (ReadOnly, Sparse Int64 67%)&quot;
+
+read_only = read_only_array(dense)
+@test sparsify(read_only) == read_only
+@test brief(sparsify(read_only)) == &quot;3 x 4 x Float64 in Columns (ReadOnly, Sparse UInt32 100%)&quot;
+
+# Named
+
+using NamedArrays
+
+named = NamedArray(sparse)
+@test sparsify(named) === named
+@test brief(named) == &quot;2 x 3 x Int64 in Columns (Named, Sparse Int64 67%)&quot;
+
+named = NamedArray(dense)
+@test sparsify(named) == named
+@test brief(sparsify(named)) == &quot;3 x 4 x Float64 in Columns (Named, Sparse UInt32 100%)&quot;
+
+# Permuted
+
+permuted = PermutedDimsArray(sparse, (2,1))
+@test sparsify(permuted) === permuted
+@test brief(permuted) == &quot;3 x 2 x Int64 in Rows (Permute, Sparse Int64 67%)&quot;
+
+unpermuted = PermutedDimsArray(sparse, (1,2))
+@test sparsify(unpermuted) === unpermuted
+@test brief(unpermuted) == &quot;2 x 3 x Int64 in Columns (!Permute, Sparse Int64 67%)&quot;
+
+permuted = PermutedDimsArray(dense, (2,1))
+@test sparsify(permuted) == permuted
+@test brief(permuted) == &quot;4 x 3 x Float64 in Rows (Permute, Dense)&quot;
+@test brief(sparsify(permuted)) == &quot;4 x 3 x Float64 in Rows (Permute, Sparse UInt32 100%)&quot;
+
+unpermuted = PermutedDimsArray(dense, (1,2))
+@test sparsify(unpermuted) == unpermuted
+@test brief(unpermuted) == &quot;3 x 4 x Float64 in Columns (!Permute, Dense)&quot;
+@test brief(sparsify(unpermuted)) == &quot;3 x 4 x Float64 in Columns (!Permute, Sparse UInt32 100%)&quot;
+
+# LinearAlgebra
+
+transposed = transpose(sparse)
+@test sparsify(transposed) === transposed
+@test brief(transposed) == &quot;3 x 2 x Int64 in Rows (Transpose, Sparse Int64 67%)&quot;
+
+adjointed = adjoint(sparse)
+@test sparsify(adjointed) === adjointed
+@test brief(adjointed) == &quot;3 x 2 x Int64 in Rows (Adjoint, Sparse Int64 67%)&quot;
+
+transposed = transpose(dense)
+@test sparsify(transposed) == transposed
+@test brief(transposed) == &quot;4 x 3 x Float64 in Rows (Transpose, Dense)&quot;
+@test brief(sparsify(transposed)) == &quot;4 x 3 x Float64 in Rows (Transpose, Sparse UInt32 100%)&quot;
+
+adjointed = adjoint(dense)
+@test sparsify(adjointed) == adjointed
+@test brief(adjointed) == &quot;4 x 3 x Float64 in Rows (Adjoint, Dense)&quot;
+@test brief(sparsify(adjointed)) == &quot;4 x 3 x Float64 in Rows (Adjoint, Sparse UInt32 100%)&quot;
+
+println(&quot;OK&quot;)
+
+# output
+
+OK
+</code>
+</pre>
+<pre>
+<code class="language-julia hljs">using Test
+using SparseArrays
+
+# Dense
+
+dense = rand(4)
+@test sparsify(dense) == dense
+@test brief(dense) == &quot;4 x Float64 (Dense)&quot;
+@test brief(sparsify(dense)) == &quot;4 x Float64 (Sparse UInt32 100%)&quot;
+
+# Sparse
+
+sparse = SparseVector([0, 1, 2, 0])
+@test sparsify(sparse) === sparse
+@test brief(sparse) == &quot;4 x Int64 (Sparse Int64 50%)&quot;
+
+@test sparsify(sparse; copy = true) == sparse
+@test sparsify(sparse; copy = true) !== sparse
+@test brief(sparsify(sparse)) == &quot;4 x Int64 (Sparse Int64 50%)&quot;
+
+@test sparsify(sparse; eltype = Int8) == sparse
+@test brief(sparsify(sparse; eltype = Int8)) == &quot;4 x Int8 (Sparse Int64 50%)&quot;
+
+@test sparsify(sparse; indtype = Int8) == sparse
+@test brief(sparsify(sparse; indtype = Int8)) == &quot;4 x Int64 (Sparse Int8 50%)&quot;
+
+println(&quot;OK&quot;)
+
+# output
+
+OK
+</code>
+</pre>
+</div>
+</section>
+</article>
+<article class="docstring">
+<header>
+<a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring">
+</a>
+<a class="docstring-binding" id="TanayLabUtilities.MatrixFormats.densify" href="#TanayLabUtilities.MatrixFormats.densify">
+<code>TanayLabUtilities.MatrixFormats.densify
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+<span class="is-flex-grow-1 docstring-article-toggle-button" title="Collapse docstring">
+</span>
+</header>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">densify(matrix::AbstractMatrix; copy::Bool = false, eltype::Maybe{Type} = nothing)::AbstractMatrix
+densify(vector::AbstractVector; copy::Bool = false, eltype::Maybe{Type} = nothing)::AbstractVector
+</code>
+</pre>
+<p>Return a dense version of an array, possibly forcing a different 
+<code>eltype
+</code>. This will preserve the matrix layout (for example, 
+<code>densify
+</code> of a transposed matrix will be a transposed matrix). If 
+<code>copy
+</code>, this will create a copy even if it is already dense and has the correct 
+<code>eltype
+</code>.
+</p>
+<pre>
+<code class="language-julia hljs">using Test
+using SparseArrays
+
+# Dense
+
+dense = rand(3, 4)
+@test densify(dense) === dense
+@test brief(dense) == &quot;3 x 4 x Float64 in Columns (Dense)&quot;
+
+@test densify(dense; copy = true) !== dense
+@test densify(dense; copy = true) == dense
+@test brief(densify(dense; copy = true)) == &quot;3 x 4 x Float64 in Columns (Dense)&quot;
+
+@test isapprox(densify(dense; eltype = Float32), dense)
+@test brief(densify(dense; eltype = Float32)) == &quot;3 x 4 x Float32 in Columns (Dense)&quot;
+
+# Sparse
+
+sparse = SparseMatrixCSC([0 1 2; 3 4 0])
+
+@test densify(sparse) == sparse
+@test brief(densify(sparse)) == &quot;2 x 3 x Int64 in Columns (Dense)&quot;
+@test brief(densify(sparse; eltype = Int8)) == &quot;2 x 3 x Int8 in Columns (Dense)&quot;
+
+# ReadOnly
+
+read_only = read_only_array(sparse)
+@test densify(read_only) == read_only
+@test brief(read_only) == &quot;2 x 3 x Int64 in Columns (ReadOnly, Sparse Int64 67%)&quot;
+@test brief(densify(read_only)) == &quot;2 x 3 x Int64 in Columns (ReadOnly, Dense)&quot;
+
+read_only = read_only_array(dense)
+@test densify(read_only) == dense
+
+# Named
+
+using NamedArrays
+
+named = NamedArray(sparse)
+@test densify(named) == named
+@test brief(named) == &quot;2 x 3 x Int64 in Columns (Named, Sparse Int64 67%)&quot;
+@test brief(densify(named)) == &quot;2 x 3 x Int64 in Columns (Named, Dense)&quot;
+
+named = NamedArray(dense)
+@test densify(named) == dense
+
+# Permuted
+
+permuted = PermutedDimsArray(dense, (2,1))
+@test densify(permuted) === permuted
+@test brief(permuted) == &quot;4 x 3 x Float64 in Rows (Permute, Dense)&quot;
+
+unpermuted = PermutedDimsArray(dense, (1,2))
+@test densify(unpermuted) === unpermuted
+@test brief(unpermuted) == &quot;3 x 4 x Float64 in Columns (!Permute, Dense)&quot;
+
+permuted = PermutedDimsArray(sparse, (2,1))
+@test densify(permuted) == permuted
+@test brief(permuted) == &quot;3 x 2 x Int64 in Rows (Permute, Sparse Int64 67%)&quot;
+@test brief(densify(permuted)) == &quot;3 x 2 x Int64 in Rows (Permute, Dense)&quot;
+
+unpermuted = PermutedDimsArray(sparse, (1,2))
+@test densify(unpermuted) == unpermuted
+@test brief(unpermuted) == &quot;2 x 3 x Int64 in Columns (!Permute, Sparse Int64 67%)&quot;
+@test brief(densify(unpermuted)) == &quot;2 x 3 x Int64 in Columns (!Permute, Dense)&quot;
+
+# LinearAlgebra
+
+transposed = transpose(dense)
+@test densify(transposed) === transposed
+@test brief(transposed) == &quot;4 x 3 x Float64 in Rows (Transpose, Dense)&quot;
+
+adjointed = adjoint(dense)
+@test densify(adjointed) === adjointed
+@test brief(adjointed) == &quot;4 x 3 x Float64 in Rows (Adjoint, Dense)&quot;
+
+transposed = transpose(sparse)
+@test densify(transposed) == transposed
+@test brief(transposed) == &quot;3 x 2 x Int64 in Rows (Transpose, Sparse Int64 67%)&quot;
+@test brief(densify(transposed)) == &quot;3 x 2 x Int64 in Rows (Transpose, Dense)&quot;
+
+adjointed = adjoint(sparse)
+@test densify(adjointed) == adjointed
+@test brief(adjointed) == &quot;3 x 2 x Int64 in Rows (Adjoint, Sparse Int64 67%)&quot;
+@test brief(densify(adjointed)) == &quot;3 x 2 x Int64 in Rows (Adjoint, Dense)&quot;
+
+println(&quot;OK&quot;)
+
+# output
+
+OK
+</code>
+</pre>
+<pre>
+<code class="language-julia hljs">using Test
+using SparseArrays
+
+# Sparse
+
+sparse = SparseVector([0, 1, 2, 0])
+
+@test densify(sparse) == sparse
+@test brief(densify(sparse)) == &quot;4 x Int64 (Dense)&quot;
+
+# Dense
+
+dense = rand(4)
+@test densify(dense) === dense
+@test brief(dense) == &quot;4 x Float64 (Dense)&quot;
+
+@test densify(dense; copy = true) !== dense
+@test densify(dense; copy = true) == dense
+@test brief(densify(dense; copy = true)) == &quot;4 x Float64 (Dense)&quot;
+
+@test isapprox(densify(dense; eltype = Float32), dense)
+@test brief(densify(dense; eltype = Float32)) == &quot;4 x Float32 (Dense)&quot;
+
+println(&quot;OK&quot;)
+
+# output
+
+OK
+</code>
+</pre>
+</div>
+</section>
+</article>
+<article class="docstring">
+<header>
+<a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring">
+</a>
+<a class="docstring-binding" id="TanayLabUtilities.MatrixFormats.bestify" href="#TanayLabUtilities.MatrixFormats.bestify">
+<code>TanayLabUtilities.MatrixFormats.bestify
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+<span class="is-flex-grow-1 docstring-article-toggle-button" title="Collapse docstring">
+</span>
+</header>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">bestify(
+    matrix::AbstractMatrix;
+    min_sparse_saving_fraction::AbstractFloat = ```0.25```,
+    copy::Bool = false,
+    eltype::Maybe{Type} = nothing,
+)::AbstractMatrix
+
+bestify(
+    matrix::AbstractVector;
+    min_sparse_saving_fraction::AbstractFloat = ```0.25```,
+    copy::Bool = false,
+    eltype::Maybe{Type} = nothing,
+)::AbstractVector
+</code>
+</pre>
+<p>Return a &quot;best&quot; (dense or sparse) version of an array. The sparse format is chosen if it saves at least 
+<code>min_sparse_saving_fraction
+</code> of the storage of the dense format. If 
+<code>copy
+</code>, this will create a copy even if it is already in the best format.
+</p>
+<p>If 
+<code>eltype
+</code> is specified, computes the savings (and create the &quot;best&quot; version) using this element type. In addition, if given a sparse matrix, we consider the 
+<a href="matrix_formats.html#TanayLabUtilities.MatrixFormats.indtype_for_size">
+<code>indtype_for_size
+</code>
+</a> for it, and if that saves 
+<code>min_sparse_saving_fraction
+</code> relative to the current sparse representation, we&#39;ll create a new one using the better (smaller) 
+<code>indtype
+</code>.
+</p>
+<pre>
+<code class="language-julia hljs">using Test
+using LinearAlgebra
+
+# Dense
+
+dense = zeros(Int32, 5, 5)
+view(dense, diagind(dense)) .= 1
+
+@test bestify(dense) == dense
+@test brief(bestify(dense)) == &quot;5 x 5 x Int32 in Columns (Sparse UInt32 20%)&quot;
+
+@test bestify(dense; min_sparse_saving_fraction = 0.5) === dense
+
+# Sparse
+
+sparse = sparse_matrix_csc(dense)
+@test bestify(sparse) === sparse
+@test brief(sparse) == &quot;5 x 5 x Int32 in Columns (Sparse UInt32 20%)&quot;
+
+# ReadOnly
+
+read_only = read_only_array(dense)
+@test bestify(read_only; min_sparse_saving_fraction = 0.5) === read_only
+@test brief(read_only) == &quot;5 x 5 x Int32 in Columns (ReadOnly, Dense)&quot;
+
+@test bestify(read_only) == read_only
+@test brief(bestify(read_only)) == &quot;5 x 5 x Int32 in Columns (ReadOnly, Sparse UInt32 20%)&quot;
+
+read_only = read_only_array(sparse)
+@test bestify(read_only) === read_only
+@test brief(read_only) == &quot;5 x 5 x Int32 in Columns (ReadOnly, Sparse UInt32 20%)&quot;
+
+@test bestify(read_only; min_sparse_saving_fraction = 0.5) == read_only
+@test brief(bestify(read_only; min_sparse_saving_fraction = 0.5)) == &quot;5 x 5 x Int32 in Columns (ReadOnly, Dense)&quot;
+
+# Named
+
+using NamedArrays
+
+named = NamedArray(dense)
+@test bestify(named; min_sparse_saving_fraction = 0.5) === named
+@test brief(named) == &quot;5 x 5 x Int32 in Columns (Named, Dense)&quot;
+
+@test bestify(named) == named
+@test brief(bestify(named)) == &quot;5 x 5 x Int32 in Columns (Named, Sparse UInt32 20%)&quot;
+
+named = NamedArray(sparse)
+@test bestify(named) === named
+@test brief(named) == &quot;5 x 5 x Int32 in Columns (Named, Sparse UInt32 20%)&quot;
+
+@test bestify(named; min_sparse_saving_fraction = 0.5) == named
+@test brief(bestify(named; min_sparse_saving_fraction = 0.5)) == &quot;5 x 5 x Int32 in Columns (Named, Dense)&quot;
+
+# Permuted
+
+permuted = PermutedDimsArray(dense, (2,1))
+@test bestify(permuted; min_sparse_saving_fraction = 0.5) === permuted
+@test brief(permuted) == &quot;5 x 5 x Int32 in Rows (Permute, Dense)&quot;
+
+@test bestify(permuted) == permuted
+@test brief(bestify(permuted)) == &quot;5 x 5 x Int32 in Rows (Permute, Sparse UInt32 20%)&quot;
+
+permuted = PermutedDimsArray(sparse, (1,2))
+@test bestify(permuted) === permuted
+@test brief(permuted) == &quot;5 x 5 x Int32 in Columns (!Permute, Sparse UInt32 20%)&quot;
+
+@test bestify(permuted; min_sparse_saving_fraction = 0.5) == permuted
+@test brief(bestify(permuted; min_sparse_saving_fraction = 0.5)) == &quot;5 x 5 x Int32 in Columns (!Permute, Dense)&quot;
+
+# LinearAlgebra
+
+transposed = transpose(dense)
+@test bestify(transposed; min_sparse_saving_fraction = 0.5) === transposed
+@test brief(transposed) == &quot;5 x 5 x Int32 in Rows (Transpose, Dense)&quot;
+
+@test bestify(transposed) == transposed
+@test brief(bestify(transposed)) == &quot;5 x 5 x Int32 in Rows (Transpose, Sparse UInt32 20%)&quot;
+
+adjointed = adjoint(sparse)
+@test bestify(adjointed) === adjointed
+@test brief(adjointed) == &quot;5 x 5 x Int32 in Rows (Adjoint, Sparse UInt32 20%)&quot;
+
+@test bestify(adjointed; min_sparse_saving_fraction = 0.5) == adjointed
+@test brief(bestify(adjointed; min_sparse_saving_fraction = 0.5)) == &quot;5 x 5 x Int32 in Rows (Adjoint, Dense)&quot;
+
+println(&quot;OK&quot;)
+
+# output
+
+OK
+</code>
+</pre>
+<pre>
+<code class="language-julia hljs">using Test
+using LinearAlgebra
+
+# Dense
+
+dense = zeros(Int32, 3)
+dense[1] = 1
+
+@test bestify(dense) == dense
+@test brief(bestify(dense)) == &quot;3 x Int32 (Sparse UInt32 33%)&quot;
+
+@test bestify(dense; min_sparse_saving_fraction = 0.5) === dense
+
+# Sparse
+
+sparse = sparse_vector(dense)
+@test bestify(sparse) === sparse
+@test brief(sparse) == &quot;3 x Int32 (Sparse UInt32 33%)&quot;
+
+println(&quot;OK&quot;)
+
+# output
+
+OK
+</code>
+</pre>
+</div>
+</section>
+</article>
+<article class="docstring">
+<header>
+<a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring">
+</a>
+<a class="docstring-binding" id="TanayLabUtilities.MatrixFormats.indtype_for_size" href="#TanayLabUtilities.MatrixFormats.indtype_for_size">
+<code>TanayLabUtilities.MatrixFormats.indtype_for_size
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+<span class="is-flex-grow-1 docstring-article-toggle-button" title="Collapse docstring">
+</span>
+</header>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">indtype_for_size(size::Integer)::Type
+</code>
+</pre>
+<p>Return the an integer data type which is large enough to hold indices and offsets for a 
+<code>SparseMatrixCSC
+</code> matrix of some 
+<code>size
+</code> (total number of elements). We try to use 
+<code>UInt32
+</code> whenever possible because for large matrices (especially with 32-bit value types) this will drastically reduce the amount of space used.
+</p>
+<pre>
+<code class="language-julia hljs">println(10000000 =&gt; indtype_for_size(10000000))
+println(10000000000 =&gt; indtype_for_size(10000000000))
+
+# output
+
+10000000 =&gt; UInt32
+10000000000 =&gt; UInt64
+</code>
+</pre>
+</div>
+</section>
+</article>
+<article class="docstring">
+<header>
+<a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring">
+</a>
+<a class="docstring-binding" id="TanayLabUtilities.MatrixFormats.colptr" href="#TanayLabUtilities.MatrixFormats.colptr">
+<code>TanayLabUtilities.MatrixFormats.colptr
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+<span class="is-flex-grow-1 docstring-article-toggle-button" title="Collapse docstring">
+</span>
+</header>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">colptr(sparse::AbstractMatrix)::AbstractVector{&lt;:Integer}
+</code>
+</pre>
+<p>Return the 
+<code>colptr
+</code> of a 
+<code>sparse
+</code> matrix.
+</p>
+<pre>
+<code class="language-julia hljs">using Test
+using NamedArrays
+using SparseArrays
+
+sparse_matrix = SparseMatrixCSC([0 1 2; 3 4 0])
+@assert colptr(sparse_matrix) === sparse_matrix.colptr
+@assert colptr(read_only_array(sparse_matrix)) === sparse_matrix.colptr
+@assert colptr(NamedArray(sparse_matrix)) === sparse_matrix.colptr
+
+println(&quot;OK&quot;)
+
+# output
+
+OK
+</code>
+</pre>
+</div>
+</section>
+</article>
+<article class="docstring">
+<header>
+<a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring">
+</a>
+<a class="docstring-binding" id="TanayLabUtilities.MatrixFormats.rowval" href="#TanayLabUtilities.MatrixFormats.rowval">
+<code>TanayLabUtilities.MatrixFormats.rowval
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+<span class="is-flex-grow-1 docstring-article-toggle-button" title="Collapse docstring">
+</span>
+</header>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">rowval(sparse::AbstractArray)::AbstractVector{&lt;Integer}
+</code>
+</pre>
+<p>Return the 
+<code>rowval
+</code> of a 
+<code>sparse
+</code> array.
+</p>
+<pre>
+<code class="language-julia hljs">using Test
+using NamedArrays
+using SparseArrays
+
+sparse_matrix = SparseMatrixCSC([0 1 2; 3 4 0])
+@assert rowval(sparse_matrix) === sparse_matrix.rowval
+@assert rowval(read_only_array(sparse_matrix)) === sparse_matrix.rowval
+@assert rowval(NamedArray(sparse_matrix)) === sparse_matrix.rowval
+
+println(&quot;OK&quot;)
+
+# output
+
+OK
+</code>
+</pre>
+</div>
+</section>
+</article>
+<article class="docstring">
+<header>
+<a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring">
+</a>
+<a class="docstring-binding" id="TanayLabUtilities.MatrixFormats.nzind" href="#TanayLabUtilities.MatrixFormats.nzind">
+<code>TanayLabUtilities.MatrixFormats.nzind
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+<span class="is-flex-grow-1 docstring-article-toggle-button" title="Collapse docstring">
+</span>
+</header>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">nzind(sparse::AbstractVector)::AbstractVector{&lt;:Integer}
+</code>
+</pre>
+<p>Return the 
+<code>nzind
+</code> of a 
+<code>sparse
+</code> vector.
+</p>
+<pre>
+<code class="language-julia hljs">using Test
+using NamedArrays
+using SparseArrays
+
+sparse_vector = SparseVector([0, 1, 2])
+@assert nzind(sparse_vector) === sparse_vector.nzind
+@assert nzind(read_only_array(sparse_vector)) === sparse_vector.nzind
+@assert nzind(NamedArray(sparse_vector)) === sparse_vector.nzind
+
+println(&quot;OK&quot;)
+
+# output
+
+OK
+</code>
+</pre>
+</div>
+</section>
+</article>
+<article class="docstring">
+<header>
+<a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring">
+</a>
+<a class="docstring-binding" id="TanayLabUtilities.MatrixFormats.nzval" href="#TanayLabUtilities.MatrixFormats.nzval">
+<code>TanayLabUtilities.MatrixFormats.nzval
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+<span class="is-flex-grow-1 docstring-article-toggle-button" title="Collapse docstring">
+</span>
+</header>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">nzval(sparse::AbstractArray)::AbstractVector
+</code>
+</pre>
+<p>Return the 
+<code>nzval
+</code> of a 
+<code>sparse
+</code> array.
+</p>
+<pre>
+<code class="language-julia hljs">using Test
+using NamedArrays
+using SparseArrays
+
+sparse_matrix = SparseMatrixCSC([0 1 2; 3 4 0])
+@assert nzval(sparse_matrix) === sparse_matrix.nzval
+@assert nzval(read_only_array(sparse_matrix)) === sparse_matrix.nzval
+@assert nzval(NamedArray(sparse_matrix)) === sparse_matrix.nzval
+
+sparse_vector = SparseVector([0, 1, 2])
+@assert nzval(sparse_vector) === sparse_vector.nzval
+@assert nzval(read_only_array(sparse_vector)) === sparse_vector.nzval
+@assert nzval(NamedArray(sparse_vector)) === sparse_vector.nzval
+
+println(&quot;OK&quot;)
+
+# output
+
+OK
+</code>
+</pre>
+</div>
+</section>
+</article>
+<h2 id="Index">
+<a class="docs-heading-anchor" href="#Index">Index
+</a>
+<a id="Index-1">
+</a>
+<a class="docs-heading-anchor-permalink" href="#Index" title="Permalink">
+</a>
+</h2>
+<ul>
+<li>
+<a href="matrix_formats.html#TanayLabUtilities.MatrixFormats">
+<code>TanayLabUtilities.MatrixFormats
+</code>
+</a>
+</li>
+<li>
+<a href="matrix_formats.html#TanayLabUtilities.MatrixFormats.bestify">
+<code>TanayLabUtilities.MatrixFormats.bestify
+</code>
+</a>
+</li>
+<li>
+<a href="matrix_formats.html#TanayLabUtilities.MatrixFormats.colptr">
+<code>TanayLabUtilities.MatrixFormats.colptr
+</code>
+</a>
+</li>
+<li>
+<a href="matrix_formats.html#TanayLabUtilities.MatrixFormats.copy_array">
+<code>TanayLabUtilities.MatrixFormats.copy_array
+</code>
+</a>
+</li>
+<li>
+<a href="matrix_formats.html#TanayLabUtilities.MatrixFormats.dense_mask_vector">
+<code>TanayLabUtilities.MatrixFormats.dense_mask_vector
+</code>
+</a>
+</li>
+<li>
+<a href="matrix_formats.html#TanayLabUtilities.MatrixFormats.densify">
+<code>TanayLabUtilities.MatrixFormats.densify
+</code>
+</a>
+</li>
+<li>
+<a href="matrix_formats.html#TanayLabUtilities.MatrixFormats.indtype_for_size">
+<code>TanayLabUtilities.MatrixFormats.indtype_for_size
+</code>
+</a>
+</li>
+<li>
+<a href="matrix_formats.html#TanayLabUtilities.MatrixFormats.nzind">
+<code>TanayLabUtilities.MatrixFormats.nzind
+</code>
+</a>
+</li>
+<li>
+<a href="matrix_formats.html#TanayLabUtilities.MatrixFormats.nzval">
+<code>TanayLabUtilities.MatrixFormats.nzval
+</code>
+</a>
+</li>
+<li>
+<a href="matrix_formats.html#TanayLabUtilities.MatrixFormats.rowval">
+<code>TanayLabUtilities.MatrixFormats.rowval
+</code>
+</a>
+</li>
+<li>
+<a href="matrix_formats.html#TanayLabUtilities.MatrixFormats.sparse_mask_vector">
+<code>TanayLabUtilities.MatrixFormats.sparse_mask_vector
+</code>
+</a>
+</li>
+<li>
+<a href="matrix_formats.html#TanayLabUtilities.MatrixFormats.sparse_matrix_csc">
+<code>TanayLabUtilities.MatrixFormats.sparse_matrix_csc
+</code>
+</a>
+</li>
+<li>
+<a href="matrix_formats.html#TanayLabUtilities.MatrixFormats.sparse_vector">
+<code>TanayLabUtilities.MatrixFormats.sparse_vector
+</code>
+</a>
+</li>
+<li>
+<a href="matrix_formats.html#TanayLabUtilities.MatrixFormats.sparsify">
+<code>TanayLabUtilities.MatrixFormats.sparsify
+</code>
+</a>
+</li>
+</ul>
+</article>
+<nav class="docs-footer">
+<p class="footer-message">Powered by 
+<a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl
+</a> and the 
+<a href="https://julialang.org/">Julia Programming Language
+</a>.
+</p>
+</nav>
+</div>
+<div class="modal" id="documenter-settings">
+<div class="modal-background">
+</div>
+<div class="modal-card">
+<header class="modal-card-head">
+<p class="modal-card-title">Settings
+</p>
+<button class="delete">
+</button>
+</header>
+<section class="modal-card-body">
+<p>
+<label class="label">Theme
+</label>
+<div class="select">
+<select id="documenter-themepicker">
+<option value="auto">Automatic (OS)
+</option>
+<option value="documenter-light">documenter-light
+</option>
+<option value="documenter-dark">documenter-dark
+</option>
+<option value="catppuccin-latte">catppuccin-latte
+</option>
+<option value="catppuccin-frappe">catppuccin-frappe
+</option>
+<option value="catppuccin-macchiato">catppuccin-macchiato
+</option>
+<option value="catppuccin-mocha">catppuccin-mocha
+</option>
+</select>
+</div>
+</p>
+<hr/>
+<p>This document was generated with 
+<a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl
+</a> version 1.9.0. Using Julia version 1.11.4.
+</p>
+</section>
+<footer class="modal-card-foot">
+</footer>
+</div>
+</div>
+</div>
+</body>
+</html>

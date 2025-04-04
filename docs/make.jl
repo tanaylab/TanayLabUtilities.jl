@@ -39,10 +39,12 @@ makedocs(;
         "brief.md",
         "logger.md",
         "parallel_storage.md",
+        "parallel_rng.md",
         "locks.md",
         "names.md",
         "documentation.md",
         "handlers.md",
+        "read_only_arrays.md",
     ],
 )
 
