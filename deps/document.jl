@@ -56,7 +56,7 @@ makedocs(;
         "parallel_storage.md",
         "parallel_rng.md",
         "locks.md",
-        "names.md",
+        "unique_names.md",
         "documentation.md",
         "handlers.md",
         "read_only_arrays.md",

@@ -34,8 +34,8 @@ include("parallel_rng.jl")
 include("locks.jl")
 @reexport using .Locks
 
-include("names.jl")
-@reexport using .Names
+include("unique_names.jl")
+@reexport using .UniqueNames
 
 include("handlers.jl")
 @reexport using .Handlers

@@ -1,7 +1,7 @@
 """
 Functions for generating names.
 """
-module Names
+module UniqueNames
 
 export unique_name
 
@@ -30,7 +30,7 @@ To help with tests, if the `prefix` contains `!`, we return it as-is, accepting 
 # Example
 
 ```jldoctest
-using TanayLabUtilities.Names
+using TanayLabUtilities.UniqueNames
 
 unique_name("foo")
 
@@ -42,7 +42,7 @@ unique_name("foo")
 # Second usage
 
 ```jldoctest
-using TanayLabUtilities.Names
+using TanayLabUtilities.UniqueNames
 
 unique_name("foo")
 
@@ -54,7 +54,7 @@ unique_name("foo")
 # Force not unique
 
 ```jldoctest
-using TanayLabUtilities.Names
+using TanayLabUtilities.UniqueNames
 
 unique_name("foo!")
 
@@ -66,7 +66,7 @@ unique_name("foo!")
 # Second usage
 
 ```jldoctest
-using TanayLabUtilities.Names
+using TanayLabUtilities.UniqueNames
 
 unique_name("foo!")
 
