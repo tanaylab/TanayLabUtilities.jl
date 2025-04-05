@@ -354,7 +354,7 @@ function copy_array(
 
     if is_sparse
         @assert major_axis(matrix) == Columns
-        return SparseMatrixCSC{eltype, indtype}(matrix)
+        return sparse_matrix_csc(matrix; eltype, indtype)
     elseif major_axis(matrix) == Rows
         return transpose(Matrix{eltype}(transpose(matrix)))  # UNTESTED
     else
@@ -370,7 +370,7 @@ function copy_array(
     is_sparse, eltype, indtype = parse_sparse_array(vector; eltype, indtype)
 
     if is_sparse
-        return SparseVector{eltype, indtype}(vector)
+        return sparse_vector(vector; eltype, indtype)
     else
         return Vector{eltype}(vector)
     end
@@ -572,7 +572,7 @@ function sparsify(
     is_sparse, eltype, indtype = parse_sparse_array(matrix; eltype, indtype)
 
     if !is_sparse || copy || eltype != Base.eltype(matrix) || indtype != SparseArrays.indtype(matrix)
-        matrix = SparseMatrixCSC{eltype, indtype}(matrix)
+        matrix = sparse_matrix_csc(matrix; eltype, indtype)
     end
 
     return matrix
@@ -587,7 +587,7 @@ function sparsify(
     is_sparse, eltype, indtype = parse_sparse_array(vector; eltype, indtype)
 
     if !is_sparse || copy || eltype != Base.eltype(vector) || indtype != SparseArrays.indtype(vector)
-        vector = SparseVector{eltype, indtype}(vector)
+        vector = sparse_vector(vector; eltype, indtype)
     end
 
     return vector
