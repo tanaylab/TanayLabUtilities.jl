@@ -28,6 +28,7 @@ using Test
 @test brief(missing) == "missing"
 @test brief(undef) == "undef"
 @test brief(("foo", :bar)) == "(\\"foo\\", :bar)"
+@test brief("foo" => :bar) == "\\"foo\\" => :bar"
 @test brief("foo") == "\\"foo\\""
 @test brief("foo "^10) == "\\"foo foo foo foo ...\\" (40)"
 @test brief([true, false]) == "2 x Bool (Dense; 50% true)"
@@ -40,6 +41,8 @@ using Test
 
 struct Vaz end
 @test brief(Vaz()) == summary(Vaz())
+
+@test brief(Set([1])) == "1 x Int64 (Set)"
 
 @test brief(rand(5)) == "5 x Float64 (Dense)"
 @test brief(rand(3, 4)) == "3 x 4 x Float64 in Columns (Dense)"
@@ -74,10 +77,10 @@ OK
 """
 function brief(value::Any)::AbstractString
     try
-        return "$(brief(eltype(value))) x $(join(string.(size(value)), " x ")) $(brief(typeof(value)))"
+        return "$(join(string.(size(value)), " x ")) x $(brief(eltype(value))) ($(brief(typeof(value))))"
     catch
         try
-            return "$(brief(eltype(value))) x $(length(value)) $(brief(typeof(value)))"
+            return "$(length(value)) x $(brief(eltype(value))) ($(brief(typeof(value))))"
         catch
             return summary(value)
         end
@@ -94,6 +97,10 @@ end
 
 function brief(value::Tuple)::AbstractString
     return "(" * join([brief(entry) for entry in value], ", ") * ")"
+end
+
+function brief(value::Pair)::AbstractString
+    return "$(brief(value[1])) => $(brief(value[2]))"
 end
 
 function brief(value::Union{Real, Type, Nothing, Missing})::AbstractString

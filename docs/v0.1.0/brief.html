@@ -223,6 +223,7 @@
 @test brief(missing) == &quot;missing&quot;
 @test brief(undef) == &quot;undef&quot;
 @test brief((&quot;foo&quot;, :bar)) == &quot;(\&quot;foo\&quot;, :bar)&quot;
+@test brief(&quot;foo&quot; =&gt; :bar) == &quot;\&quot;foo\&quot; =&gt; :bar&quot;
 @test brief(&quot;foo&quot;) == &quot;\&quot;foo\&quot;&quot;
 @test brief(&quot;foo &quot;^10) == &quot;\&quot;foo foo foo foo ...\&quot; (40)&quot;
 @test brief([true, false]) == &quot;2 x Bool (Dense; 50% true)&quot;
@@ -235,6 +236,8 @@
 
 struct Vaz end
 @test brief(Vaz()) == summary(Vaz())
+
+@test brief(Set([1])) == &quot;1 x Int64 (Set)&quot;
 
 @test brief(rand(5)) == &quot;5 x Float64 (Dense)&quot;
 @test brief(rand(3, 4)) == &quot;3 x 4 x Float64 in Columns (Dense)&quot;
