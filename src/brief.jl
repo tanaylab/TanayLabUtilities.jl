@@ -13,137 +13,103 @@ export percent
 using Distributed
 
 """
-    brief(value::Any)::String
+    brief(value::Any)::AbstractString
 
 Provide a brief description of a `value`. This is basically `summary` but modified for specific types (in particular,
 vectors and matrices) to give "better" results.
 
 ```jldoctest
-brief(1.0)
+using Test
 
-# output
+@test brief(1.0) == "1.0"
+@test brief(true) == "true"
+@test brief(:foo) == ":foo"
+@test brief(nothing) == "nothing"
+@test brief(missing) == "missing"
+@test brief(undef) == "undef"
+@test brief(("foo", :bar)) == "(\\"foo\\", :bar)"
+@test brief("foo") == "\\"foo\\""
+@test brief("foo "^10) == "\\"foo foo foo foo ...\\" (40)"
+@test brief([true, false]) == "2 x Bool (Dense; 50% true)"
+@test brief(Int64) == "Int64"
+@test brief(String) == "Str"
+@test brief(AbstractString) == "Str"
 
-"1.0"
-```
-
-```jldoctest
-brief(true)
-
-# output
-
-"true"
-```
-
-```jldoctest
-brief(:foo)
-
-# output
-
-":foo"
-```
-
-```jldoctest
-brief(nothing)
-
-# output
-
-"nothing"
-```
-
-```jldoctest
-brief(missing)
-
-# output
-
-"missing"
-```
-
-```jldoctest
-brief(undef)
-
-# output
-
-"undef"
-```
-
-```jldoctest
-brief(("foo", :bar))
-
-# output
-
-"(\\"foo\\", :bar)"
-```
-
-```jldoctest
-brief("foo")
-
-# output
-
-"\\"foo\\""
-```
-
-```jldoctest
-brief("foo "^10)
-
-# output
-
-"\\"foo foo foo foo ...\\" (40)"
-```
-
-```jldoctest
 @enum Foo Bar Baz
+@test brief(Bar) == "Foo::Bar"
 
-brief(Bar)
+struct Vaz end
+@test brief(Vaz()) == summary(Vaz())
+
+@test brief(rand(5)) == "5 x Float64 (Dense)"
+@test brief(rand(3, 4)) == "3 x 4 x Float64 in Columns (Dense)"
+
+@test brief(read_only_array(rand(5))) == "5 x Float64 (ReadOnly, Dense)"
+@test brief(PermutedDimsArray(rand(3, 4), (2, 1))) == "4 x 3 x Float64 in Rows (Permute, Dense)"
+@test brief(PermutedDimsArray(rand(3, 4), (1, 2))) == "3 x 4 x Float64 in Columns (!Permute, Dense)"
+
+using SparseArrays
+
+@test brief(SparseVector([0.0, 1.0])) == "2 x Float64 (Sparse Int64 50%)"
+@test brief(SparseMatrixCSC([0.0 1.0 2.0; 3.0 4.0 0.0])) == "2 x 3 x Float64 in Columns (Sparse Int64 67%)"
+
+using NamedArrays
+
+@test brief(NamedArray(rand(2))) == "2 x Float64 (Named, Dense)"
+@test brief(NamedArray(SparseVector([0.0, 1.0]))) == "2 x Float64 (Named, Sparse Int64 50%)"
+
+using LinearAlgebra
+
+@test brief(transpose(rand(2))) == "2 x Float64 (Transpose, Dense)"
+@test brief(adjoint(rand(2))) == "2 x Float64 (Adjoint, Dense)"
+
+@test brief(Dict(["a" => 1])) == "1 x Str => Int64 (Dict)"
+
+println("OK")
 
 # output
 
-"Foo::Bar"
-```
-
-```jldoctest
-struct Foo end
-
-brief(Foo())
-
-# output
-
-"Foo"
-```
-
-```jldoctest
-brief([true, false])
-
-# output
-
-"2 x Bool (Dense; 50% true)"
+OK
 ```
 """
-function brief(value::Any)::String
+function brief(value::Any)::AbstractString
     try
-        return "$(eltype(value)) x $(join(string.(size(value)), " x ")) $(nameof(typeof(value)))"
+        return "$(brief(eltype(value))) x $(join(string.(size(value)), " x ")) $(brief(typeof(value)))"
     catch
         try
-            return "$(eltype(value)) x $(length(value)) $(nameof(typeof(value)))"
+            return "$(brief(eltype(value))) x $(length(value)) $(brief(typeof(value)))"
         catch
             return summary(value)
         end
     end
 end
 
-function brief(value::Tuple)::String
+function brief(value::Type)::AbstractString
+    if value <: AbstractString
+        return "Str"
+    else
+        return "$(nameof(value))"
+    end
+end
+
+function brief(value::Tuple)::AbstractString
     return "(" * join([brief(entry) for entry in value], ", ") * ")"
 end
 
-function brief(value::Union{Real, Type, Nothing, Missing})::String
+function brief(value::Union{Real, Type, Nothing, Missing})::AbstractString
     return "$(value)"
 end
 
-function brief(value::Enum)::String
+function brief(value::Enum)::AbstractString
     return "$(nameof(typeof(value)))::$(value)"
 end
 
-function brief(::UndefInitializer)::String
+function brief(::UndefInitializer)::AbstractString
     return "undef"
+end
+
+function brief(value::AbstractDict)::AbstractString
+    return "$(length(value)) x $(brief(keytype(value))) => $(brief(valtype(value))) ($(brief(typeof(value))))"
 end
 
 """
@@ -152,7 +118,7 @@ their length).
 """
 MAX_BRIEF_STRING::Integer = 16
 
-function brief(value::AbstractString)::String
+function brief(value::AbstractString)::AbstractString
     if length(value) <= MAX_BRIEF_STRING
         return "\"$(value)\""
     else
@@ -160,12 +126,12 @@ function brief(value::AbstractString)::String
     end
 end
 
-function brief(value::Symbol)::String
+function brief(value::Symbol)::AbstractString
     return ":$(value)"
 end
 
 """
-    percent(used::Real, out_of::Real)::String
+    percent(used::Real, out_of::Real)::AbstractString
 
 Format a fraction of `used` amount `out_of` some total, as an integer percent value. Very small fractions are denoted as
 `<1%` and very large fractions are denoted as `>99%`. We use this to show the percent of `true` values in masks, and the
@@ -235,7 +201,7 @@ percent(1000, 1000)
 "100%"
 ```
 """
-function percent(used::Real, out_of::Real)::String
+function percent(used::Real, out_of::Real)::AbstractString
     @assert 0 <= used <= out_of
 
     if out_of == 0

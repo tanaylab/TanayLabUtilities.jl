@@ -75,7 +75,7 @@
 </g>
 </g>
 <!-- Types&#45;&gt;Logger -->
-<g id="edge3" class="edge">
+<g id="edge4" class="edge">
 <title>Types&#45;&gt;Logger</title>
 <path fill="none" stroke="black" d="M178.78,-220.89C190.76,-213.01 208.41,-201.39 222.62,-192.04"/>
 <polygon fill="black" stroke="black" points="224.53,-194.96 230.96,-186.54 220.69,-189.12 224.53,-194.96"/>
@@ -135,7 +135,7 @@
 </g>
 </g>
 <!-- Brief&#45;&gt;Logger -->
-<g id="edge4" class="edge">
+<g id="edge3" class="edge">
 <title>Brief&#45;&gt;Logger</title>
 <path fill="none" stroke="black" d="M246.03,-221.14C246.03,-214.54 246.03,-205.24 246.03,-196.85"/>
 <polygon fill="black" stroke="black" points="249.54,-197.13 246.04,-187.13 242.54,-197.13 249.54,-197.13"/>

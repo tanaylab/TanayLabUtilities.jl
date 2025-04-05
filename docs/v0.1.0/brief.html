@@ -204,7 +204,7 @@
 <section>
 <div>
 <pre>
-<code class="language-julia hljs">brief(value::Any)::String
+<code class="language-julia hljs">brief(value::Any)::AbstractString
 </code>
 </pre>
 <p>Provide a brief description of a 
@@ -214,103 +214,57 @@
 </code> but modified for specific types (in particular, vectors and matrices) to give &quot;better&quot; results.
 </p>
 <pre>
-<code class="language-julia hljs">brief(1.0)
+<code class="language-julia hljs">using Test
+
+@test brief(1.0) == &quot;1.0&quot;
+@test brief(true) == &quot;true&quot;
+@test brief(:foo) == &quot;:foo&quot;
+@test brief(nothing) == &quot;nothing&quot;
+@test brief(missing) == &quot;missing&quot;
+@test brief(undef) == &quot;undef&quot;
+@test brief((&quot;foo&quot;, :bar)) == &quot;(\&quot;foo\&quot;, :bar)&quot;
+@test brief(&quot;foo&quot;) == &quot;\&quot;foo\&quot;&quot;
+@test brief(&quot;foo &quot;^10) == &quot;\&quot;foo foo foo foo ...\&quot; (40)&quot;
+@test brief([true, false]) == &quot;2 x Bool (Dense; 50% true)&quot;
+@test brief(Int64) == &quot;Int64&quot;
+@test brief(String) == &quot;Str&quot;
+@test brief(AbstractString) == &quot;Str&quot;
+
+@enum Foo Bar Baz
+@test brief(Bar) == &quot;Foo::Bar&quot;
+
+struct Vaz end
+@test brief(Vaz()) == summary(Vaz())
+
+@test brief(rand(5)) == &quot;5 x Float64 (Dense)&quot;
+@test brief(rand(3, 4)) == &quot;3 x 4 x Float64 in Columns (Dense)&quot;
+
+@test brief(read_only_array(rand(5))) == &quot;5 x Float64 (ReadOnly, Dense)&quot;
+@test brief(PermutedDimsArray(rand(3, 4), (2, 1))) == &quot;4 x 3 x Float64 in Rows (Permute, Dense)&quot;
+@test brief(PermutedDimsArray(rand(3, 4), (1, 2))) == &quot;3 x 4 x Float64 in Columns (!Permute, Dense)&quot;
+
+using SparseArrays
+
+@test brief(SparseVector([0.0, 1.0])) == &quot;2 x Float64 (Sparse Int64 50%)&quot;
+@test brief(SparseMatrixCSC([0.0 1.0 2.0; 3.0 4.0 0.0])) == &quot;2 x 3 x Float64 in Columns (Sparse Int64 67%)&quot;
+
+using NamedArrays
+
+@test brief(NamedArray(rand(2))) == &quot;2 x Float64 (Named, Dense)&quot;
+@test brief(NamedArray(SparseVector([0.0, 1.0]))) == &quot;2 x Float64 (Named, Sparse Int64 50%)&quot;
+
+using LinearAlgebra
+
+@test brief(transpose(rand(2))) == &quot;2 x Float64 (Transpose, Dense)&quot;
+@test brief(adjoint(rand(2))) == &quot;2 x Float64 (Adjoint, Dense)&quot;
+
+@test brief(Dict([&quot;a&quot; =&gt; 1])) == &quot;1 x Str =&gt; Int64 (Dict)&quot;
+
+println(&quot;OK&quot;)
 
 # output
 
-&quot;1.0&quot;
-</code>
-</pre>
-<pre>
-<code class="language-julia hljs">brief(true)
-
-# output
-
-&quot;true&quot;
-</code>
-</pre>
-<pre>
-<code class="language-julia hljs">brief(:foo)
-
-# output
-
-&quot;:foo&quot;
-</code>
-</pre>
-<pre>
-<code class="language-julia hljs">brief(nothing)
-
-# output
-
-&quot;nothing&quot;
-</code>
-</pre>
-<pre>
-<code class="language-julia hljs">brief(missing)
-
-# output
-
-&quot;missing&quot;
-</code>
-</pre>
-<pre>
-<code class="language-julia hljs">brief(undef)
-
-# output
-
-&quot;undef&quot;
-</code>
-</pre>
-<pre>
-<code class="language-julia hljs">brief((&quot;foo&quot;, :bar))
-
-# output
-
-&quot;(\&quot;foo\&quot;, :bar)&quot;
-</code>
-</pre>
-<pre>
-<code class="language-julia hljs">brief(&quot;foo&quot;)
-
-# output
-
-&quot;\&quot;foo\&quot;&quot;
-</code>
-</pre>
-<pre>
-<code class="language-julia hljs">brief(&quot;foo &quot;^10)
-
-# output
-
-&quot;\&quot;foo foo foo foo ...\&quot; (40)&quot;
-</code>
-</pre>
-<pre>
-<code class="language-julia hljs">@enum Foo Bar Baz
-
-brief(Bar)
-
-# output
-
-&quot;Foo::Bar&quot;
-</code>
-</pre>
-<pre>
-<code class="language-julia hljs">struct Foo end
-
-brief(Foo())
-
-# output
-
-&quot;Foo&quot;
-</code>
-</pre>
-<pre>
-<code class="language-julia hljs">brief([true, false])
-
-# output
-
-&quot;2 x Bool (Dense; 50% true)&quot;
+OK
 </code>
 </pre>
 </div>
@@ -356,7 +310,7 @@ brief(Foo())
 <section>
 <div>
 <pre>
-<code class="language-julia hljs">percent(used::Real, out_of::Real)::String
+<code class="language-julia hljs">percent(used::Real, out_of::Real)::AbstractString
 </code>
 </pre>
 <p>Format a fraction of 
