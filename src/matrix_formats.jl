@@ -626,7 +626,7 @@ function sparsify(
     copy::Bool = false,
     eltype::Maybe{Type} = nothing,
     indtype::Maybe{Type} = nothing,
-)::AbstractMatrix
+)::AbstractArray
     parent_array = sparsify(parent(array); copy, eltype, indtype)
     if parent_array === parent(array)
         return array
@@ -640,7 +640,7 @@ function sparsify(
     copy::Bool = false,
     eltype::Maybe{Type} = nothing,
     indtype::Maybe{Type} = nothing,
-)::AbstractMatrix
+)::AbstractArray
     parent_array = sparsify(parent(array); copy, eltype, indtype)
     if parent_array === parent(array)
         return array
@@ -838,7 +838,7 @@ function densify(
     end
 end
 
-function densify(array::Transpose; copy::Bool = false, eltype::Maybe = nothing)::AbstractMatrix
+function densify(array::Transpose; copy::Bool = false, eltype::Maybe = nothing)::AbstractArray
     parent_array = densify(parent(array); copy, eltype)
     if parent_array === parent(array)
         return array
@@ -847,7 +847,7 @@ function densify(array::Transpose; copy::Bool = false, eltype::Maybe = nothing):
     end
 end
 
-function densify(array::Adjoint; copy::Bool = false, eltype::Maybe{Type} = nothing)::AbstractMatrix
+function densify(array::Adjoint; copy::Bool = false, eltype::Maybe{Type} = nothing)::AbstractArray
     parent_array = densify(parent(array); copy, eltype)
     if parent_array === parent(array)
         return array
@@ -856,7 +856,7 @@ function densify(array::Adjoint; copy::Bool = false, eltype::Maybe{Type} = nothi
     end
 end
 
-function densify(array::NamedArray; copy::Bool = false, eltype::Maybe{Type} = nothing)::AbstractMatrix
+function densify(array::NamedArray; copy::Bool = false, eltype::Maybe{Type} = nothing)::AbstractArray
     parent_array = densify(parent(array); copy, eltype)
     if parent_array === parent(array)
         return array
@@ -1313,32 +1313,32 @@ function bestify(
 end
 
 function bestify(
-    matrix::Transpose;
+    array::Transpose;
     min_sparse_saving_fraction::AbstractFloat = 0.25,
     copy::Bool = false,
     eltype::Maybe{Type} = nothing,
     indtype::Maybe{Type} = nothing,
-)::AbstractMatrix
-    parent_matrix = bestify(parent(matrix); min_sparse_saving_fraction, copy, eltype, indtype)
-    if parent_matrix === parent(matrix)
-        return matrix
+)::AbstractArray
+    parent_array = bestify(parent(array); min_sparse_saving_fraction, copy, eltype, indtype)
+    if parent_array === parent(array)
+        return array
     else
-        return Transpose(parent_matrix)
+        return Transpose(parent_array)
     end
 end
 
 function bestify(
-    matrix::Adjoint;
+    array::Adjoint;
     min_sparse_saving_fraction::AbstractFloat = 0.25,
     copy::Bool = false,
     eltype::Maybe{Type} = nothing,
     indtype::Maybe{Type} = nothing,
-)::AbstractMatrix
-    parent_matrix = bestify(parent(matrix); min_sparse_saving_fraction, copy, eltype, indtype)
-    if parent_matrix === parent(matrix)
-        return matrix
+)::AbstractArray
+    parent_array = bestify(parent(array); min_sparse_saving_fraction, copy, eltype, indtype)
+    if parent_array === parent(array)
+        return array
     else
-        return Adjoint(parent_matrix)
+        return Adjoint(parent_array)
     end
 end
 
@@ -1348,7 +1348,7 @@ function bestify(
     copy::Bool = false,
     eltype::Maybe{Type} = nothing,
     indtype::Maybe{Type} = nothing,
-)::AbstractMatrix
+)::AbstractArray
     parent_array = bestify(parent(array); min_sparse_saving_fraction, copy, eltype, indtype)
     if parent_array === parent(array)
         return array
