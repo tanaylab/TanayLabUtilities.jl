@@ -3,6 +3,7 @@
 ```@docs
 TanayLabUtilities.MatrixFormats
 TanayLabUtilities.MatrixFormats.copy_array
+TanayLabUtilities.MatrixFormats.similar_array
 TanayLabUtilities.MatrixFormats.sparse_matrix_csc
 TanayLabUtilities.MatrixFormats.sparse_vector
 TanayLabUtilities.MatrixFormats.sparse_mask_vector

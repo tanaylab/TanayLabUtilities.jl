@@ -28,6 +28,7 @@ export indtype_for_size
 export nzind
 export nzval
 export rowval
+export similar_array
 export sparse_matrix_csc
 export sparse_vector
 export sparse_mask_vector
@@ -237,13 +238,13 @@ named = NamedArray(base)
 
 # Permuted
 
-permuted = PermutedDimsArray(base, (2,1))
+permuted = PermutedDimsArray(base, (2, 1))
 @test brief(permuted) == "3 x 2 x Int64 in Rows (Permute, Dense)"
 @test brief(copy_array(permuted)) == "3 x 2 x Int64 in Rows (Permute, Dense)"
 @test copy_array(permuted) == permuted
 @test parent(copy_array(permuted)) !== base
 
-unpermuted = PermutedDimsArray(base, (1,2))
+unpermuted = PermutedDimsArray(base, (1, 2))
 @test brief(unpermuted) == "2 x 3 x Int64 in Columns (!Permute, Dense)"
 @test brief(copy_array(unpermuted)) == "2 x 3 x Int64 in Columns (!Permute, Dense)"
 @test copy_array(unpermuted) == unpermuted
@@ -413,6 +414,112 @@ function copy_array(matrix::Adjoint; eltype::Maybe{Type} = nothing, indtype::May
 end
 
 """
+    similar_array(
+        array::AbstractArray;
+        [value::Any = undef,
+        eltype::Maybe{Type} = nothing]
+    )::AbstractArray
+    end
+
+Return an `array` (vector or a matrix) similar to the given one. By default the data has the same `eltype` as the
+original, and is uninitialized unless you specify a `value`. The returned data is always dense (`Vector` or `Matrix`).
+
+This is different from `similar` in that it will preserve the layout of a matrix (for example, `similar_array` of a
+`transpose` will also be a `transpose`). Also, `similar_array` of a `NamedArray` will be another `NamedArray` sharing
+the axes with the original, and `ReadOnlyArray` wrappers are stripped from the result.
+
+```jldoctest
+using Test
+
+base = rand(3, 4)
+
+@test brief(base) == "3 x 4 x Float64 in Columns (Dense)"
+@test similar_array(base) !== base
+@test brief(similar_array(base)) == "3 x 4 x Float64 in Columns (Dense)"
+
+@test brief(similar_array(base; eltype = Int32)) == "3 x 4 x Int32 in Columns (Dense)"
+@test brief(similar_array(base; value = 0.0)) == "3 x 4 x Float64 in Columns (Dense)"
+@test all(similar_array(base; value = 0.0) .== 0)
+
+# ReadOnly
+
+read_only = read_only_array(base)
+@test brief(read_only) == "3 x 4 x Float64 in Columns (ReadOnly, Dense)"
+@test brief(similar_array(read_only)) == "3 x 4 x Float64 in Columns (Dense)"
+
+# Named
+
+using NamedArrays
+
+named = NamedArray(base)
+@test brief(named) == "3 x 4 x Float64 in Columns (Named, Dense)"
+@test similar_array(named) !== named
+@test brief(similar_array(named)) == "3 x 4 x Float64 in Columns (Named, Dense)"
+
+# Permuted
+
+permuted = PermutedDimsArray(base, (2, 1))
+@test brief(permuted) == "4 x 3 x Float64 in Rows (Permute, Dense)"
+@test similar_array(permuted) !== permuted
+@test brief(similar_array(permuted)) == "4 x 3 x Float64 in Rows (Permute, Dense)"
+
+# LinearAlgebra
+
+transposed = transpose(base)
+@test brief(transposed) == "4 x 3 x Float64 in Rows (Transpose, Dense)"
+@test similar_array(transposed) !== transposed
+@test brief(similar_array(transposed)) == "4 x 3 x Float64 in Rows (Transpose, Dense)"
+
+adjointed = adjoint(base)
+@test brief(adjointed) == "4 x 3 x Float64 in Rows (Adjoint, Dense)"
+@test similar_array(adjointed) !== adjointed
+@test brief(similar_array(adjointed)) == "4 x 3 x Float64 in Rows (Adjoint, Dense)"
+
+println("OK")
+
+# output
+
+OK
+```
+"""
+function similar_array(array::AbstractArray; value::Any = undef, eltype::Maybe{Type} = nothing)::AbstractArray
+    if eltype === nothing
+        eltype = Base.eltype(array)
+    end
+
+    similar = Array{eltype}(undef, size(array)...)
+    if value != undef
+        similar .= value
+    end
+
+    return similar
+end
+
+function similar_array(array::ReadOnlyArray; value::Any = undef, eltype::Maybe{Type} = nothing)::AbstractArray
+    return similar_array(parent(array); value, eltype)
+end
+
+function similar_array(array::NamedArray; value::Any = undef, eltype::Maybe{Type} = nothing)::AbstractArray
+    return NamedArray(similar_array(parent(array); value, eltype), array.dicts, array.dimnames)
+end
+
+function similar_array(
+    matrix::PermutedDimsArray{T, 2, P, IP, A};
+    value::Any = undef,
+    eltype::Maybe{Type} = nothing,
+)::AbstractArray where {T, P, IP, A}
+    return PermutedDimsArray(similar_array(parent(matrix); value, eltype), P)
+end
+
+function similar_array(array::Transpose; value::Any = undef, eltype::Maybe{Type} = nothing)::AbstractArray
+    return Transpose(similar_array(parent(array); value, eltype))
+end
+
+function similar_array(array::Adjoint; value::Any = undef, eltype::Maybe{Type} = nothing)::AbstractArray
+    return Adjoint(similar_array(parent(array); value, eltype))
+end
+
+"""
     sparsify(
         matrix::AbstractMatrix;
         copy::Bool = false,
@@ -484,20 +591,20 @@ named = NamedArray(dense)
 
 # Permuted
 
-permuted = PermutedDimsArray(sparse, (2,1))
+permuted = PermutedDimsArray(sparse, (2, 1))
 @test sparsify(permuted) === permuted
 @test brief(permuted) == "3 x 2 x Int64 in Rows (Permute, Sparse Int64 67%)"
 
-unpermuted = PermutedDimsArray(sparse, (1,2))
+unpermuted = PermutedDimsArray(sparse, (1, 2))
 @test sparsify(unpermuted) === unpermuted
 @test brief(unpermuted) == "2 x 3 x Int64 in Columns (!Permute, Sparse Int64 67%)"
 
-permuted = PermutedDimsArray(dense, (2,1))
+permuted = PermutedDimsArray(dense, (2, 1))
 @test sparsify(permuted) == permuted
 @test brief(permuted) == "4 x 3 x Float64 in Rows (Permute, Dense)"
 @test brief(sparsify(permuted)) == "4 x 3 x Float64 in Rows (Permute, Sparse UInt32 100%)"
 
-unpermuted = PermutedDimsArray(dense, (1,2))
+unpermuted = PermutedDimsArray(dense, (1, 2))
 @test sparsify(unpermuted) == unpermuted
 @test brief(unpermuted) == "3 x 4 x Float64 in Columns (!Permute, Dense)"
 @test brief(sparsify(unpermuted)) == "3 x 4 x Float64 in Columns (!Permute, Sparse UInt32 100%)"
@@ -720,20 +827,20 @@ named = NamedArray(dense)
 
 # Permuted
 
-permuted = PermutedDimsArray(dense, (2,1))
+permuted = PermutedDimsArray(dense, (2, 1))
 @test densify(permuted) === permuted
 @test brief(permuted) == "4 x 3 x Float64 in Rows (Permute, Dense)"
 
-unpermuted = PermutedDimsArray(dense, (1,2))
+unpermuted = PermutedDimsArray(dense, (1, 2))
 @test densify(unpermuted) === unpermuted
 @test brief(unpermuted) == "3 x 4 x Float64 in Columns (!Permute, Dense)"
 
-permuted = PermutedDimsArray(sparse, (2,1))
+permuted = PermutedDimsArray(sparse, (2, 1))
 @test densify(permuted) == permuted
 @test brief(permuted) == "3 x 2 x Int64 in Rows (Permute, Sparse Int64 67%)"
 @test brief(densify(permuted)) == "3 x 2 x Int64 in Rows (Permute, Dense)"
 
-unpermuted = PermutedDimsArray(sparse, (1,2))
+unpermuted = PermutedDimsArray(sparse, (1, 2))
 @test densify(unpermuted) == unpermuted
 @test brief(unpermuted) == "2 x 3 x Int64 in Columns (!Permute, Sparse Int64 67%)"
 @test brief(densify(unpermuted)) == "2 x 3 x Int64 in Columns (!Permute, Dense)"
@@ -1194,14 +1301,14 @@ named = NamedArray(sparse)
 
 # Permuted
 
-permuted = PermutedDimsArray(dense, (2,1))
+permuted = PermutedDimsArray(dense, (2, 1))
 @test bestify(permuted; min_sparse_saving_fraction = 0.5) === permuted
 @test brief(permuted) == "5 x 5 x Int32 in Rows (Permute, Dense)"
 
 @test bestify(permuted) == permuted
 @test brief(bestify(permuted)) == "5 x 5 x Int32 in Rows (Permute, Sparse UInt32 20%)"
 
-permuted = PermutedDimsArray(sparse, (1,2))
+permuted = PermutedDimsArray(sparse, (1, 2))
 @test bestify(permuted) === permuted
 @test brief(permuted) == "5 x 5 x Int32 in Columns (!Permute, Sparse UInt32 20%)"
 

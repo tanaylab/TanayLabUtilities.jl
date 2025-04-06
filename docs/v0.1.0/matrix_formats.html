@@ -344,13 +344,13 @@ named = NamedArray(base)
 
 # Permuted
 
-permuted = PermutedDimsArray(base, (2,1))
+permuted = PermutedDimsArray(base, (2, 1))
 @test brief(permuted) == &quot;3 x 2 x Int64 in Rows (Permute, Dense)&quot;
 @test brief(copy_array(permuted)) == &quot;3 x 2 x Int64 in Rows (Permute, Dense)&quot;
 @test copy_array(permuted) == permuted
 @test parent(copy_array(permuted)) !== base
 
-unpermuted = PermutedDimsArray(base, (1,2))
+unpermuted = PermutedDimsArray(base, (1, 2))
 @test brief(unpermuted) == &quot;2 x 3 x Int64 in Columns (!Permute, Dense)&quot;
 @test brief(copy_array(unpermuted)) == &quot;2 x 3 x Int64 in Columns (!Permute, Dense)&quot;
 @test copy_array(unpermuted) == unpermuted
@@ -444,6 +444,117 @@ base = split(&quot;abc&quot;, &quot;&quot;)
 @test eltype(base) != AbstractString
 @test eltype(copy_array(base)) == AbstractString
 @test copy_array(base) == base
+
+println(&quot;OK&quot;)
+
+# output
+
+OK
+</code>
+</pre>
+</div>
+</section>
+</article>
+<article class="docstring">
+<header>
+<a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring">
+</a>
+<a class="docstring-binding" id="TanayLabUtilities.MatrixFormats.similar_array" href="#TanayLabUtilities.MatrixFormats.similar_array">
+<code>TanayLabUtilities.MatrixFormats.similar_array
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+<span class="is-flex-grow-1 docstring-article-toggle-button" title="Collapse docstring">
+</span>
+</header>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">similar_array(
+    array::AbstractArray;
+    [value::Any = undef,
+    eltype::Maybe{Type} = nothing]
+)::AbstractArray
+end
+</code>
+</pre>
+<p>Return an 
+<code>array
+</code> (vector or a matrix) similar to the given one. By default the data has the same 
+<code>eltype
+</code> as the original, and is uninitialized unless you specify a 
+<code>value
+</code>. The returned data is always dense (
+<code>Vector
+</code> or 
+<code>Matrix
+</code>).
+</p>
+<p>This is different from 
+<code>similar
+</code> in that it will preserve the layout of a matrix (for example, 
+<code>similar_array
+</code> of a 
+<code>transpose
+</code> will also be a 
+<code>transpose
+</code>). Also, 
+<code>similar_array
+</code> of a 
+<code>NamedArray
+</code> will be another 
+<code>NamedArray
+</code> sharing the axes with the original, and 
+<code>ReadOnlyArray
+</code> wrappers are stripped from the result.
+</p>
+<pre>
+<code class="language-julia hljs">using Test
+
+base = rand(3, 4)
+
+@test brief(base) == &quot;3 x 4 x Float64 in Columns (Dense)&quot;
+@test similar_array(base) !== base
+@test brief(similar_array(base)) == &quot;3 x 4 x Float64 in Columns (Dense)&quot;
+
+@test brief(similar_array(base; eltype = Int32)) == &quot;3 x 4 x Int32 in Columns (Dense)&quot;
+@test brief(similar_array(base; value = 0.0)) == &quot;3 x 4 x Float64 in Columns (Dense)&quot;
+@test all(similar_array(base; value = 0.0) .== 0)
+
+# ReadOnly
+
+read_only = read_only_array(base)
+@test brief(read_only) == &quot;3 x 4 x Float64 in Columns (ReadOnly, Dense)&quot;
+@test brief(similar_array(read_only)) == &quot;3 x 4 x Float64 in Columns (Dense)&quot;
+
+# Named
+
+using NamedArrays
+
+named = NamedArray(base)
+@test brief(named) == &quot;3 x 4 x Float64 in Columns (Named, Dense)&quot;
+@test similar_array(named) !== named
+@test brief(similar_array(named)) == &quot;3 x 4 x Float64 in Columns (Named, Dense)&quot;
+
+# Permuted
+
+permuted = PermutedDimsArray(base, (2, 1))
+@test brief(permuted) == &quot;4 x 3 x Float64 in Rows (Permute, Dense)&quot;
+@test similar_array(permuted) !== permuted
+@test brief(similar_array(permuted)) == &quot;4 x 3 x Float64 in Rows (Permute, Dense)&quot;
+
+# LinearAlgebra
+
+transposed = transpose(base)
+@test brief(transposed) == &quot;4 x 3 x Float64 in Rows (Transpose, Dense)&quot;
+@test similar_array(transposed) !== transposed
+@test brief(similar_array(transposed)) == &quot;4 x 3 x Float64 in Rows (Transpose, Dense)&quot;
+
+adjointed = adjoint(base)
+@test brief(adjointed) == &quot;4 x 3 x Float64 in Rows (Adjoint, Dense)&quot;
+@test similar_array(adjointed) !== adjointed
+@test brief(similar_array(adjointed)) == &quot;4 x 3 x Float64 in Rows (Adjoint, Dense)&quot;
 
 println(&quot;OK&quot;)
 
@@ -802,20 +913,20 @@ named = NamedArray(dense)
 
 # Permuted
 
-permuted = PermutedDimsArray(sparse, (2,1))
+permuted = PermutedDimsArray(sparse, (2, 1))
 @test sparsify(permuted) === permuted
 @test brief(permuted) == &quot;3 x 2 x Int64 in Rows (Permute, Sparse Int64 67%)&quot;
 
-unpermuted = PermutedDimsArray(sparse, (1,2))
+unpermuted = PermutedDimsArray(sparse, (1, 2))
 @test sparsify(unpermuted) === unpermuted
 @test brief(unpermuted) == &quot;2 x 3 x Int64 in Columns (!Permute, Sparse Int64 67%)&quot;
 
-permuted = PermutedDimsArray(dense, (2,1))
+permuted = PermutedDimsArray(dense, (2, 1))
 @test sparsify(permuted) == permuted
 @test brief(permuted) == &quot;4 x 3 x Float64 in Rows (Permute, Dense)&quot;
 @test brief(sparsify(permuted)) == &quot;4 x 3 x Float64 in Rows (Permute, Sparse UInt32 100%)&quot;
 
-unpermuted = PermutedDimsArray(dense, (1,2))
+unpermuted = PermutedDimsArray(dense, (1, 2))
 @test sparsify(unpermuted) == unpermuted
 @test brief(unpermuted) == &quot;3 x 4 x Float64 in Columns (!Permute, Dense)&quot;
 @test brief(sparsify(unpermuted)) == &quot;3 x 4 x Float64 in Columns (!Permute, Sparse UInt32 100%)&quot;
@@ -963,20 +1074,20 @@ named = NamedArray(dense)
 
 # Permuted
 
-permuted = PermutedDimsArray(dense, (2,1))
+permuted = PermutedDimsArray(dense, (2, 1))
 @test densify(permuted) === permuted
 @test brief(permuted) == &quot;4 x 3 x Float64 in Rows (Permute, Dense)&quot;
 
-unpermuted = PermutedDimsArray(dense, (1,2))
+unpermuted = PermutedDimsArray(dense, (1, 2))
 @test densify(unpermuted) === unpermuted
 @test brief(unpermuted) == &quot;3 x 4 x Float64 in Columns (!Permute, Dense)&quot;
 
-permuted = PermutedDimsArray(sparse, (2,1))
+permuted = PermutedDimsArray(sparse, (2, 1))
 @test densify(permuted) == permuted
 @test brief(permuted) == &quot;3 x 2 x Int64 in Rows (Permute, Sparse Int64 67%)&quot;
 @test brief(densify(permuted)) == &quot;3 x 2 x Int64 in Rows (Permute, Dense)&quot;
 
-unpermuted = PermutedDimsArray(sparse, (1,2))
+unpermuted = PermutedDimsArray(sparse, (1, 2))
 @test densify(unpermuted) == unpermuted
 @test brief(unpermuted) == &quot;2 x 3 x Int64 in Columns (!Permute, Sparse Int64 67%)&quot;
 @test brief(densify(unpermuted)) == &quot;2 x 3 x Int64 in Columns (!Permute, Dense)&quot;
@@ -1147,14 +1258,14 @@ named = NamedArray(sparse)
 
 # Permuted
 
-permuted = PermutedDimsArray(dense, (2,1))
+permuted = PermutedDimsArray(dense, (2, 1))
 @test bestify(permuted; min_sparse_saving_fraction = 0.5) === permuted
 @test brief(permuted) == &quot;5 x 5 x Int32 in Rows (Permute, Dense)&quot;
 
 @test bestify(permuted) == permuted
 @test brief(bestify(permuted)) == &quot;5 x 5 x Int32 in Rows (Permute, Sparse UInt32 20%)&quot;
 
-permuted = PermutedDimsArray(sparse, (1,2))
+permuted = PermutedDimsArray(sparse, (1, 2))
 @test bestify(permuted) === permuted
 @test brief(permuted) == &quot;5 x 5 x Int32 in Columns (!Permute, Sparse UInt32 20%)&quot;
 
@@ -1505,6 +1616,12 @@ OK
 <li>
 <a href="matrix_formats.html#TanayLabUtilities.MatrixFormats.rowval">
 <code>TanayLabUtilities.MatrixFormats.rowval
+</code>
+</a>
+</li>
+<li>
+<a href="matrix_formats.html#TanayLabUtilities.MatrixFormats.similar_array">
+<code>TanayLabUtilities.MatrixFormats.similar_array
 </code>
 </a>
 </li>
