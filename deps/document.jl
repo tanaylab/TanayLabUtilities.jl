@@ -60,6 +60,7 @@ makedocs(;
         "documentation.md",
         "handlers.md",
         "read_only_arrays.md",
+        "downsample.md",
     ],
 )
 

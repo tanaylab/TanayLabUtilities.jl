@@ -5,11 +5,11 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Unique Names · TanayLabUtilities.jl v0.1.0
+<title>Downsample · TanayLabUtilities.jl v0.1.0
 </title>
-<meta name="title" content="Unique Names · TanayLabUtilities.jl v0.1.0"/>
-<meta property="og:title" content="Unique Names · TanayLabUtilities.jl v0.1.0"/>
-<meta property="twitter:title" content="Unique Names · TanayLabUtilities.jl v0.1.0"/>
+<meta name="title" content="Downsample · TanayLabUtilities.jl v0.1.0"/>
+<meta property="og:title" content="Downsample · TanayLabUtilities.jl v0.1.0"/>
+<meta property="twitter:title" content="Downsample · TanayLabUtilities.jl v0.1.0"/>
 <meta name="description" content="Documentation for TanayLabUtilities.jl v0.1.0."/>
 <meta property="og:description" content="Documentation for TanayLabUtilities.jl v0.1.0."/>
 <meta property="twitter:description" content="Documentation for TanayLabUtilities.jl v0.1.0."/>
@@ -80,17 +80,9 @@
 <a class="tocitem" href="locks.html">Locks
 </a>
 </li>
-<li class="is-active">
+<li>
 <a class="tocitem" href="unique_names.html">Unique Names
 </a>
-<ul class="internal">
-<li>
-<a class="tocitem" href="#Index">
-<span>Index
-</span>
-</a>
-</li>
-</ul>
 </li>
 <li>
 <a class="tocitem" href="documentation.html">Documentation
@@ -104,9 +96,17 @@
 <a class="tocitem" href="read_only_arrays.html">Read-Only Arrays
 </a>
 </li>
-<li>
+<li class="is-active">
 <a class="tocitem" href="downsample.html">Downsample
 </a>
+<ul class="internal">
+<li>
+<a class="tocitem" href="#Index">
+<span>Index
+</span>
+</a>
+</li>
+</ul>
 </li>
 </ul>
 <div class="docs-version-selector field has-addons">
@@ -129,13 +129,13 @@
 <nav class="breadcrumb">
 <ul class="is-hidden-mobile">
 <li class="is-active">
-<a href="unique_names.html">Unique Names
+<a href="downsample.html">Downsample
 </a>
 </li>
 </ul>
 <ul class="is-hidden-tablet">
 <li class="is-active">
-<a href="unique_names.html">Unique Names
+<a href="downsample.html">Downsample
 </a>
 </li>
 </ul>
@@ -154,20 +154,20 @@
 </div>
 </header>
 <article class="content" id="documenter-page">
-<h1 id="Unique-Names">
-<a class="docs-heading-anchor" href="#Unique-Names">Unique Names
+<h1 id="Downsample">
+<a class="docs-heading-anchor" href="#Downsample">Downsample
 </a>
-<a id="Unique-Names-1">
+<a id="Downsample-1">
 </a>
-<a class="docs-heading-anchor-permalink" href="#Unique-Names" title="Permalink">
+<a class="docs-heading-anchor-permalink" href="#Downsample" title="Permalink">
 </a>
 </h1>
 <article class="docstring">
 <header>
 <a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring">
 </a>
-<a class="docstring-binding" id="TanayLabUtilities.UniqueNames" href="#TanayLabUtilities.UniqueNames">
-<code>TanayLabUtilities.UniqueNames
+<a class="docstring-binding" id="TanayLabUtilities.Downsample" href="#TanayLabUtilities.Downsample">
+<code>TanayLabUtilities.Downsample
 </code>
 </a> — 
 <span class="docstring-category">Module
@@ -177,7 +177,33 @@
 </header>
 <section>
 <div>
-<p>Functions for generating names.
+<p>Downsampling of data. The idea is that you have a vector containing a total of some (large) 
+<code>K
+</code> counts of samples with values 
+<code>1..N
+</code> drawn from a multinomial distribution (with different probabilities for getting each of the 
+<code>1..N
+</code> values). Generate a vector with a total of some (smaller) 
+<code>k
+</code> samples. This is typically done to a set of vectors, typically to all columns of a matrix (each with its own 
+<code>K(j)
+</code>), to get a set of vectors with the same 
+<code>k
+</code>.
+</p>
+<p>This is useful for meaningfully comparing the vectors (for example, computing correlations between them). Without downsampling, distance measures between such vectors are biases by the sampling depth 
+<code>K
+</code>. For example, correlations with deeper (higher total samples) vectors will tend to be higher.
+</p>
+<p>Downsampling discards data so we&#39;d like the target 
+<code>k
+</code> to be as large as possible. Typically this isn&#39;t the minimal 
+<code>K(j)
+</code> to avoid a few shallow sampled vectors from ruining the quality of the results; we accept that a small fraction of the vectors will keep their original 
+<code>K(j)
+</code> samples when this is less than the chosen 
+<code>k
+</code>.
 </p>
 </div>
 </section>
@@ -186,8 +212,8 @@
 <header>
 <a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring">
 </a>
-<a class="docstring-binding" id="TanayLabUtilities.UniqueNames.unique_name" href="#TanayLabUtilities.UniqueNames.unique_name">
-<code>TanayLabUtilities.UniqueNames.unique_name
+<a class="docstring-binding" id="TanayLabUtilities.Downsample.downsample" href="#TanayLabUtilities.Downsample.downsample">
+<code>TanayLabUtilities.Downsample.downsample
 </code>
 </a> — 
 <span class="docstring-category">Function
@@ -198,91 +224,147 @@
 <section>
 <div>
 <pre>
-<code class="language-julia hljs">unique_name(prefix::AbstractString, separator::AbstractString = &quot;#&quot;)::AbstractString
+<code class="language-julia hljs">downsample(
+    vector::AbstractVector{&lt;:Integer},
+    samples::Integer;
+    rng::AbstractRNG = default_rng(),
+    output::Maybe{AbstractVector} = nothing,
+)::AbstractVector
+
+downsample(
+    matrix::AbstractMatrix{&lt;:Integer},
+    samples::Integer;
+    dims::Integer,
+    rng::AbstractRNG = default_rng(),
+    output::Maybe{AbstractMatrix} = nothing,
+)::AbstractMatrix
 </code>
 </pre>
-<p>Using short, human-readable unique names for things is a great help when debugging. Normally one has to choose between using a human-provided short non-unique name, and an opaque object identifier, or a combination thereof. This function replaces the opaque object identifier with a short counter, which gives names that are both unique and short.
+<p>Given a 
+<code>vector
+</code> of integer non-negative data values, return a new vector such that the sum of entries in it is 
+<code>samples
+</code>. Think of the original vector as containing a number of marbles in each entry. We randomly pick 
+<code>samples
+</code> marbles from this vector; each time we pick a marble we take it out of the original vector and move it to the same position in the result.
 </p>
-<p>That is, this will return a unique name starting with the 
-<code>prefix
-</code> and followed by the 
-<code>separator
-</code> (by default, 
-<code>#
-</code>), the process index (if using multiple processes), and an index (how many times this name was used in the process). For example, 
-<code>unique_name(&quot;foo&quot;)
-</code> will return 
-<code>foo
-</code> for the first usage, 
-<code>foo#2
-</code> for the 2nd, etc. If using multiple processes, it will return 
-<code>foo
-</code>, 
-<code>foo#1.2
-</code>, etc.
+<p>If the sum of the entries of a vector is less than 
+<code>samples
+</code>, it is copied to the output. If 
+<code>output
+</code> is not specified, it is allocated automatically using the same element type as the input.
 </p>
-<p>That is, for code where the names are unique (e.g., a simple script or Jupyter notebook), this doesn&#39;t mess up the names. It only appends a suffix to the names if it is needed to disambiguate between multiple uses of the same name.
-</p>
-<p>To help with tests, if the 
-<code>prefix
-</code> contains 
-<code>!
-</code>, we return it as-is, accepting it may not be unique.
-</p>
-<p>
-<strong>Example
-</strong>
+<p>When downsampling a 
+<code>matrix
+</code>, then 
+<code>dims
+</code> must be specified to be 
+<code>1
+</code>/
+<code>Rows
+</code> to downsample all the rows in each column or 
+<code>2
+</code>/
+<code>Columns
+</code> to downsample all the columns in each row (that is, the 
+<code>sum
+</code> with the same 
+<code>dims
+</code> will give the number of samples in each vector).
 </p>
 <pre>
-<code class="language-julia hljs">using TanayLabUtilities.UniqueNames
+<code class="language-julia hljs">using Test
 
-unique_name(&quot;foo&quot;)
+# Columns
+
+data = rand(1:100, 10, 5)
+samples_per_column = vec(sum(data; dims = 1))
+
+for samples in (100, 250, 500, 750, 1000)
+    downsampled = downsample(data, samples; dims = 1)
+    downsamples_per_column = vec(sum(downsampled; dims = 1))
+    @test all(downsamples_per_column .== min.(samples_per_column, samples))
+    too_small_mask = samples_per_column .&lt;= samples
+    @test all(downsampled[:, too_small_mask] .== data[:, too_small_mask])
+end
+
+# Rows
+
+data = transpose(data)
+samples_per_row = samples_per_column
+
+for samples in (100, 250, 500, 750, 1000)
+    downsampled = downsample(data, samples; dims = 2)
+    downsamples_per_row = vec(sum(downsampled; dims = 2))
+    @test all(downsamples_per_row .== min.(samples_per_row, samples))
+    too_small_mask = samples_per_row .&lt;= samples
+    @test all(downsampled[too_small_mask, :] .== data[too_small_mask, :])
+end
+
+println(&quot;OK&quot;)
 
 # output
 
-&quot;foo&quot;
+OK
 </code>
 </pre>
-<p>
-<strong>Second usage
-</strong>
-</p>
+</div>
+</section>
+</article>
+<article class="docstring">
+<header>
+<a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring">
+</a>
+<a class="docstring-binding" id="TanayLabUtilities.Downsample.downsamples" href="#TanayLabUtilities.Downsample.downsamples">
+<code>TanayLabUtilities.Downsample.downsamples
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+<span class="is-flex-grow-1 docstring-article-toggle-button" title="Collapse docstring">
+</span>
+</header>
+<section>
+<div>
 <pre>
-<code class="language-julia hljs">using TanayLabUtilities.UniqueNames
-
-unique_name(&quot;foo&quot;)
+<code class="language-julia hljs">downsamples(
+    samples_per_vector::AbstractVector{&lt;:Integer};
+    min_downsamples::Integer = _TODOX(DEFAULT.min_downsamples),
+    min_downsamples_quantile::AbstractFloat = _TODOX(DEFAULT.min_downsamples_quantile),
+    max_downsamples_quantile::AbstractFloat = _TODOX(DEFAULT.max_downsamples_quantile),
+)::Integer
+</code>
+</pre>
+<p>When downsampling multiple vectors (the amount of data in each available in 
+<code>samples_per_vector
+</code>), we need to pick a &quot;reasonable&quot; number of samples to downsample to. We have conflicting requirements, so this is a compromise. First, we want most vectors to have at least the target number of samples, so we start with the 
+<code>min_downsamples_quantile
+</code> of the 
+<code>samples_per_vector
+</code>. Second, we also want to have at least 
+<code>min_downsamples
+</code> to ensure we don&#39;t throw away too much data even if many vectors are sparse, so we increase the target to this value. Finally, we don&#39;t want a target which is too big for too many vectors, so so we reduce the result to the 
+<code>max_downsamples_quantile
+</code> of the 
+<code>samples_per_vector
+</code>.
+</p>
+<div class="admonition is-info">
+<header class="admonition-header">Note
+</header>
+<div class="admonition-body">
+<p>The defaults (especially 
+<code>min_downsamples
+</code>) were chosen to fit our needs (downsampling UMIs of sc-RNA-seq data). You will need to tweak them when using this for other purposes.
+</p>
+</div>
+</div>
+<pre>
+<code class="language-julia hljs">downsamples([100, 500, 1000])
 
 # output
 
-&quot;foo#2&quot;
-</code>
-</pre>
-<p>
-<strong>Force not unique
-</strong>
-</p>
-<pre>
-<code class="language-julia hljs">using TanayLabUtilities.UniqueNames
-
-unique_name(&quot;foo!&quot;)
-
-# output
-
-&quot;foo!&quot;
-</code>
-</pre>
-<p>
-<strong>Second usage
-</strong>
-</p>
-<pre>
-<code class="language-julia hljs">using TanayLabUtilities.UniqueNames
-
-unique_name(&quot;foo!&quot;)
-
-# output
-
-&quot;foo!&quot;
+500
 </code>
 </pre>
 </div>
@@ -298,23 +380,27 @@ unique_name(&quot;foo!&quot;)
 </h2>
 <ul>
 <li>
-<a href="unique_names.html#TanayLabUtilities.UniqueNames">
-<code>TanayLabUtilities.UniqueNames
+<a href="downsample.html#TanayLabUtilities.Downsample">
+<code>TanayLabUtilities.Downsample
 </code>
 </a>
 </li>
 <li>
-<a href="unique_names.html#TanayLabUtilities.UniqueNames.unique_name">
-<code>TanayLabUtilities.UniqueNames.unique_name
+<a href="downsample.html#TanayLabUtilities.Downsample.downsample">
+<code>TanayLabUtilities.Downsample.downsample
+</code>
+</a>
+</li>
+<li>
+<a href="downsample.html#TanayLabUtilities.Downsample.downsamples">
+<code>TanayLabUtilities.Downsample.downsamples
 </code>
 </a>
 </li>
 </ul>
 </article>
 <nav class="docs-footer">
-<a class="docs-footer-prevpage" href="locks.html">« Locks
-</a>
-<a class="docs-footer-nextpage" href="documentation.html">Documentation »
+<a class="docs-footer-prevpage" href="read_only_arrays.html">« Read-Only Arrays
 </a>
 <div class="flexbox-break">
 </div>

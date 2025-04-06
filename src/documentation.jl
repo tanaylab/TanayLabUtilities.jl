@@ -5,9 +5,10 @@ default values of other function parameters.
 module Documentation
 
 export @documented
-export function_default
-export documented_wrapper
+export @source_location
 export DEFAULT
+export documented_wrapper
+export function_default
 
 using DocStringExtensions
 using ExprTools
@@ -264,6 +265,15 @@ function DocStringExtensions.format(what::DefaultValue, buffer::IOBuffer, doc_st
     print(buffer, "```")
 
     return nothing
+end
+
+"""
+    path, line = @source_location()
+
+Return the path to the current source file and the current source line number.
+"""
+macro source_location()
+    return :((string($(QuoteNode(__source__.file))), $(__source__.line)))
 end
 
 end # module

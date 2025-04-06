@@ -597,10 +597,9 @@ function check_efficient_action(
     if major_axis(matrix) != axis
         global GLOBAL_INEFFICIENT_ACTION_HANDLER
         handle_abnormal(GLOBAL_INEFFICIENT_ACTION_HANDLER) do
-            text = brief(matrix)
             return """
                 inefficient major axis: $(axis_name(major_axis(matrix)))
-                for $(operand): $(text)
+                for $(operand): $(brief(matrix))
                 in: $(source_file):$(source_line)
                 """
         end

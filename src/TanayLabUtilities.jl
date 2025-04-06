@@ -52,4 +52,7 @@ include("matrix_layouts.jl")
 include("matrix_formats.jl")
 @reexport using .MatrixFormats
 
+include("downsample.jl")
+@reexport using .Downsample
+
 end  # module
