@@ -202,7 +202,7 @@
 <pre>
 <code class="language-julia hljs">parallel_loop_with_rng(
     body::Function,
-    size::Maybe{Integer} = nothing;
+    indices::AbstractVector{&lt;:Integer},
     policy::Symbol = :greedy,
     seed::Maybe{Integer} = nothing,
     rng::Maybe{AbstractRNG} = nothing
@@ -211,25 +211,35 @@
 </pre>
 <p>Run the 
 <code>body
-</code> in parallel (using the 
-<code>@threads policy
-</code>) 
-<code>size
-</code> times, passing it the iteration index, and a separate 
-<code>rng
-</code> that is seeded to a reproducible state regardless of the allocation of tasks to threads. A copy of this 
-<code>rng
-</code> is given to each iteration, after being reset to 
-<code>seed + index
-</code> for reproducibility. If no 
-<code>seed
-</code> is specified, it is just sampled 
-<code>rng
-</code> before the loop starts. If the 
-<code>rng
-</code> isn&#39;t given, then this uses (and sets for each iteration) the 
-<code>default_rng()
-</code>. In this case passing it to the body is redundant but is still done for consistency.
+</code> in parallel, passing it the iteration 
+<code>indices, and a separate
+</code>rng
+<code>that is seeded to a reproducible state regardless of the allocation of tasks to threads. A copy of this
+</code>rng
+<code>is given to each iteration, after being reset to
+</code>seed + index
+<code>for reproducibility. If no
+</code>seed
+<code>is specified, it is just sampled
+</code>rng
+<code>before the loop starts. If the
+</code>rng
+<code>isn&#39;t given, then this uses (and sets for each iteration) the
+</code>default_rng()`. In this case passing it to the body is redundant but is still done for consistency.
+</p>
+<p>The 
+<code>policy
+</code> is passed to 
+<code>@threads
+</code> if it is one of (the default 
+<code>:greedy
+</code>, 
+<code>:dynamic
+</code>, or 
+<code>:static
+</code>). If it is 
+<code>:serial
+</code>, then the loop is not run in parallel (useful for debugging).
 </p>
 <pre>
 <code class="language-julia hljs">using Test
@@ -239,7 +249,7 @@ size = 10
 
 function collect_rng(rng::AbstractRNG)::Vector{Float64}
     results = zeros(Float64, size)
-    parallel_loop_with_rng(size; rng) do index, rng
+    parallel_loop_with_rng(1:size; rng) do index, rng
         results[index] = rand(rng)
     end
     @test results[1] != results[2]
@@ -250,7 +260,7 @@ end
 
 function collect_default_rng()::Vector{Float64}
     results = zeros(Float64, size)
-    parallel_loop_with_rng(size; seed = 123456, policy = :dynamic) do index, _
+    parallel_loop_with_rng(1:size; seed = 123456, policy = :dynamic) do index, _
         results[index] = rand()
     end
     @test results[1] != results[2]

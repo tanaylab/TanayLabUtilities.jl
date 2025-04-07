@@ -17,17 +17,20 @@ import Random.default_rng
 """
     parallel_loop_with_rng(
         body::Function,
-        size::Maybe{Integer} = nothing;
+        indices::AbstractVector{<:Integer},
         policy::Symbol = :greedy,
         seed::Maybe{Integer} = nothing,
         rng::Maybe{AbstractRNG} = nothing
     )::Nothing
 
-Run the `body` in parallel (using the `@threads policy`) `size` times, passing it the iteration index, and a separate
-`rng` that is seeded to a reproducible state regardless of the allocation of tasks to threads. A copy of this `rng` is
-given to each iteration, after being reset to `seed + index` for reproducibility. If no `seed` is specified, it is just
-sampled `rng` before the loop starts. If the `rng` isn't given, then this uses (and sets for each iteration) the
-`default_rng()`. In this case passing it to the body is redundant but is still done for consistency.
+Run the `body` in parallel, passing it the iteration `indices, and a separate `rng` that is seeded to a reproducible
+state regardless of the allocation of tasks to threads. A copy of this `rng` is given to each iteration, after being
+reset to `seed + index` for reproducibility. If no `seed` is specified, it is just sampled `rng` before the loop starts.
+If the `rng` isn't given, then this uses (and sets for each iteration) the `default_rng()`. In this case passing it to
+the body is redundant but is still done for consistency.
+
+The `policy` is passed to `@threads` if it is one of (the default `:greedy`, `:dynamic`, or `:static`). If it is
+`:serial`, then the loop is not run in parallel (useful for debugging).
 
 ```jldoctest
 using Test
@@ -37,7 +40,7 @@ size = 10
 
 function collect_rng(rng::AbstractRNG)::Vector{Float64}
     results = zeros(Float64, size)
-    parallel_loop_with_rng(size; rng) do index, rng
+    parallel_loop_with_rng(1:size; rng) do index, rng
         results[index] = rand(rng)
     end
     @test results[1] != results[2]
@@ -48,7 +51,7 @@ end
 
 function collect_default_rng()::Vector{Float64}
     results = zeros(Float64, size)
-    parallel_loop_with_rng(size; seed = 123456, policy = :dynamic) do index, _
+    parallel_loop_with_rng(1:size; seed = 123456, policy = :dynamic) do index, _
         results[index] = rand()
     end
     @test results[1] != results[2]
@@ -66,29 +69,37 @@ OK
 """
 function parallel_loop_with_rng(  # NOJET
     body::Function,
-    size::Maybe{Integer} = nothing;
+    indices::AbstractVector{<:Integer};
     policy::Symbol = :greedy,
     seed::Maybe{Integer} = nothing,
     rng::Maybe{AbstractRNG} = nothing,
 )::Nothing
-    @assert policy in (:greedy, :static, :dynamic)
+    @assert policy in (:greedy, :static, :dynamic, :serial)
 
     if seed === nothing
         seed = rand(copy(rng === nothing ? default_rng() : rng), Int64)
     end
 
-    if policy == :greedy
-        @threads :greedy for index in 1:size
+    if policy == :serial
+        for index in indices  # UNTESTED
+            loop_body(body, index, seed, rng)  # UNTESTED
+        end
+
+    elseif policy == :greedy
+        @threads :greedy for index in indices
             loop_body(body, index, seed, rng)
         end
+
     elseif policy == :static
-        @threads :static for index in 1:size  # UNTESTED
+        @threads :static for index in indices  # UNTESTED
             loop_body(body, index, seed, rng)
         end
+
     elseif policy == :dynamic
-        @threads :dynamic for index in 1:size
+        @threads :dynamic for index in indices
             loop_body(body, index, seed, rng)
         end
+
     else
         @assert false
     end
