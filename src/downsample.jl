@@ -17,6 +17,7 @@ module Downsample
 export downsample
 export downsamples
 
+using ..Brief
 using ..Documentation
 using ..MatrixFormats
 using ..MatrixLayouts
@@ -141,14 +142,18 @@ function downsample(
     @assert 1 <= dims <= 2
     n_rows, n_columns = size(matrix)
 
-    check_efficient_action(@source_location()..., "matrix", matrix, other_axis(dims))
-
-    if output === nothing
-        output = similar_array(matrix)
+    if major_axis(matrix) !== nothing
+        check_efficient_action(@source_location()..., "matrix", matrix, other_axis(dims))
     end
 
-    @assert size(output) == size(matrix)
-    check_efficient_action(@source_location()..., "output", output, other_axis(dims))
+    if output === nothing
+        output = similar_array(matrix; default_major_axis = other_axis(dims))
+    else
+        @assert size(output) == size(matrix)  # UNTESTED
+        if major_axis(output) !== nothing  # UNTESTED
+            check_efficient_action(@source_location()..., "output", output, other_axis(dims))  # UNTESTED
+        end
+    end
 
     if dims == Columns
         parallel_loop_with_rng(n_rows; rng) do row_index, rng
@@ -242,9 +247,9 @@ end
 """
     downsamples(
         samples_per_vector::AbstractVector{<:Integer};
-        min_downsamples::Integer = _TODOX(DEFAULT.min_downsamples),
-        min_downsamples_quantile::AbstractFloat = _TODOX(DEFAULT.min_downsamples_quantile),
-        max_downsamples_quantile::AbstractFloat = _TODOX(DEFAULT.max_downsamples_quantile),
+        min_downsamples::Integer = $(DEFAULT.min_downsamples),
+        min_downsamples_quantile::AbstractFloat = $(DEFAULT.min_downsamples_quantile),
+        max_downsamples_quantile::AbstractFloat = $(DEFAULT.max_downsamples_quantile),
     )::Integer
 
 When downsampling multiple vectors (the amount of data in each available in `samples_per_vector`), we need to pick a

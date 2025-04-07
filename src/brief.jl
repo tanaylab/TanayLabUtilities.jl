@@ -91,7 +91,11 @@ function brief(value::Type)::AbstractString
     if value <: AbstractString
         return "Str"
     else
-        return "$(nameof(value))"
+        try
+            value = nameof(value)
+        catch  # UNTESTED
+        end
+        return "$(value)"
     end
 end
 

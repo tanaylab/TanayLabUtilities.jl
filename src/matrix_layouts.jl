@@ -936,20 +936,27 @@ function transposer(matrix::AbstractMatrix)::AbstractMatrix
     axis = require_major_axis(matrix)
 
     if issparse(matrix)
-        @assert axis == Columns
-        result = SparseMatrixCSC(transpose(mutable_array(matrix)))
-
-    elseif axis == Columns
-        result = Matrix{eltype(matrix)}(undef, size(matrix, Columns), size(matrix, Rows))
-        result = LinearAlgebra.transpose!(result, mutable_array(matrix))
-
-    elseif axis == Rows  # UNTESTED
-        result = Matrix{eltype(matrix)}(undef, size(matrix, Rows), size(matrix, Columns))  # UNTESTED
-        result = LinearAlgebra.transpose!(result, transpose(mutable_array(matrix)))  # UNTESTED
-        result = transpose(result)  # UNTESTED
+        if axis == Columns
+            result = SparseMatrixCSC(transpose(mutable_array(matrix)))
+        elseif axis == Rows  # UNTESTED
+            result = transpose(SparseMatrixCSC(mutable_array(matrix)))  # UNTESTED
+        else
+            @assert false
+        end
 
     else
-        @assert false
+        if axis == Columns
+            result = Matrix{eltype(matrix)}(undef, size(matrix, Columns), size(matrix, Rows))
+            result = LinearAlgebra.transpose!(result, mutable_array(matrix))
+
+        elseif axis == Rows  # UNTESTED
+            result = Matrix{eltype(matrix)}(undef, size(matrix, Rows), size(matrix, Columns))  # UNTESTED
+            result = LinearAlgebra.transpose!(result, transpose(mutable_array(matrix)))  # UNTESTED
+            result = transpose(result)  # UNTESTED
+
+        else
+            @assert false
+        end
     end
 
     @assert major_axis(result) == axis

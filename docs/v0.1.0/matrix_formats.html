@@ -478,7 +478,8 @@ OK
 <code class="language-julia hljs">similar_array(
     array::AbstractArray;
     [value::Any = undef,
-    eltype::Maybe{Type} = nothing]
+    eltype::Maybe{Type} = nothing,
+    default_major_axis::Maybe{Integer} = Columns]
 )::AbstractArray
 end
 </code>
@@ -511,7 +512,17 @@ end
 <code>NamedArray
 </code> sharing the axes with the original, and 
 <code>ReadOnlyArray
-</code> wrappers are stripped from the result.
+</code> wrappers are stripped from the result. If the 
+<code>array
+</code> is a matrix with no clear 
+<a href="matrix_layouts.html#TanayLabUtilities.MatrixLayouts.major_axis">
+<code>major_axis
+</code>
+</a>, such as a 
+<code>@views
+</code> slice of a matrix, then the result will have the 
+<code>default_major_axis
+</code>.
 </p>
 <pre>
 <code class="language-julia hljs">using Test

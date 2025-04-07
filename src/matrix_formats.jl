@@ -91,7 +91,7 @@ end
 
 function brief_array(array::AbstractArray, prefixes::Vector{String}; transposed::Bool)::String
     if issparse(array)
-        push!(prefixes, "Sparse $(SparseArrays.indtype(array)) $(percent(length(array.nzval), length(array)))")
+        push!(prefixes, "Sparse $(SparseArrays.indtype(array)) $(percent(nnz(array), length(array)))")
         return format_brief_array(array, prefixes; transposed)
     else
         push!(prefixes, string(nameof(typeof(array))))  # UNTESTED
@@ -406,18 +406,19 @@ function copy_array(
 end
 
 function copy_array(matrix::Transpose; eltype::Maybe{Type} = nothing, indtype::Maybe{Type} = nothing)::Transpose
-    return Transpose(copy_array(parent(matrix); eltype, indtype))
+    return transpose(copy_array(parent(matrix); eltype, indtype))
 end
 
 function copy_array(matrix::Adjoint; eltype::Maybe{Type} = nothing, indtype::Maybe{Type} = nothing)::Adjoint
-    return Adjoint(copy_array(parent(matrix); eltype, indtype))
+    return adjoint(copy_array(parent(matrix); eltype, indtype))
 end
 
 """
     similar_array(
         array::AbstractArray;
         [value::Any = undef,
-        eltype::Maybe{Type} = nothing]
+        eltype::Maybe{Type} = nothing,
+        default_major_axis::Maybe{Integer} = Columns]
     )::AbstractArray
     end
 
@@ -426,7 +427,8 @@ original, and is uninitialized unless you specify a `value`. The returned data i
 
 This is different from `similar` in that it will preserve the layout of a matrix (for example, `similar_array` of a
 `transpose` will also be a `transpose`). Also, `similar_array` of a `NamedArray` will be another `NamedArray` sharing
-the axes with the original, and `ReadOnlyArray` wrappers are stripped from the result.
+the axes with the original, and `ReadOnlyArray` wrappers are stripped from the result. If the `array` is a matrix with
+no clear [`major_axis`](@ref), such as a `@views` slice of a matrix, then the result will have the `default_major_axis`.
 
 ```jldoctest
 using Test
@@ -482,12 +484,24 @@ println("OK")
 OK
 ```
 """
-function similar_array(array::AbstractArray; value::Any = undef, eltype::Maybe{Type} = nothing)::AbstractArray
+function similar_array(
+    array::AbstractArray;
+    value::Any = undef,
+    eltype::Maybe{Type} = nothing,
+    default_major_axis::Integer = Columns,
+)::AbstractArray
+    @assert 1 <= default_major_axis <= 2
     if eltype === nothing
         eltype = Base.eltype(array)
     end
 
-    similar = Array{eltype}(undef, size(array)...)
+    if length(size(array)) == 2 && default_major_axis == Rows && major_axis(array) === nothing
+        n_rows, n_columns = size(array)  # UNTESTED
+        similar = transpose(Array{eltype}(undef, n_columns, n_rows))  # UNTESTED
+    else
+        similar = Array{eltype}(undef, size(array)...)
+    end
+
     if value != undef
         similar .= value
     end
@@ -495,28 +509,52 @@ function similar_array(array::AbstractArray; value::Any = undef, eltype::Maybe{T
     return similar
 end
 
-function similar_array(array::ReadOnlyArray; value::Any = undef, eltype::Maybe{Type} = nothing)::AbstractArray
-    return similar_array(parent(array); value, eltype)
+function similar_array(
+    array::ReadOnlyArray;
+    value::Any = undef,
+    eltype::Maybe{Type} = nothing,
+    default_major_axis::Integer = Columns,
+)::AbstractArray
+    return similar_array(parent(array); value, eltype, default_major_axis)
 end
 
-function similar_array(array::NamedArray; value::Any = undef, eltype::Maybe{Type} = nothing)::AbstractArray
-    return NamedArray(similar_array(parent(array); value, eltype), array.dicts, array.dimnames)
+function similar_array(
+    array::NamedArray;
+    value::Any = undef,
+    eltype::Maybe{Type} = nothing,
+    default_major_axis::Integer = Columns,
+)::AbstractArray
+    return NamedArray(similar_array(parent(array); value, eltype, default_major_axis), array.dicts, array.dimnames)
 end
 
 function similar_array(
     matrix::PermutedDimsArray{T, 2, P, IP, A};
     value::Any = undef,
     eltype::Maybe{Type} = nothing,
+    default_major_axis::Integer = Columns,
 )::AbstractArray where {T, P, IP, A}
-    return PermutedDimsArray(similar_array(parent(matrix); value, eltype), P)
+    if P == (2, 1)
+        default_major_axis = other_axis(default_major_axis)
+    end
+    return PermutedDimsArray(similar_array(parent(matrix); value, eltype, default_major_axis), P)
 end
 
-function similar_array(array::Transpose; value::Any = undef, eltype::Maybe{Type} = nothing)::AbstractArray
-    return Transpose(similar_array(parent(array); value, eltype))
+function similar_array(
+    array::Transpose;
+    value::Any = undef,
+    eltype::Maybe{Type} = nothing,
+    default_major_axis::Integer = Columns,
+)::AbstractArray
+    return transpose(similar_array(parent(array); value, eltype, default_major_axis = other_axis(default_major_axis)))
 end
 
-function similar_array(array::Adjoint; value::Any = undef, eltype::Maybe{Type} = nothing)::AbstractArray
-    return Adjoint(similar_array(parent(array); value, eltype))
+function similar_array(
+    array::Adjoint;
+    value::Any = undef,
+    eltype::Maybe{Type} = nothing,
+    default_major_axis::Integer = Columns,
+)::AbstractArray
+    return adjoint(similar_array(parent(array); value, eltype, default_major_axis = other_axis(default_major_axis)))
 end
 
 """
@@ -738,7 +776,7 @@ function sparsify(
     if parent_array === parent(array)
         return array
     else
-        return Transpose(parent_array)
+        return transpose(parent_array)
     end
 end
 
@@ -752,7 +790,7 @@ function sparsify(
     if parent_array === parent(array)
         return array
     else
-        return Adjoint(parent_array)
+        return adjoint(parent_array)
     end
 end
 
@@ -950,7 +988,7 @@ function densify(array::Transpose; copy::Bool = false, eltype::Maybe = nothing):
     if parent_array === parent(array)
         return array
     else
-        return Transpose(parent_array)
+        return transpose(parent_array)
     end
 end
 
@@ -959,7 +997,7 @@ function densify(array::Adjoint; copy::Bool = false, eltype::Maybe{Type} = nothi
     if parent_array === parent(array)
         return array
     else
-        return Adjoint(parent_array)
+        return adjoint(parent_array)
     end
 end
 
@@ -1430,7 +1468,7 @@ function bestify(
     if parent_array === parent(array)
         return array
     else
-        return Transpose(parent_array)
+        return transpose(parent_array)
     end
 end
 
@@ -1445,7 +1483,7 @@ function bestify(
     if parent_array === parent(array)
         return array
     else
-        return Adjoint(parent_array)
+        return adjoint(parent_array)
     end
 end
 
@@ -1494,8 +1532,23 @@ function SparseArrays.indtype(read_only::ReadOnlyArray)::Type  # UNTESTED
     return SparseArrays.indtype(parent(read_only))
 end
 
+function SparseArrays.indtype(sub_array::SubArray)::Type  # UNTESTED
+    return SparseArrays.indtype(parent(sub_array))
+end
+
 function SparseArrays.nnz(read_only::ReadOnlyArray)::Integer  # UNTESTED
     return SparseArrays.nnz(parent(read_only))
+end
+
+function SparseArrays.nnz(sub_read_only::SubArray{T, N, ReadOnlyArray{T, N, R}, I, L})::Integer where {T, N, R, I, L}  # UNTESTED
+    return nnz(
+        SubArray{T, N, R, I, L}(
+            parent(parent(sub_read_only)),
+            sub_read_only.indices,
+            sub_read_only.offset1,
+            sub_read_only.stride1,
+        ),
+    )
 end
 
 # These we can excuse...
