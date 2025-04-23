@@ -164,20 +164,22 @@ function logged_wrapper(
     has_result::Bool,
     inner_function,
 )
-    return (args...; kwargs...) -> (@debug "$(name) {" _module = _module _file = _file _line = _line;
-    for (arg_name, value) in zip(arg_names, args)
-        @debug "- $(arg_name): $(brief(value))" _module = _module _file = _file _line = _line
-    end;
-    for (name, value) in kwargs
-        @debug "- $(name): $(brief(value))" _module = _module _file = _file _line = _line
-    end;
-    result = inner_function(args...; kwargs...);
-    if has_result
-        @debug "$(name) return: $(brief(result)) }" _module = _module _file = _file _line = _line
-    else
-        @debug "$(name) return }" _module = _module _file = _file _line = _line
-    end;
-    result)  # flaky tested
+    return (args...; kwargs...) -> (
+        @debug "$(name) {" _module = _module _file = _file _line = _line;
+        for (arg_name, value) in zip(arg_names, args)
+            @debug "- $(arg_name): $(brief(value))" _module = _module _file = _file _line = _line
+        end;
+        for (name, value) in kwargs
+            @debug "- $(name): $(brief(value))" _module = _module _file = _file _line = _line
+        end;
+        result = inner_function(args...; kwargs...);
+        if has_result
+            @debug "$(name) return: $(brief(result)) }" _module = _module _file = _file _line = _line
+        else
+            @debug "$(name) return }" _module = _module _file = _file _line = _line
+        end;
+        result
+    )  # flaky tested
 end
 
 NEXT_TASK_ID = Atomic{Int}(1)

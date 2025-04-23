@@ -408,15 +408,13 @@ end
 
 macro assert_vector(vector, n_elements)
     return esc(
-        :(  #
-            TanayLabUtilities.MatrixLayouts.@assert_is_vector($(__source__.file), $(__source__.line), $vector);   #
-            TanayLabUtilities.MatrixLayouts.@assert_vector_size(
-                $(__source__.file),
-                $(__source__.line),
-                $vector,
-                $n_elements
-            )  #
-        ),
+        :(TanayLabUtilities.MatrixLayouts.@assert_is_vector($(__source__.file), $(__source__.line), $vector);   #
+        TanayLabUtilities.MatrixLayouts.@assert_vector_size(
+            $(__source__.file),
+            $(__source__.line),
+            $vector,
+            $n_elements
+        )),
     )
 end
 
@@ -539,51 +537,45 @@ end
 
 macro assert_matrix(matrix, axis)
     return esc(
-        :( #
-            TanayLabUtilities.MatrixLayouts.@assert_is_matrix($(__source__.file), $(__source__.line), $matrix); #
-            TanayLabUtilities.MatrixLayouts.@check_matrix_layout(
-                $(string(__source__.file)),
-                $(__source__.line),
-                $matrix,
-                $axis
-            ) #
-        ),
+        :(TanayLabUtilities.MatrixLayouts.@assert_is_matrix($(__source__.file), $(__source__.line), $matrix); #
+        TanayLabUtilities.MatrixLayouts.@check_matrix_layout(
+            $(string(__source__.file)),
+            $(__source__.line),
+            $matrix,
+            $axis
+        )),
     )
 end
 
 macro assert_matrix(matrix, n_rows, n_columns)
     return esc(
-        :(  #
-            TanayLabUtilities.MatrixLayouts.@assert_is_matrix($(__source__.file), $(__source__.line), $matrix);  #
-            TanayLabUtilities.MatrixLayouts.@assert_matrix_size(
-                $(__source__.file),
-                $(__source__.line),
-                $matrix,
-                $n_rows,
-                $n_columns
-            )  #
-        ),
+        :(TanayLabUtilities.MatrixLayouts.@assert_is_matrix($(__source__.file), $(__source__.line), $matrix);  #
+        TanayLabUtilities.MatrixLayouts.@assert_matrix_size(
+            $(__source__.file),
+            $(__source__.line),
+            $matrix,
+            $n_rows,
+            $n_columns
+        )),
     )
 end
 
 macro assert_matrix(matrix, n_rows, n_columns, axis)
     return esc(
-        :( #
-            TanayLabUtilities.MatrixLayouts.@assert_is_matrix($(__source__.file), $(__source__.line), $matrix); #
-            TanayLabUtilities.MatrixLayouts.@assert_matrix_size(
-                $(__source__.file),
-                $(__source__.line),
-                $matrix,
-                $n_rows,
-                $n_columns
-            ); #
-            TanayLabUtilities.MatrixLayouts.@check_matrix_layout(
-                $(string(__source__.file)),
-                $(__source__.line),
-                $matrix,
-                $axis
-            ) #
-        ),
+        :(TanayLabUtilities.MatrixLayouts.@assert_is_matrix($(__source__.file), $(__source__.line), $matrix); #
+        TanayLabUtilities.MatrixLayouts.@assert_matrix_size(
+            $(__source__.file),
+            $(__source__.line),
+            $matrix,
+            $n_rows,
+            $n_columns
+        ); #
+        TanayLabUtilities.MatrixLayouts.@check_matrix_layout(
+            $(string(__source__.file)),
+            $(__source__.line),
+            $matrix,
+            $axis
+        )),
     )
 end
 
