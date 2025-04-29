@@ -46,6 +46,7 @@ makedocs(;
         "handlers.md",
         "read_only_arrays.md",
         "downsample.md",
+        "global_weak_cache.md",
     ],
 )
 

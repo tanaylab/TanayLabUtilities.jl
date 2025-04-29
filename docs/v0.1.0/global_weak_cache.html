@@ -5,11 +5,11 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Brief · TanayLabUtilities.jl v0.1.0
+<title>Global Weak Cache · TanayLabUtilities.jl v0.1.0
 </title>
-<meta name="title" content="Brief · TanayLabUtilities.jl v0.1.0"/>
-<meta property="og:title" content="Brief · TanayLabUtilities.jl v0.1.0"/>
-<meta property="twitter:title" content="Brief · TanayLabUtilities.jl v0.1.0"/>
+<meta name="title" content="Global Weak Cache · TanayLabUtilities.jl v0.1.0"/>
+<meta property="og:title" content="Global Weak Cache · TanayLabUtilities.jl v0.1.0"/>
+<meta property="twitter:title" content="Global Weak Cache · TanayLabUtilities.jl v0.1.0"/>
 <meta name="description" content="Documentation for TanayLabUtilities.jl v0.1.0."/>
 <meta property="og:description" content="Documentation for TanayLabUtilities.jl v0.1.0."/>
 <meta property="twitter:description" content="Documentation for TanayLabUtilities.jl v0.1.0."/>
@@ -60,17 +60,9 @@
 <a class="tocitem" href="types.html">Types
 </a>
 </li>
-<li class="is-active">
+<li>
 <a class="tocitem" href="brief.html">Brief
 </a>
-<ul class="internal">
-<li>
-<a class="tocitem" href="#Index">
-<span>Index
-</span>
-</a>
-</li>
-</ul>
 </li>
 <li>
 <a class="tocitem" href="logger.html">Logger
@@ -108,9 +100,17 @@
 <a class="tocitem" href="downsample.html">Downsample
 </a>
 </li>
-<li>
+<li class="is-active">
 <a class="tocitem" href="global_weak_cache.html">Global Weak Cache
 </a>
+<ul class="internal">
+<li>
+<a class="tocitem" href="#Index">
+<span>Index
+</span>
+</a>
+</li>
+</ul>
 </li>
 </ul>
 <div class="docs-version-selector field has-addons">
@@ -133,13 +133,13 @@
 <nav class="breadcrumb">
 <ul class="is-hidden-mobile">
 <li class="is-active">
-<a href="brief.html">Brief
+<a href="global_weak_cache.html">Global Weak Cache
 </a>
 </li>
 </ul>
 <ul class="is-hidden-tablet">
 <li class="is-active">
-<a href="brief.html">Brief
+<a href="global_weak_cache.html">Global Weak Cache
 </a>
 </li>
 </ul>
@@ -158,20 +158,20 @@
 </div>
 </header>
 <article class="content" id="documenter-page">
-<h1 id="Brief">
-<a class="docs-heading-anchor" href="#Brief">Brief
+<h1 id="Global-Weak-Cache">
+<a class="docs-heading-anchor" href="#Global-Weak-Cache">Global Weak Cache
 </a>
-<a id="Brief-1">
+<a id="Global-Weak-Cache-1">
 </a>
-<a class="docs-heading-anchor-permalink" href="#Brief" title="Permalink">
+<a class="docs-heading-anchor-permalink" href="#Global-Weak-Cache" title="Permalink">
 </a>
 </h1>
 <article class="docstring">
 <header>
 <a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring">
 </a>
-<a class="docstring-binding" id="TanayLabUtilities.Brief" href="#TanayLabUtilities.Brief">
-<code>TanayLabUtilities.Brief
+<a class="docstring-binding" id="TanayLabUtilities.GlobalWeakCache" href="#TanayLabUtilities.GlobalWeakCache">
+<code>TanayLabUtilities.GlobalWeakCache
 </code>
 </a> — 
 <span class="docstring-category">Module
@@ -181,17 +181,7 @@
 </header>
 <section>
 <div>
-<p>Functions for generating a brief description of arbitrary data. Yes, this is what the builtin 
-<code>summary
-</code> is expected to do. However, 
-<code>summary
-</code> doesn&#39;t summarize arrays that well. As we don&#39;t want to override it for types we don&#39;t own, we default 
-<code>brief
-</code> to call 
-<code>summary
-</code> and can then override it for whatever types we feel is necessary. For your own types, provide an implementation for 
-<code>summary
-</code> as that is the &quot;right thing to do&quot;.
+<p>Cache big expensive objects (that consume a lot of OS resources).
 </p>
 </div>
 </section>
@@ -200,8 +190,8 @@
 <header>
 <a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring">
 </a>
-<a class="docstring-binding" id="TanayLabUtilities.Brief.brief" href="#TanayLabUtilities.Brief.brief">
-<code>TanayLabUtilities.Brief.brief
+<a class="docstring-binding" id="TanayLabUtilities.GlobalWeakCache.get_through_global_weak_cache" href="#TanayLabUtilities.GlobalWeakCache.get_through_global_weak_cache">
+<code>TanayLabUtilities.GlobalWeakCache.get_through_global_weak_cache
 </code>
 </a> — 
 <span class="docstring-category">Function
@@ -212,194 +202,53 @@
 <section>
 <div>
 <pre>
-<code class="language-julia hljs">brief(value::Any)::AbstractString
+<code class="language-julia hljs">get_through_global_weak_cache(getter::Function, key::Any)::Any
 </code>
 </pre>
-<p>Provide a brief description of a 
-<code>value
-</code>. This is basically 
-<code>summary
-</code> but modified for specific types (in particular, vectors and matrices) to give &quot;better&quot; results.
+<p>Given some unique 
+<code>key
+</code>, fetch the associated object from the global cache (if it is there) or invoke the 
+<code>getter
+</code> to obtain it (and cache it for future reference). As a convenience, the 
+<code>getter
+</code> is passed the 
+<code>key
+</code>.
 </p>
-<pre>
-<code class="language-julia hljs">using Test
-
-@test brief(1.0) == &quot;1.0&quot;
-@test brief(true) == &quot;true&quot;
-@test brief(:foo) == &quot;:foo&quot;
-@test brief(nothing) == &quot;nothing&quot;
-@test brief(missing) == &quot;missing&quot;
-@test brief(undef) == &quot;undef&quot;
-@test brief((&quot;foo&quot;, :bar)) == &quot;(\&quot;foo\&quot;, :bar)&quot;
-@test brief(&quot;foo&quot; =&gt; :bar) == &quot;\&quot;foo\&quot; =&gt; :bar&quot;
-@test brief(&quot;foo&quot;) == &quot;\&quot;foo\&quot;&quot;
-@test brief(&quot;foo &quot;^10) == &quot;\&quot;foo foo foo foo ...\&quot; (40)&quot;
-@test brief([true, false]) == &quot;2 x Bool (Dense; 50% true)&quot;
-@test brief(Int64) == &quot;Int64&quot;
-@test brief(String) == &quot;Str&quot;
-@test brief(AbstractString) == &quot;Str&quot;
-
-@enum Foo Bar Baz
-@test brief(Bar) == &quot;Foo::Bar&quot;
-
-struct Vaz end
-@test brief(Vaz()) == summary(Vaz())
-
-@test brief(Set([1])) == &quot;1 x Int64 (Set)&quot;
-
-@test brief(rand(5)) == &quot;5 x Float64 (Dense)&quot;
-@test brief(rand(3, 4)) == &quot;3 x 4 x Float64 in Columns (Dense)&quot;
-
-@test brief(read_only_array(rand(5))) == &quot;5 x Float64 (ReadOnly, Dense)&quot;
-@test brief(PermutedDimsArray(rand(3, 4), (2, 1))) == &quot;4 x 3 x Float64 in Rows (Permute, Dense)&quot;
-@test brief(PermutedDimsArray(rand(3, 4), (1, 2))) == &quot;3 x 4 x Float64 in Columns (!Permute, Dense)&quot;
-
-using SparseArrays
-
-@test brief(SparseVector([0.0, 1.0])) == &quot;2 x Float64 (Sparse Int64 50%)&quot;
-@test brief(SparseMatrixCSC([0.0 1.0 2.0; 3.0 4.0 0.0])) == &quot;2 x 3 x Float64 in Columns (Sparse Int64 67%)&quot;
-
-using NamedArrays
-
-@test brief(NamedArray(rand(2))) == &quot;2 x Float64 (Named, Dense)&quot;
-@test brief(NamedArray(SparseVector([0.0, 1.0]))) == &quot;2 x Float64 (Named, Sparse Int64 50%)&quot;
-
-using LinearAlgebra
-
-@test brief(transpose(rand(2))) == &quot;2 x Float64 (Transpose, Dense)&quot;
-@test brief(adjoint(rand(2))) == &quot;2 x Float64 (Adjoint, Dense)&quot;
-
-@test brief(Dict([&quot;a&quot; =&gt; 1])) == &quot;1 x Str =&gt; Int64 (Dict)&quot;
-
-println(&quot;OK&quot;)
-
-# output
-
-OK
-</code>
-</pre>
-</div>
-</section>
-</article>
-<article class="docstring">
-<header>
-<a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring">
-</a>
-<a class="docstring-binding" id="TanayLabUtilities.Brief.MAX_BRIEF_STRING" href="#TanayLabUtilities.Brief.MAX_BRIEF_STRING">
-<code>TanayLabUtilities.Brief.MAX_BRIEF_STRING
-</code>
-</a> — 
-<span class="docstring-category">Constant
-</span>
-<span class="is-flex-grow-1 docstring-article-toggle-button" title="Collapse docstring">
-</span>
-</header>
-<section>
-<div>
-<p>The maximal length of strings we show as-is in 
-<a href="brief.html#TanayLabUtilities.Brief.brief">
-<code>brief
-</code>
-</a>. We only show a prefix of longer strings (followed by their length).
+<p>There&#39;s a singleton 
+<code>GLOBAL_CACHE
+</code> and all accesses are protected by a single 
+<code>GLOBAL_LOCK
+</code>, so while this is thread-safe, it does not support parallelism. It is meant for heavy operations such as opening files etc., not for memoizing functions results for performance.
 </p>
-</div>
-</section>
-</article>
-<article class="docstring">
-<header>
-<a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring">
-</a>
-<a class="docstring-binding" id="TanayLabUtilities.Brief.percent" href="#TanayLabUtilities.Brief.percent">
-<code>TanayLabUtilities.Brief.percent
-</code>
-</a> — 
-<span class="docstring-category">Function
-</span>
-<span class="is-flex-grow-1 docstring-article-toggle-button" title="Collapse docstring">
-</span>
-</header>
-<section>
-<div>
-<pre>
-<code class="language-julia hljs">percent(used::Real, out_of::Real)::AbstractString
-</code>
-</pre>
-<p>Format a fraction of 
-<code>used
-</code> amount 
-<code>out_of
-</code> some total, as an integer percent value. Very small fractions are denoted as 
-<code>&lt;1%
-</code> and very large fractions are denoted as 
-<code>&gt;99%
-</code>. We use this to show the percent of 
-<code>true
-</code> values in masks, and the percent of non-zero entries in sparse arrays.
+<p>The cache holds weak references to the objects, so they are let go if there remain no active references to them (outside the cache).
 </p>
-<pre>
-<code class="language-julia hljs">percent(0, 0)
-
-# output
-
-&quot;NA%&quot;
-</code>
-</pre>
-<pre>
-<code class="language-julia hljs">percent(0, 1000)
-
-# output
-
-&quot;0%&quot;
-</code>
-</pre>
-<pre>
-<code class="language-julia hljs">percent(9, 1000)
-
-# output
-
-&quot;&lt;1%&quot;
-</code>
-</pre>
-<pre>
-<code class="language-julia hljs">percent(10, 1000)
-
-# output
-
-&quot;1%&quot;
-</code>
-</pre>
-<pre>
-<code class="language-julia hljs">percent(11, 1000)
-
-# output
-
-&quot;1%&quot;
-</code>
-</pre>
-<pre>
-<code class="language-julia hljs">percent(990, 1000)
-
-# output
-
-&quot;99%&quot;
-</code>
-</pre>
-<pre>
-<code class="language-julia hljs">percent(991, 1000)
-
-# output
-
-&quot;&gt;99%&quot;
-</code>
-</pre>
-<pre>
-<code class="language-julia hljs">percent(1000, 1000)
-
-# output
-
-&quot;100%&quot;
-</code>
-</pre>
+<p>```jldoctest using Test
+</p>
+<p>first = get
+<em>through
+</em>global
+<em>weak
+</em>cache(:test) do _     return [1] end @test first == [1] @test first === get
+<em>through
+</em>global
+<em>weak
+</em>cache(:test) do _     @assert false end
+</p>
+<p>first = nothing gc() second = get
+<em>through
+</em>global
+<em>weak
+</em>cache(:test) do _     return [2] end @assert second == [2]
+</p>
+<p>println(&quot;OK&quot;)
+</p>
+<p>
+<strong>output
+</strong>
+</p>
+<p>OK
+</p>
 </div>
 </section>
 </article>
@@ -413,35 +262,21 @@ OK
 </h2>
 <ul>
 <li>
-<a href="brief.html#TanayLabUtilities.Brief">
-<code>TanayLabUtilities.Brief
+<a href="global_weak_cache.html#TanayLabUtilities.GlobalWeakCache">
+<code>TanayLabUtilities.GlobalWeakCache
 </code>
 </a>
 </li>
 <li>
-<a href="brief.html#TanayLabUtilities.Brief.MAX_BRIEF_STRING">
-<code>TanayLabUtilities.Brief.MAX_BRIEF_STRING
-</code>
-</a>
-</li>
-<li>
-<a href="brief.html#TanayLabUtilities.Brief.brief">
-<code>TanayLabUtilities.Brief.brief
-</code>
-</a>
-</li>
-<li>
-<a href="brief.html#TanayLabUtilities.Brief.percent">
-<code>TanayLabUtilities.Brief.percent
+<a href="global_weak_cache.html#TanayLabUtilities.GlobalWeakCache.get_through_global_weak_cache">
+<code>TanayLabUtilities.GlobalWeakCache.get_through_global_weak_cache
 </code>
 </a>
 </li>
 </ul>
 </article>
 <nav class="docs-footer">
-<a class="docs-footer-prevpage" href="types.html">« Types
-</a>
-<a class="docs-footer-nextpage" href="logger.html">Logger »
+<a class="docs-footer-prevpage" href="downsample.html">« Downsample
 </a>
 <div class="flexbox-break">
 </div>

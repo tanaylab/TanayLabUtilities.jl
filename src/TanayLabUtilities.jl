@@ -55,4 +55,7 @@ include("matrix_formats.jl")
 include("downsample.jl")
 @reexport using .Downsample
 
+include("global_weak_cache.jl")
+@reexport using .GlobalWeakCache
+
 end  # module
