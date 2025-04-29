@@ -213,6 +213,10 @@
 <code>getter
 </code> is passed the 
 <code>key
+</code>. If 
+<code>purge
+</code> is set, then any existing value is ignored and is replaced by the result of the 
+<code>getter
 </code>.
 </p>
 <p>There&#39;s a singleton 
@@ -235,11 +239,17 @@
 <em>weak
 </em>cache(:test) do _     @assert false end
 </p>
-<p>first = nothing gc() second = get
+<p>second = get
 <em>through
 </em>global
 <em>weak
-</em>cache(:test) do _     return [2] end @assert second == [2]
+</em>cache(:test; purge = true) do _     return [2] end @assert second == [2]
+</p>
+<p>first = second = nothing gc() third = get
+<em>through
+</em>global
+<em>weak
+</em>cache(:test) do _     return [3] end @assert third == [3]
 </p>
 <p>println(&quot;OK&quot;)
 </p>

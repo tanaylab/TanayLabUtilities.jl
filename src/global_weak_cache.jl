@@ -16,6 +16,7 @@ GLOBAL_CACHE = Dict{Any, WeakRef}()
 
 Given some unique `key`, fetch the associated object from the global cache (if it is there) or invoke the `getter` to
 obtain it (and cache it for future reference). As a convenience, the `getter` is passed the `key`.
+If `purge` is set, then any existing value is ignored and is replaced by the result of the `getter`.
 
 There's a singleton `GLOBAL_CACHE` and all accesses are protected by a single `GLOBAL_LOCK`, so while this is
 thread-safe, it does not support parallelism. It is meant for heavy operations such as opening files etc., not for
@@ -35,12 +36,17 @@ end
     @assert false
 end
 
-first = nothing
-gc()
-second = get_through_global_weak_cache(:test) do _
+second = get_through_global_weak_cache(:test; purge = true) do _
     return [2]
 end
 @assert second == [2]
+
+first = second = nothing
+gc()
+third = get_through_global_weak_cache(:test) do _
+    return [3]
+end
+@assert third == [3]
 
 println("OK")
 
@@ -48,9 +54,14 @@ println("OK")
 
 OK
 """
-function get_through_global_weak_cache(getter::Function, key::Any)::Any
+function get_through_global_weak_cache(getter::Function, key::Any; purge::Bool = false)::Any
     return lock(GLOBAL_LOCK) do
-        weak_ref = get(GLOBAL_CACHE, key, nothing)
+        if purge
+            weak_ref = nothing
+        else
+            weak_ref = get(GLOBAL_CACHE, key, nothing)
+        end
+
         if weak_ref === nothing || weak_ref.value === nothing
             @debug "Get $(key)"
             value = getter(key)
@@ -59,6 +70,7 @@ function get_through_global_weak_cache(getter::Function, key::Any)::Any
             @debug "Reuse $(key)"
             value = weak_ref.value
         end
+
         return value
     end
 end
