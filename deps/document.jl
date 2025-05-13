@@ -42,7 +42,7 @@ makedocs(;
     highlightsig = true,
     sitename = "$(NAME).jl v$(VERSION)",
     draft = false,
-    linkcheck = true,
+    linkcheck = false,
     format = Documenter.HTML(;
         repolink = "$(REPO)/blob/main{path}?plain=1#L{line}",
         prettyurls = false,

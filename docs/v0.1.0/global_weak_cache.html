@@ -202,54 +202,70 @@
 <section>
 <div>
 <pre>
-<code class="language-julia hljs">get_through_global_weak_cache(getter::Function, key::Any)::Any
+<code class="language-julia hljs">get_through_global_weak_cache(getter::Function, path::AbstractString, key::Any)::Any
 </code>
 </pre>
-<p>Given some unique 
-<code>key
-</code>, fetch the associated object from the global cache (if it is there) or invoke the 
-<code>getter
-</code> to obtain it (and cache it for future reference). As a convenience, the 
-<code>getter
-</code> is passed the 
-<code>key
-</code>. If 
-<code>purge
-</code> is set, then any existing value is ignored and is replaced by the result of the 
-<code>getter
-</code>.
+<p>Get some object associated with a 
+<code>path
+</code> and identified by the 
+<code>key from the global cache (if it is there) or invoke the
+</code>getter
+<code>to obtain it (and cache it for future reference). As a convenience, the
+</code>getter
+<code>is passed the
+</code>path
+<code>and
+</code>key
+<code>. If
+</code>purge
+<code>is set, then any existing value is ignored and is replaced by the result of the
+</code>getter
+<code>. If the
+</code>mtime
+<code>of the file does not match the value when the object was cached, it is likewise ignored and
+</code>getter` is called to fetch a fresh value.
 </p>
 <p>There&#39;s a singleton 
 <code>GLOBAL_CACHE
 </code> and all accesses are protected by a single 
 <code>GLOBAL_LOCK
-</code>, so while this is thread-safe, it does not support parallelism. It is meant for heavy operations such as opening files etc., not for memoizing functions results for performance.
+</code>, so while this is thread-safe, it does not support parallelism. It is meant for &quot;expensive&quot; OS operations such as 
+<code>mmap
+</code>, not for memoizing functions results for performance.
 </p>
 <p>The cache holds weak references to the objects, so they are let go if there remain no active references to them (outside the cache).
 </p>
+<div class="admonition is-info">
+<header class="admonition-header">Note
+</header>
+<div class="admonition-body">
+<p>Use absolute paths to ensure correct results.
+</p>
+</div>
+</div>
 <p>```jldoctest using Test
 </p>
 <p>first = get
 <em>through
 </em>global
 <em>weak
-</em>cache(:test) do _     return [1] end @test first == [1] @test first === get
+</em>cache(&quot;fake path&quot;, :test) do _     return [1] end @test first == [1] @test first === get
 <em>through
 </em>global
 <em>weak
-</em>cache(:test) do _     @assert false end
+</em>cache(&quot;fake path&quot;, :test) do _     @assert false end
 </p>
 <p>second = get
 <em>through
 </em>global
 <em>weak
-</em>cache(:test; purge = true) do _     return [2] end @assert second == [2]
+</em>cache(&quot;fake path&quot;, :test; purge = true) do _     return [2] end @assert second == [2]
 </p>
 <p>first = second = nothing gc() third = get
 <em>through
 </em>global
 <em>weak
-</em>cache(:test) do _     return [3] end @assert third == [3]
+</em>cache(&quot;fake path&quot;, :test) do _     return [3] end @assert third == [3]
 </p>
 <p>println(&quot;OK&quot;)
 </p>
