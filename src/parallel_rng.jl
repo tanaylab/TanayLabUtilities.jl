@@ -23,7 +23,7 @@ import Random.default_rng
         rng::Maybe{AbstractRNG} = nothing
     )::Nothing
 
-Run the `body` in parallel, passing it the iteration `indices, and a separate `rng` that is seeded to a reproducible
+Run the `body` in parallel, passing it the iteration `index` and a separate `rng` that is seeded to a reproducible
 state regardless of the allocation of tasks to threads. A copy of this `rng` is given to each iteration, after being
 reset to `seed + index` for reproducibility. If no `seed` is specified, it is just sampled `rng` before the loop starts.
 If the `rng` isn't given, then this uses (and sets for each iteration) the `default_rng()`. In this case passing it to
