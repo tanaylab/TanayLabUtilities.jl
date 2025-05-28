@@ -211,21 +211,21 @@
 </pre>
 <p>Implement resuable storage for parallel computations. This allocates and reuses the minimal number of instances of some data for (re)use by parallel tasks. The 
 <code>create
-</code> function should return a new instance of the data. If a previous task has used the data, we will 
-<code>reset
-</code> it to bring it back it to its initial state.
+</code> function should return a new instance of the data. If a previous task has used the data, we will call [
+<code>reset_reusable_storage!
+</code>]@(ref) to bring it back it to its initial state.
 </p>
-<div class="admonition is-info" id="Note-60fc142f50f0150">
+<div class="admonition is-info" id="Note-7b0bc234ae5e4f2a">
 <header class="admonition-header">Note
-<a class="admonition-anchor" href="#Note-60fc142f50f0150" title="Permalink">
+<a class="admonition-anchor" href="#Note-7b0bc234ae5e4f2a" title="Permalink">
 </a>
 </header>
 <div class="admonition-body">
 <p>The 
 <code>create
 </code> and 
-<code>reset
-</code> functions must be thread safe. We intentionally do not perform them while holding the global lock to maximize performance.
+<code>reset_reusable_storage!
+</code> functions must be thread safe. We intentionally do not perform them while holding the global lock to maximize performance. This only matters if these functions access global variables or the like; typically they just allocate some memory and work on the specific reusable storage instance, which only they have access to, so this isn&#39;t a concern.
 </p>
 </div>
 </div>
@@ -234,13 +234,13 @@
     is_clean::Bool
 end
 
-function reset(storage::ExampleStorage)::Nothing
+function TanayLabUtilities.reset_reusable_storage!(storage::ExampleStorage)::Nothing
     @assert !storage.is_clean
     storage.is_clean = true
     return nothing
 end
 
-reusable_storage = ReusableStorage(reset) do
+reusable_storage = ReusableStorage() do
     return ExampleStorage(true)
 end
 
@@ -282,62 +282,6 @@ end
 <header>
 <a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring">
 </a>
-<a class="docstring-binding" id="TanayLabUtilities.ParallelStorage.get_reusable!" href="#TanayLabUtilities.ParallelStorage.get_reusable!">
-<code>TanayLabUtilities.ParallelStorage.get_reusable!
-</code>
-</a> — 
-<span class="docstring-category">Function
-</span>
-<span class="is-flex-grow-1 docstring-article-toggle-button" title="Collapse docstring">
-</span>
-</header>
-<section>
-<div>
-<pre>
-<code class="language-julia hljs">get_reusable!(reusable_storage::ReusableStorage{T})::T where{T}
-</code>
-</pre>
-<p>Get a private instance of the data from the reusable storage. Will prefer to return an existing instance of the data, after being 
-<code>reset
-</code> if used by a previous task. If all instances are currently being used by other tasks, will 
-<code>create
-</code> a new instance instead.
-</p>
-</div>
-</section>
-</article>
-<article class="docstring">
-<header>
-<a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring">
-</a>
-<a class="docstring-binding" id="TanayLabUtilities.ParallelStorage.put_reusable!" href="#TanayLabUtilities.ParallelStorage.put_reusable!">
-<code>TanayLabUtilities.ParallelStorage.put_reusable!
-</code>
-</a> — 
-<span class="docstring-category">Function
-</span>
-<span class="is-flex-grow-1 docstring-article-toggle-button" title="Collapse docstring">
-</span>
-</header>
-<section>
-<div>
-<pre>
-<code class="language-julia hljs">put_reusable!(reusable_storage::ReusableStorage{T}, data::T)::Nothing
-</code>
-</pre>
-<p>Put back data into the 
-<code>reusable_storage
-</code> once a task is done with it. This will allow other tasks to reuse this data (after being 
-<code>reset
-</code>).
-</p>
-</div>
-</section>
-</article>
-<article class="docstring">
-<header>
-<a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring">
-</a>
 <a class="docstring-binding" id="TanayLabUtilities.ParallelStorage.with_reusable" href="#TanayLabUtilities.ParallelStorage.with_reusable">
 <code>TanayLabUtilities.ParallelStorage.with_reusable
 </code>
@@ -372,6 +316,92 @@ end
 </div>
 </section>
 </article>
+<article class="docstring">
+<header>
+<a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring">
+</a>
+<a class="docstring-binding" id="TanayLabUtilities.ParallelStorage.get_reusable!" href="#TanayLabUtilities.ParallelStorage.get_reusable!">
+<code>TanayLabUtilities.ParallelStorage.get_reusable!
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+<span class="is-flex-grow-1 docstring-article-toggle-button" title="Collapse docstring">
+</span>
+</header>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">get_reusable!(reusable_storage::ReusableStorage{T})::T where{T}
+</code>
+</pre>
+<p>Get a private instance of the data from the reusable storage. Will prefer to return an existing instance of the data, after calling 
+<a href="parallel_storage.html#TanayLabUtilities.ParallelStorage.reset_reusable_storage!">
+<code>reset_reusable_storage!
+</code>
+</a> if used by a previous task. If all instances are currently being used by other tasks, will 
+<code>create
+</code> a new instance instead.
+</p>
+</div>
+</section>
+</article>
+<article class="docstring">
+<header>
+<a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring">
+</a>
+<a class="docstring-binding" id="TanayLabUtilities.ParallelStorage.put_reusable!" href="#TanayLabUtilities.ParallelStorage.put_reusable!">
+<code>TanayLabUtilities.ParallelStorage.put_reusable!
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+<span class="is-flex-grow-1 docstring-article-toggle-button" title="Collapse docstring">
+</span>
+</header>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">put_reusable!(reusable_storage::ReusableStorage{T}, data::T)::Nothing
+</code>
+</pre>
+<p>Put back data into the 
+<code>reusable_storage
+</code> once a task is done with it. This will allow other tasks to reuse this data (after going through 
+<a href="parallel_storage.html#TanayLabUtilities.ParallelStorage.reset_reusable_storage!">
+<code>reset_reusable_storage!
+</code>
+</a>).
+</p>
+</div>
+</section>
+</article>
+<article class="docstring">
+<header>
+<a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring">
+</a>
+<a class="docstring-binding" id="TanayLabUtilities.ParallelStorage.reset_reusable_storage!" href="#TanayLabUtilities.ParallelStorage.reset_reusable_storage!">
+<code>TanayLabUtilities.ParallelStorage.reset_reusable_storage!
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+<span class="is-flex-grow-1 docstring-article-toggle-button" title="Collapse docstring">
+</span>
+</header>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">function reset_reusable_storage!(reusable_storage::Any)::Nothing
+</code>
+</pre>
+<p>Given 
+<code>reusable_storage
+</code> that was used by a task, return it to its initial state so it can be used by another task.
+</p>
+</div>
+</section>
+</article>
 <h2 id="Index">
 <a class="docs-heading-anchor" href="#Index">Index
 </a>
@@ -402,6 +432,12 @@ end
 <li>
 <a href="parallel_storage.html#TanayLabUtilities.ParallelStorage.put_reusable!">
 <code>TanayLabUtilities.ParallelStorage.put_reusable!
+</code>
+</a>
+</li>
+<li>
+<a href="parallel_storage.html#TanayLabUtilities.ParallelStorage.reset_reusable_storage!">
+<code>TanayLabUtilities.ParallelStorage.reset_reusable_storage!
 </code>
 </a>
 </li>
