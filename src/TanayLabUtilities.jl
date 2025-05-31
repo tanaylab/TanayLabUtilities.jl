@@ -55,6 +55,9 @@ include("matrix_formats.jl")
 include("downsample.jl")
 @reexport using .Downsample
 
+include("cross_validations.jl")
+@reexport using .CrossValidations
+
 include("global_weak_cache.jl")
 @reexport using .GlobalWeakCache
 
