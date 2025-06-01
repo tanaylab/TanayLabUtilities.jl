@@ -3,6 +3,7 @@ Cross validation functions.
 """
 module CrossValidations
 
+export CrossValidationIndices
 export pick_cross_validation_indices
 
 using Random
