@@ -5,11 +5,11 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Cross Validations · TanayLabUtilities.jl v0.1.0
+<title>Enhanced Hierarchical Clustering · TanayLabUtilities.jl v0.1.0
 </title>
-<meta name="title" content="Cross Validations · TanayLabUtilities.jl v0.1.0"/>
-<meta property="og:title" content="Cross Validations · TanayLabUtilities.jl v0.1.0"/>
-<meta property="twitter:title" content="Cross Validations · TanayLabUtilities.jl v0.1.0"/>
+<meta name="title" content="Enhanced Hierarchical Clustering · TanayLabUtilities.jl v0.1.0"/>
+<meta property="og:title" content="Enhanced Hierarchical Clustering · TanayLabUtilities.jl v0.1.0"/>
+<meta property="twitter:title" content="Enhanced Hierarchical Clustering · TanayLabUtilities.jl v0.1.0"/>
 <meta name="description" content="Documentation for TanayLabUtilities.jl v0.1.0."/>
 <meta property="og:description" content="Documentation for TanayLabUtilities.jl v0.1.0."/>
 <meta property="twitter:description" content="Documentation for TanayLabUtilities.jl v0.1.0."/>
@@ -100,8 +100,16 @@
 <a class="tocitem" href="downsample.html">Downsample
 </a>
 </li>
-<li class="is-active">
+<li>
 <a class="tocitem" href="cross_validations.html">Cross Validations
+</a>
+</li>
+<li>
+<a class="tocitem" href="global_weak_cache.html">Global Weak Cache
+</a>
+</li>
+<li class="is-active">
+<a class="tocitem" href="enhanced_hclust.html">Enhanced Hierarchical Clustering
 </a>
 <ul class="internal">
 <li>
@@ -111,14 +119,6 @@
 </a>
 </li>
 </ul>
-</li>
-<li>
-<a class="tocitem" href="global_weak_cache.html">Global Weak Cache
-</a>
-</li>
-<li>
-<a class="tocitem" href="enhanced_hclust.html">Enhanced Hierarchical Clustering
-</a>
 </li>
 </ul>
 <div class="docs-version-selector field has-addons">
@@ -141,13 +141,13 @@
 <nav class="breadcrumb">
 <ul class="is-hidden-mobile">
 <li class="is-active">
-<a href="cross_validations.html">Cross Validations
+<a href="enhanced_hclust.html">Enhanced Hierarchical Clustering
 </a>
 </li>
 </ul>
 <ul class="is-hidden-tablet">
 <li class="is-active">
-<a href="cross_validations.html">Cross Validations
+<a href="enhanced_hclust.html">Enhanced Hierarchical Clustering
 </a>
 </li>
 </ul>
@@ -166,20 +166,20 @@
 </div>
 </header>
 <article class="content" id="documenter-page">
-<h1 id="Cross-Validations">
-<a class="docs-heading-anchor" href="#Cross-Validations">Cross Validations
+<h1 id="Enhanced-Hierarchical-Clustering">
+<a class="docs-heading-anchor" href="#Enhanced-Hierarchical-Clustering">Enhanced Hierarchical Clustering
 </a>
-<a id="Cross-Validations-1">
+<a id="Enhanced-Hierarchical-Clustering-1">
 </a>
-<a class="docs-heading-anchor-permalink" href="#Cross-Validations" title="Permalink">
+<a class="docs-heading-anchor-permalink" href="#Enhanced-Hierarchical-Clustering" title="Permalink">
 </a>
 </h1>
 <article class="docstring">
 <header>
 <a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring">
 </a>
-<a class="docstring-binding" id="TanayLabUtilities.CrossValidations" href="#TanayLabUtilities.CrossValidations">
-<code>TanayLabUtilities.CrossValidations
+<a class="docstring-binding" id="TanayLabUtilities.EnhancedHclust" href="#TanayLabUtilities.EnhancedHclust">
+<code>TanayLabUtilities.EnhancedHclust
 </code>
 </a> — 
 <span class="docstring-category">Module
@@ -189,7 +189,7 @@
 </header>
 <section>
 <div>
-<p>Cross validation functions.
+<p>Enhancements of [hclust]*https://github.com/JuliaStats/Clustering.jl/blob/master/src/hclust.jl)
 </p>
 </div>
 </section>
@@ -198,38 +198,8 @@
 <header>
 <a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring">
 </a>
-<a class="docstring-binding" id="TanayLabUtilities.CrossValidations.CrossValidationIndices" href="#TanayLabUtilities.CrossValidations.CrossValidationIndices">
-<code>TanayLabUtilities.CrossValidations.CrossValidationIndices
-</code>
-</a> — 
-<span class="docstring-category">Type
-</span>
-<span class="is-flex-grow-1 docstring-article-toggle-button" title="Collapse docstring">
-</span>
-</header>
-<section>
-<div>
-<pre>
-<code class="language-julia hljs">@kwdef struct CrossValidationIndices
-    n_parts::Integer
-    train_indices_per_part::AbstractVector{&lt;:AbstractVector{&lt;:Integer}}
-    test_indices_per_part::AbstractVector{&lt;:AbstractVector{&lt;:Integer}}
-end
-</code>
-</pre>
-<p>A set of cross-validation indices; 
-<code>n_parts
-</code>, where each part is a combination of distinct test and training indices, such that the training indices for each part are the union of the test indices of all the other parts.
-</p>
-</div>
-</section>
-</article>
-<article class="docstring">
-<header>
-<a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring">
-</a>
-<a class="docstring-binding" id="TanayLabUtilities.CrossValidations.pick_cross_validation_indices" href="#TanayLabUtilities.CrossValidations.pick_cross_validation_indices">
-<code>TanayLabUtilities.CrossValidations.pick_cross_validation_indices
+<a class="docstring-binding" id="TanayLabUtilities.EnhancedHclust.ehclust" href="#TanayLabUtilities.EnhancedHclust.ehclust">
+<code>TanayLabUtilities.EnhancedHclust.ehclust
 </code>
 </a> — 
 <span class="docstring-category">Function
@@ -240,43 +210,54 @@ end
 <section>
 <div>
 <pre>
-<code class="language-julia hljs">function pick_cross_validation_indices(;
-    full_indices::AbstractVector{&lt;:Integer},
-    cross_validation_parts::Integer,
-    rng::AbstractRNG,
-)::CrossValidationIndices
+<code class="language-julia hljs">ehclust(d::AbstractMatrix; [linkage], [uplo], [branchorder]) -&gt; Hclust
 </code>
 </pre>
-<p>Given a vector of 
-<code>full_indices
-</code>, split them into 
-<code>cross_validation_parts
-</code> where each part has distinct training and testing indices.
+<p>Enhanced [hclust]*https://github.com/JuliaStats/Clustering.jl/blob/master/src/hclust.jl). This is similar to 
+<code>hclust
+</code> with the following extensions:
 </p>
+<ul>
+<li>If 
+<code>branchorder
+</code> is a vector of 
+<code>Real
+</code> numbers, one per leaf, then we reorder the branches so that each leaf position would be as close as possible to its 
+<code>branchorder
+</code> value. Technically we compute a center of gravity for each node and reorder the tree such that that at each branch, the left sub-tree center of gravity is to the left (lower than) the center of gravity of the right sub-tree.
+</li>
+</ul>
 <pre>
 <code class="language-julia hljs">using Test
-using Random
+using Distances
 
-cross_validation_indices = pick_cross_validation_indices(;
-    full_indices = collect(1:12),
-    cross_validation_parts = 3,
-    rng = Random.default_rng()
-)
-@test all([
-    length(test_indices)
-    for test_indices
-    in cross_validation_indices.test_indices_per_part
-] .== 4)
-@test all([
-    length(train_indices)
-    for train_indices
-    in cross_validation_indices.train_indices_per_part
-] .== 8)
-@test all([
-    length(union(Set(test_indices), Set(train_indices)))
-    for (test_indices, train_indices)
-    in zip(cross_validation_indices.test_indices_per_part, cross_validation_indices.train_indices_per_part)
-] .== 12)
+data = rand(4, 10)
+distances = pairwise(Euclidean(), data; dims = 2)
+positions = rand(10)
+result = ehclust(distances, branchorder = positions)
+merges_data = Vector{Tuple{Int32, Float32}}(undef, 9)
+for merge_index in 1:9
+    left = result.merges[merge_index, 1]
+    if left &lt; 0
+        left_size = 1
+        left_center = positions[-left]
+    else
+        left_size, left_center = merges_data[left]
+    end
+
+    right = result.merges[merge_index, 2]
+    if right &lt; 0
+        right_size = 1
+        right_center = positions[-right]
+    else
+        right_size, right_center = merges_data[right]
+    end
+
+    @test left_center &lt;= right_center
+    merged_size = left_size + right_size
+    merged_center = (left_center * left_size + right_center * right_size) / merged_size
+    merges_data[merge_index] = (merged_size, merged_center)
+end
 
 println(&quot;OK&quot;)
 
@@ -298,29 +279,21 @@ OK
 </h2>
 <ul>
 <li>
-<a href="cross_validations.html#TanayLabUtilities.CrossValidations">
-<code>TanayLabUtilities.CrossValidations
+<a href="enhanced_hclust.html#TanayLabUtilities.EnhancedHclust">
+<code>TanayLabUtilities.EnhancedHclust
 </code>
 </a>
 </li>
 <li>
-<a href="cross_validations.html#TanayLabUtilities.CrossValidations.CrossValidationIndices">
-<code>TanayLabUtilities.CrossValidations.CrossValidationIndices
-</code>
-</a>
-</li>
-<li>
-<a href="cross_validations.html#TanayLabUtilities.CrossValidations.pick_cross_validation_indices">
-<code>TanayLabUtilities.CrossValidations.pick_cross_validation_indices
+<a href="enhanced_hclust.html#TanayLabUtilities.EnhancedHclust.ehclust">
+<code>TanayLabUtilities.EnhancedHclust.ehclust
 </code>
 </a>
 </li>
 </ul>
 </article>
 <nav class="docs-footer">
-<a class="docs-footer-prevpage" href="downsample.html">« Downsample
-</a>
-<a class="docs-footer-nextpage" href="global_weak_cache.html">Global Weak Cache »
+<a class="docs-footer-prevpage" href="global_weak_cache.html">« Global Weak Cache
 </a>
 <div class="flexbox-break">
 </div>
