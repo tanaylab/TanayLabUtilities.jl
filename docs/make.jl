@@ -48,7 +48,6 @@ makedocs(;
         "downsample.md",
         "cross_validations.md",
         "global_weak_cache.md",
-        "enhanced_hclust.md",
     ],
 )
 
