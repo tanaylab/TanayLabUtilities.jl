@@ -939,11 +939,11 @@ function transposer(matrix::AbstractMatrix)::AbstractMatrix
     else
         if axis == Columns
             result = Matrix{eltype(matrix)}(undef, size(matrix, Columns), size(matrix, Rows))
-            result = LinearAlgebra.transpose!(result, mutable_array(matrix))
+            result = permutedims!(result, mutable_array(matrix), (2, 1))
 
         elseif axis == Rows  # UNTESTED
             result = Matrix{eltype(matrix)}(undef, size(matrix, Rows), size(matrix, Columns))  # UNTESTED
-            result = LinearAlgebra.transpose!(result, transpose(mutable_array(matrix)))  # UNTESTED
+            result = permutedims!(result, transpose(mutable_array(matrix)), (2, 1))  # UNTESTED
             result = transpose(result)  # UNTESTED
 
         else
