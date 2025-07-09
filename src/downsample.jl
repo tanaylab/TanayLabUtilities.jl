@@ -54,9 +54,8 @@ position in the result.
 If the sum of the entries of a vector is less than `samples`, it is copied to the output. If `output` is not specified,
 it is allocated automatically using the same element type as the input.
 
-When downsampling a `matrix`, then `dims` must be specified to be `1`/`Rows` to downsample all the rows in each column
-or `2`/`Columns` to downsample all the columns in each row (that is, the `sum` with the same `dims` will give the number
-of samples in each vector).
+When downsampling a `matrix`, then `dims` must be specified to be `1`/`Rows` to separately downsample each row, or
+`2`/`Columns` to separately downsample each column.
 
 ```jldoctest
 using Test
@@ -67,7 +66,7 @@ data = rand(1:100, 10, 5)
 samples_per_column = vec(sum(data; dims = 1))
 
 for samples in (100, 250, 500, 750, 1000)
-    downsampled = downsample(data, samples; dims = 1)
+    downsampled = downsample(data, samples; dims = 2)
     downsamples_per_column = vec(sum(downsampled; dims = 1))
     @test all(downsamples_per_column .== min.(samples_per_column, samples))
     too_small_mask = samples_per_column .<= samples
@@ -80,7 +79,7 @@ data = transpose(data)
 samples_per_row = samples_per_column
 
 for samples in (100, 250, 500, 750, 1000)
-    downsampled = downsample(data, samples; dims = 2)
+    downsampled = downsample(data, samples; dims = 1)
     downsamples_per_row = vec(sum(downsampled; dims = 2))
     @test all(downsamples_per_row .== min.(samples_per_row, samples))
     too_small_mask = samples_per_row .<= samples
@@ -143,26 +142,26 @@ function downsample(
     n_rows, n_columns = size(matrix)
 
     if major_axis(matrix) !== nothing
-        check_efficient_action(@source_location()..., "matrix", matrix, other_axis(dims))
+        check_efficient_action(@source_location()..., "matrix", matrix, dims)
     end
 
     if output === nothing
-        output = similar_array(matrix; default_major_axis = other_axis(dims))
+        output = similar_array(matrix; default_major_axis = dims)
     else
         @assert size(output) == size(matrix)  # UNTESTED
         if major_axis(output) !== nothing  # UNTESTED
-            check_efficient_action(@source_location()..., "output", output, other_axis(dims))  # UNTESTED
+            check_efficient_action(@source_location()..., "output", output, dims)  # UNTESTED
         end
     end
 
-    if dims == Columns
+    if dims == Rows
         parallel_loop_with_rng(1:n_rows; rng) do row_index, rng
             @views row_vector = matrix[row_index, :]
             @views output_vector = output[row_index, :]
             return downsample(row_vector, samples; rng, output = output_vector)
         end
 
-    elseif dims == Rows
+    elseif dims == Columns
         parallel_loop_with_rng(1:n_columns; rng) do column_index, rng
             @views column_vector = matrix[:, column_index]
             @views output_vector = output[:, column_index]

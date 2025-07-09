@@ -270,15 +270,11 @@ downsample(
 <code>1
 </code>/
 <code>Rows
-</code> to downsample all the rows in each column or 
+</code> to separately downsample each row, or 
 <code>2
 </code>/
 <code>Columns
-</code> to downsample all the columns in each row (that is, the 
-<code>sum
-</code> with the same 
-<code>dims
-</code> will give the number of samples in each vector).
+</code> to separately downsample each column.
 </p>
 <pre>
 <code class="language-julia hljs">using Test
@@ -289,7 +285,7 @@ data = rand(1:100, 10, 5)
 samples_per_column = vec(sum(data; dims = 1))
 
 for samples in (100, 250, 500, 750, 1000)
-    downsampled = downsample(data, samples; dims = 1)
+    downsampled = downsample(data, samples; dims = 2)
     downsamples_per_column = vec(sum(downsampled; dims = 1))
     @test all(downsamples_per_column .== min.(samples_per_column, samples))
     too_small_mask = samples_per_column .&lt;= samples
@@ -302,7 +298,7 @@ data = transpose(data)
 samples_per_row = samples_per_column
 
 for samples in (100, 250, 500, 750, 1000)
-    downsampled = downsample(data, samples; dims = 2)
+    downsampled = downsample(data, samples; dims = 1)
     downsamples_per_row = vec(sum(downsampled; dims = 2))
     @test all(downsamples_per_row .== min.(samples_per_row, samples))
     too_small_mask = samples_per_row .&lt;= samples
