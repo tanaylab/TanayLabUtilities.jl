@@ -1237,7 +1237,7 @@ end
 """
     indtype_for_size(size::Integer)::Type
 
-Return the an integer data type which is large enough to hold indices and offsets for a `SparseMatrixCSC` matrix of some
+Return the integer data type which is large enough to hold indices and offsets for a `SparseMatrixCSC` matrix of some
 `size` (total number of elements). We try to use `UInt32` whenever possible because for large matrices (especially with
 32-bit value types) this will drastically reduce the amount of space used.
 
