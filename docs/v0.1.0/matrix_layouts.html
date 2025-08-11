@@ -347,6 +347,8 @@ using NamedArrays
 permuted = PermutedDimsArray(base, (2, 1))
 @test major_axis(permuted) == Rows
 
+@test flip(permuted) === base
+
 unpermuted = PermutedDimsArray(base, (1, 2))
 @test major_axis(unpermuted) == Columns
 
@@ -354,6 +356,8 @@ unpermuted = PermutedDimsArray(base, (1, 2))
 
 transposed = transpose(base)
 @test major_axis(transposed) == Rows
+
+@test flip(transposed) === base
 
 adjointed = adjoint(base)
 @test major_axis(adjointed) == Rows
@@ -466,6 +470,8 @@ using NamedArrays
 permuted = PermutedDimsArray(base, (2, 1))
 @test minor_axis(permuted) == Columns
 
+@test flip(permuted) === base
+
 unpermuted = PermutedDimsArray(base, (1, 2))
 @test minor_axis(unpermuted) == Rows
 
@@ -474,8 +480,12 @@ unpermuted = PermutedDimsArray(base, (1, 2))
 transposed = transpose(base)
 @test minor_axis(transposed) == Columns
 
+@test flip(transposed) === base
+
 adjointed = adjoint(base)
 @test minor_axis(adjointed) == Columns
+
+@test flip(adjointed) === base
 
 # Sparse
 
@@ -596,6 +606,170 @@ ERROR: invalid matrix axis: 3
 <header>
 <a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring">
 </a>
+<a class="docstring-binding" id="TanayLabUtilities.MatrixLayouts.flip" href="#TanayLabUtilities.MatrixLayouts.flip">
+<code>TanayLabUtilities.MatrixLayouts.flip
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+<span class="is-flex-grow-1 docstring-article-toggle-button" title="Collapse docstring">
+</span>
+</header>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">flip(AbstractMatrix)::AbstractMatrix
+</code>
+</pre>
+<p>Flip the axes of a matrix. This applies 
+<code>PermutedDimsArray
+</code> to the matrix. However, unlike the standard Julia functions, which in their infinite wisdom blindly add a wrapper on top of the matrix, this function looks at the input first. As long as it is not a matrix of 
+<code>Complex
+</code> values, it will strip away an existing 
+<code>Transpose
+</code> and/or 
+<code>Adjoint
+</code> and/or 
+<code>PermutedDimsArray
+</code> wrapper, instead of attaching an additional one. In addition, 
+<code>flip
+</code> will also look inside a 
+<code>ReadOnlyArray
+</code> and/or 
+<code>NamedArray
+</code> to cancel out an internal flip wrapper.
+</p>
+<div class="admonition is-info" id="Note-e7edc7fe8dd67e23">
+<header class="admonition-header">Note
+<a class="admonition-anchor" href="#Note-e7edc7fe8dd67e23" title="Permalink">
+</a>
+</header>
+<div class="admonition-body">
+<p>Something along these lines really should have been in 
+<code>Base
+</code>. Since there isn&#39;t, everyone is expected to create their own version of this - this is ours. We try to use it &quot;universally&quot; in our code instead of 
+<code>PermutedDimsArray
+</code>, 
+<code>transpose
+</code>, 
+<code>adjoint
+</code>, 
+<code>m&#39;
+</code>, etc.
+</p>
+</div>
+</div>
+</div>
+</section>
+</article>
+<article class="docstring">
+<header>
+<a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring">
+</a>
+<a class="docstring-binding" id="TanayLabUtilities.MatrixLayouts.flipped" href="#TanayLabUtilities.MatrixLayouts.flipped">
+<code>TanayLabUtilities.MatrixLayouts.flipped
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+<span class="is-flex-grow-1 docstring-article-toggle-button" title="Collapse docstring">
+</span>
+</header>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">flipped(matrix::AbstractMatrix)::AbstractMatrix
+</code>
+</pre>
+<p>Return a transpose of a matrix, but instead of simply using a zero-copy wrapper, it actually rearranges the data. See 
+<a href="matrix_layouts.html#TanayLabUtilities.MatrixLayouts.relayout!">
+<code>relayout!
+</code>
+</a>.
+</p>
+<pre>
+<code class="language-julia hljs">using Test
+
+# Dense
+
+base = rand(3, 4)
+@test flipped(base) == flip(base)
+@test brief(base) == &quot;3 x 4 x Float64 in Columns (Dense)&quot;
+@test brief(flip(base)) == &quot;4 x 3 x Float64 in Rows (Permute, Dense)&quot;
+@test brief(flipped(base)) == &quot;4 x 3 x Float64 in Columns (Dense)&quot;
+
+# Named
+
+using NamedArrays
+
+base = NamedArray(rand(3, 4))
+@test flipped(base) == flip(base)
+@test brief(base) == &quot;3 x 4 x Float64 in Columns (Named, Dense)&quot;
+@test brief(flip(base)) == &quot;4 x 3 x Float64 in Rows (Named, Permute, Dense)&quot;
+@test brief(flipped(base)) == &quot;4 x 3 x Float64 in Columns (Named, Dense)&quot;
+
+# Permuted
+
+base = PermutedDimsArray(rand(3, 4), (2,1))
+@test flipped(base) == flip(base)
+@test brief(base) == &quot;4 x 3 x Float64 in Rows (Permute, Dense)&quot;
+@test brief(flip(base)) == &quot;3 x 4 x Float64 in Columns (Dense)&quot;
+@test brief(flipped(base)) == &quot;3 x 4 x Float64 in Rows (Permute, Dense)&quot;
+
+base = PermutedDimsArray(rand(3, 4), (1,2))
+@test flipped(base) == flip(base)
+@test brief(base) == &quot;3 x 4 x Float64 in Columns (!Permute, Dense)&quot;
+@test brief(flip(base)) == &quot;4 x 3 x Float64 in Rows (Permute, Dense)&quot;
+@test brief(flipped(base)) == &quot;4 x 3 x Float64 in Columns (Dense)&quot;
+
+# LinearAlgebra
+
+using LinearAlgebra
+
+base = transpose(rand(3, 4))
+@test flipped(base) == transpose(base)
+@test brief(base) == &quot;4 x 3 x Float64 in Rows (Transpose, Dense)&quot;
+@test brief(transpose(base)) == &quot;3 x 4 x Float64 in Columns (Dense)&quot;
+@test brief(flipped(base)) == &quot;3 x 4 x Float64 in Rows (Permute, Dense)&quot;
+
+base = adjoint(rand(3, 4))
+@test flipped(base) == transpose(base)
+@test brief(base) == &quot;4 x 3 x Float64 in Rows (Adjoint, Dense)&quot;
+@test brief(flip(base)) == &quot;3 x 4 x Float64 in Columns (Dense)&quot;
+@test brief(flipped(base)) == &quot;3 x 4 x Float64 in Rows (Permute, Dense)&quot;
+
+# ReadOnly
+
+base = read_only_array(rand(3, 4))
+@test flipped(base) == transpose(base)
+@test brief(base) == &quot;3 x 4 x Float64 in Columns (ReadOnly, Dense)&quot;
+@test brief(flip(base)) == &quot;4 x 3 x Float64 in Rows (ReadOnly, Permute, Dense)&quot;
+@test brief(flipped(base)) == &quot;4 x 3 x Float64 in Columns (Dense)&quot;
+
+# Sparse
+
+using SparseArrays
+
+base = SparseMatrixCSC([0.0 1.0 2.0; 3.0 4.0 0.0])
+@test flipped(base) == flip(base)
+@test brief(base) == &quot;2 x 3 x Float64 in Columns (Sparse Int64 67%)&quot;
+@test brief(flip(base)) == &quot;3 x 2 x Float64 in Rows (Permute, Sparse Int64 67%)&quot;
+@test brief(flipped(base)) == &quot;3 x 2 x Float64 in Columns (Sparse Int64 67%)&quot;
+
+println(&quot;OK&quot;)
+
+# output
+
+OK
+</code>
+</pre>
+</div>
+</section>
+</article>
+<article class="docstring">
+<header>
+<a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring">
+</a>
 <a class="docstring-binding" id="TanayLabUtilities.MatrixLayouts.relayout!" href="#TanayLabUtilities.MatrixLayouts.relayout!">
 <code>TanayLabUtilities.MatrixLayouts.relayout!
 </code>
@@ -617,10 +791,14 @@ relayout!(destination::AbstractMatrix, source::NamedMatrix)::NamedMatrix
 </code> data, but in the other memory layout.
 </p>
 <p>Suppose you have a column-major UMIs matrix, whose rows are cells, and columns are genes. Therefore, looping on the UMIs of a gene will be fast, but looping on the UMIs of a cell will be slow. A 
+<code>flip
+</code> (or 
 <code>transpose
-</code> (no 
+</code>, no 
 <code>!
-</code>) of a matrix is fast; it creates a zero-copy wrapper of the matrix with flipped axes, so its rows will be genes and columns will be cells, but in row-major layout. Therefore, 
+</code>, or 
+<code>PermutedDimsArray
+</code>) of a matrix is fast; they create a zero-copy wrapper of the matrix with flipped axes, so its rows will be genes and columns will be cells, but in row-major layout. Therefore, 
 <strong>still
 </strong>, looping on the UMIs of a gene is fast, and looping on the UMIs of a cell is slow.
 </p>
@@ -629,31 +807,15 @@ relayout!(destination::AbstractMatrix, source::NamedMatrix)::NamedMatrix
 </code> (with a 
 <code>!
 </code>) (or 
-<a href="matrix_layouts.html#TanayLabUtilities.MatrixLayouts.transposer">
-<code>transposer
+<a href="matrix_layouts.html#TanayLabUtilities.MatrixLayouts.flipped">
+<code>flipped
 </code>
 </a>) is slow; it creates a rearranged copy of the data, also returning a matrix whose rows are genes and columns are cells, but this time, in column-major layout. Therefore, in this case looping on the UMIs of a gene will be slow, and looping on the UMIs of a cell will be fast.
 </p>
-<div class="admonition is-info" id="Note-dcf00a86ddebf90f">
-<header class="admonition-header">Note
-<a class="admonition-anchor" href="#Note-dcf00a86ddebf90f" title="Permalink">
-</a>
-</header>
-<div class="admonition-body">
-<p>It is almost always worthwhile to 
-<code>relayout!
-</code> a matrix and then looping &quot;with the grain&quot; of the data, instead of skipping it and looping &quot;against the grain&quot; of the data. This is because (in Julia at least) the implementation of 
-<code>transpose!
-</code> is optimized for the task, while the other operations typically don&#39;t provide any specific optimizations for working &quot;against the grain&quot; of the data. The benefits of a 
-<code>relayout!
-</code> become more significant the more operations are done on the data in the loop.
-</p>
-</div>
-</div>
 <p>The 
 <code>relayout!
 </code> is essentially a zero-copy 
-<code>transpose
+<code>flip
 </code> of the slow 
 <code>transpose!
 </code>. You end up with a matrix that 
@@ -678,19 +840,27 @@ relayout!(destination::AbstractMatrix, source::NamedMatrix)::NamedMatrix
 <code>source
 </code>.
 </p>
-<div class="admonition is-info" id="Note-4bcb4fcf75d941da">
-<header class="admonition-header">Note
-<a class="admonition-anchor" href="#Note-4bcb4fcf75d941da" title="Permalink">
-</a>
-</header>
-<div class="admonition-body">
 <p>The caller is responsible for providing a sensible 
 <code>destination
 </code> matrix (sparse for a sparse 
 <code>source
 </code>, dense for a non-sparse 
 <code>source
-</code>).
+</code>, with compatible storage sizes).
+</p>
+<div class="admonition is-info" id="Note-dcf00a86ddebf90f">
+<header class="admonition-header">Note
+<a class="admonition-anchor" href="#Note-dcf00a86ddebf90f" title="Permalink">
+</a>
+</header>
+<div class="admonition-body">
+<p>It is almost always worthwhile to 
+<code>relayout!
+</code> a matrix and then looping &quot;with the grain&quot; of the data, instead of skipping it and looping &quot;against the grain&quot; of the data. This is because (in Julia at least) the implementation of 
+<code>transpose!
+</code> is optimized for the task, while the other operations typically don&#39;t provide any specific optimizations for working &quot;against the grain&quot; of the data. The benefits of a 
+<code>relayout!
+</code> become more significant the more operations are done on the data in the loop.
 </p>
 </div>
 </div>
@@ -700,12 +870,12 @@ relayout!(destination::AbstractMatrix, source::NamedMatrix)::NamedMatrix
 using LinearAlgebra
 
 source = rand(3, 4)
-destination = transpose(rand(4, 3))
+destination = flip(rand(4, 3))
 
 result = relayout!(destination, source)
 @test result === destination
 @test brief(source) == &quot;3 x 4 x Float64 in Columns (Dense)&quot;
-@test brief(result) == &quot;3 x 4 x Float64 in Rows (Transpose, Dense)&quot;
+@test brief(result) == &quot;3 x 4 x Float64 in Rows (Permute, Dense)&quot;
 @test result == source
 
 # Named
@@ -713,19 +883,19 @@ result = relayout!(destination, source)
 using NamedArrays
 
 named_source = NamedArray(rand(3, 4))
-destination = transpose(rand(4, 3))
+destination = flip(rand(4, 3))
 result = relayout!(destination, named_source)
 @test parent(result) === destination
 @test brief(named_source) == &quot;3 x 4 x Float64 in Columns (Named, Dense)&quot;
-@test brief(result) == &quot;3 x 4 x Float64 in Rows (Named, Transpose, Dense)&quot;
+@test brief(result) == &quot;3 x 4 x Float64 in Rows (Named, Permute, Dense)&quot;
 @test result == named_source
 
 source = rand(3, 4)
-named_destination = NamedArray(transpose(rand(4, 3)))
+named_destination = NamedArray(flip(rand(4, 3)))
 result = relayout!(named_destination, source)
 @test result === named_destination
 @test brief(source) == &quot;3 x 4 x Float64 in Columns (Dense)&quot;
-@test brief(result) == &quot;3 x 4 x Float64 in Rows (Named, Transpose, Dense)&quot;
+@test brief(result) == &quot;3 x 4 x Float64 in Rows (Named, Permute, Dense)&quot;
 @test result == source
 
 source = rand(3, 4)
@@ -737,11 +907,11 @@ result = relayout!(named_destination, source)
 @test result == source
 
 named_source = NamedArray(rand(3, 4))
-named_destination = NamedArray(transpose(rand(4, 3)))
+named_destination = NamedArray(flip(rand(4, 3)))
 result = relayout!(named_destination, named_source)
 @test result === named_destination
 @test brief(named_source) == &quot;3 x 4 x Float64 in Columns (Named, Dense)&quot;
-@test brief(result) == &quot;3 x 4 x Float64 in Rows (Named, Transpose, Dense)&quot;
+@test brief(result) == &quot;3 x 4 x Float64 in Rows (Named, Permute, Dense)&quot;
 @test result == named_source
 
 # Permuted
@@ -767,11 +937,11 @@ result = relayout!(destination, source)
 using SparseArrays
 
 source = SparseMatrixCSC([0.0 1.0 2.0; 3.0 4.0 0.0])
-destination = transpose(SparseMatrixCSC([30.0 0.0; 0.0 40.0; 20.0 10.0]))
+destination = flip(SparseMatrixCSC([30.0 0.0; 0.0 40.0; 20.0 10.0]))
 result = relayout!(destination, source)
 @test result === destination
 @test brief(source) == &quot;2 x 3 x Float64 in Columns (Sparse Int64 67%)&quot;
-@test brief(result) == &quot;2 x 3 x Float64 in Rows (Transpose, Sparse Int64 67%)&quot;
+@test brief(result) == &quot;2 x 3 x Float64 in Rows (Permute, Sparse Int64 67%)&quot;
 @test result == source
 
 println(&quot;OK&quot;)
@@ -809,7 +979,7 @@ relayout(matrix::NamedMatrix)::NamedMatrix
 <code>relayout!
 </code>
 </a> but allocates the destination matrix for you. Is equivalent to 
-<code>transpose(transposer(matrix))
+<code>flip(flipped(matrix))
 </code>.
 </p>
 <pre>
@@ -818,110 +988,6 @@ relayout(matrix::NamedMatrix)::NamedMatrix
 @assert major_axis(relayout(base)) == minor_axis(base)
 
 # output
-</code>
-</pre>
-</div>
-</section>
-</article>
-<article class="docstring">
-<header>
-<a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring">
-</a>
-<a class="docstring-binding" id="TanayLabUtilities.MatrixLayouts.transposer" href="#TanayLabUtilities.MatrixLayouts.transposer">
-<code>TanayLabUtilities.MatrixLayouts.transposer
-</code>
-</a> — 
-<span class="docstring-category">Function
-</span>
-<span class="is-flex-grow-1 docstring-article-toggle-button" title="Collapse docstring">
-</span>
-</header>
-<section>
-<div>
-<pre>
-<code class="language-julia hljs">transposer(matrix::AbstractMatrix)::AbstractMatrix
-</code>
-</pre>
-<p>Return a transpose of a matrix, but instead of simply using a zero-copy wrapper, it actually rearranges the data. See 
-<a href="matrix_layouts.html#TanayLabUtilities.MatrixLayouts.relayout!">
-<code>relayout!
-</code>
-</a>.
-</p>
-<pre>
-<code class="language-julia hljs">using Test
-
-# Dense
-
-base = rand(3, 4)
-@test transposer(base) == transpose(base)
-@test brief(base) == &quot;3 x 4 x Float64 in Columns (Dense)&quot;
-@test brief(transpose(base)) == &quot;4 x 3 x Float64 in Rows (Transpose, Dense)&quot;
-@test brief(transposer(base)) == &quot;4 x 3 x Float64 in Columns (Dense)&quot;
-
-# Named
-
-using NamedArrays
-
-base = NamedArray(rand(3, 4))
-@test transposer(base) == transpose(base)
-@test brief(base) == &quot;3 x 4 x Float64 in Columns (Named, Dense)&quot;
-@test brief(transpose(base)) == &quot;4 x 3 x Float64 in Rows (Named, Transpose, Dense)&quot;
-@test brief(transposer(base)) == &quot;4 x 3 x Float64 in Columns (Named, Dense)&quot;
-
-# Permuted
-
-base = PermutedDimsArray(rand(3, 4), (2,1))
-@test transposer(base) == transpose(base)
-@test brief(base) == &quot;4 x 3 x Float64 in Rows (Permute, Dense)&quot;
-@test brief(transpose(base)) == &quot;3 x 4 x Float64 in Columns (Transpose, Permute, Dense)&quot;
-@test brief(transposer(base)) == &quot;3 x 4 x Float64 in Rows (Transpose, Dense)&quot;
-
-base = PermutedDimsArray(rand(3, 4), (1,2))
-@test transposer(base) == transpose(base)
-@test brief(base) == &quot;3 x 4 x Float64 in Columns (!Permute, Dense)&quot;
-@test brief(transpose(base)) == &quot;4 x 3 x Float64 in Rows (Transpose, !Permute, Dense)&quot;
-@test brief(transposer(base)) == &quot;4 x 3 x Float64 in Columns (Dense)&quot;
-
-# LinearAlgebra
-
-using LinearAlgebra
-
-base = transpose(rand(3, 4))
-@test transposer(base) == transpose(base)
-@test brief(base) == &quot;4 x 3 x Float64 in Rows (Transpose, Dense)&quot;
-@test brief(transpose(base)) == &quot;3 x 4 x Float64 in Columns (Dense)&quot;
-@test brief(transposer(base)) == &quot;3 x 4 x Float64 in Rows (Transpose, Dense)&quot;
-
-base = adjoint(rand(3, 4))
-@test transposer(base) == transpose(base)
-@test brief(base) == &quot;4 x 3 x Float64 in Rows (Adjoint, Dense)&quot;
-@test brief(transpose(base)) == &quot;3 x 4 x Float64 in Columns (Dense)&quot;
-@test brief(transposer(base)) == &quot;3 x 4 x Float64 in Rows (Adjoint, Dense)&quot;
-
-# ReadOnly
-
-base = read_only_array(rand(3, 4))
-@test transposer(base) == transpose(base)
-@test brief(base) == &quot;3 x 4 x Float64 in Columns (ReadOnly, Dense)&quot;
-@test brief(transpose(base)) == &quot;4 x 3 x Float64 in Rows (Transpose, ReadOnly, Dense)&quot;
-@test brief(transposer(base)) == &quot;4 x 3 x Float64 in Columns (Dense)&quot;
-
-# Sparse
-
-using SparseArrays
-
-base = SparseMatrixCSC([0.0 1.0 2.0; 3.0 4.0 0.0])
-@test transposer(base) == transpose(base)
-@test brief(base) == &quot;2 x 3 x Float64 in Columns (Sparse Int64 67%)&quot;
-@test brief(transpose(base)) == &quot;3 x 2 x Float64 in Rows (Transpose, Sparse Int64 67%)&quot;
-@test brief(transposer(base)) == &quot;3 x 2 x Float64 in Columns (Sparse Int64 67%)&quot;
-
-println(&quot;OK&quot;)
-
-# output
-
-OK
 </code>
 </pre>
 </div>
@@ -1122,6 +1188,18 @@ for matrix: 2 x 3 x Int64 in Columns (Dense)
 </a>
 </li>
 <li>
+<a href="matrix_layouts.html#TanayLabUtilities.MatrixLayouts.flip">
+<code>TanayLabUtilities.MatrixLayouts.flip
+</code>
+</a>
+</li>
+<li>
+<a href="matrix_layouts.html#TanayLabUtilities.MatrixLayouts.flipped">
+<code>TanayLabUtilities.MatrixLayouts.flipped
+</code>
+</a>
+</li>
+<li>
 <a href="matrix_layouts.html#TanayLabUtilities.MatrixLayouts.major_axis">
 <code>TanayLabUtilities.MatrixLayouts.major_axis
 </code>
@@ -1160,12 +1238,6 @@ for matrix: 2 x 3 x Int64 in Columns (Dense)
 <li>
 <a href="matrix_layouts.html#TanayLabUtilities.MatrixLayouts.require_minor_axis">
 <code>TanayLabUtilities.MatrixLayouts.require_minor_axis
-</code>
-</a>
-</li>
-<li>
-<a href="matrix_layouts.html#TanayLabUtilities.MatrixLayouts.transposer">
-<code>TanayLabUtilities.MatrixLayouts.transposer
 </code>
 </a>
 </li>

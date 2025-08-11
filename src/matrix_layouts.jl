@@ -36,7 +36,8 @@ export relayout
 export relayout!
 export require_major_axis
 export require_minor_axis
-export transposer
+export flip
+export flipped
 export GLOBAL_INEFFICIENT_ACTION_HANDLER
 
 using ..Documentation
@@ -120,6 +121,8 @@ using NamedArrays
 permuted = PermutedDimsArray(base, (2, 1))
 @test major_axis(permuted) == Rows
 
+@test flip(permuted) === base
+
 unpermuted = PermutedDimsArray(base, (1, 2))
 @test major_axis(unpermuted) == Columns
 
@@ -127,6 +130,8 @@ unpermuted = PermutedDimsArray(base, (1, 2))
 
 transposed = transpose(base)
 @test major_axis(transposed) == Rows
+
+@test flip(transposed) === base
 
 adjointed = adjoint(base)
 @test major_axis(adjointed) == Rows
@@ -242,6 +247,8 @@ using NamedArrays
 permuted = PermutedDimsArray(base, (2, 1))
 @test minor_axis(permuted) == Columns
 
+@test flip(permuted) === base
+
 unpermuted = PermutedDimsArray(base, (1, 2))
 @test minor_axis(unpermuted) == Rows
 
@@ -250,8 +257,12 @@ unpermuted = PermutedDimsArray(base, (1, 2))
 transposed = transpose(base)
 @test minor_axis(transposed) == Columns
 
+@test flip(transposed) === base
+
 adjointed = adjoint(base)
 @test minor_axis(adjointed) == Columns
+
+@test flip(adjointed) === base
 
 # Sparse
 
@@ -605,14 +616,24 @@ end
 Return the same `matrix` data, but in the other memory layout.
 
 Suppose you have a column-major UMIs matrix, whose rows are cells, and columns are genes. Therefore, looping on the UMIs
-of a gene will be fast, but looping on the UMIs of a cell will be slow. A `transpose` (no `!`) of a matrix is fast; it
-creates a zero-copy wrapper of the matrix with flipped axes, so its rows will be genes and columns will be cells, but in
-row-major layout. Therefore, **still**, looping on the UMIs of a gene is fast, and looping on the UMIs of a cell is
-slow.
+of a gene will be fast, but looping on the UMIs of a cell will be slow. A `flip` (or `transpose`, no `!`, or
+`PermutedDimsArray`) of a matrix is fast; they create a zero-copy wrapper of the matrix with flipped axes, so its rows
+will be genes and columns will be cells, but in row-major layout. Therefore, **still**, looping on the UMIs of a gene is
+fast, and looping on the UMIs of a cell is slow.
 
-In contrast, `transpose!` (with a `!`) (or [`transposer`](@ref)) is slow; it creates a rearranged copy of the data, also
+In contrast, `transpose!` (with a `!`) (or [`flipped`](@ref)) is slow; it creates a rearranged copy of the data, also
 returning a matrix whose rows are genes and columns are cells, but this time, in column-major layout. Therefore, in this
 case looping on the UMIs of a gene will be slow, and looping on the UMIs of a cell will be fast.
+
+The `relayout!` is essentially a zero-copy `flip` of the slow `transpose!`. You end up with a matrix that
+**appears** to be the same as the original (rows are cells and columns are genes), but behaves **differently** - looping
+on the UMIs of a gene will be slow, and looping on the UMIs of a cell will be fast. In addition, `relayout!` will work
+for both sparse and dense matrices. If the `source` is a `NamedMatrix`, then the result will be a `NamedMatrix` with the
+same axes (zero-copy shared from the `source`). If `destination` is already a `NamedMatrix`, then its axes must match
+`source`.
+
+The caller is responsible for providing a sensible `destination` matrix (sparse for a sparse `source`, dense for a
+non-sparse `source`, with compatible storage sizes).
 
 !!! note
 
@@ -622,30 +643,18 @@ case looping on the UMIs of a gene will be slow, and looping on the UMIs of a ce
     optimizations for working "against the grain" of the data. The benefits of a `relayout!` become more significant the
     more operations are done on the data in the loop.
 
-The `relayout!` is essentially a zero-copy `transpose` of the slow `transpose!`. You end up with a matrix that
-**appears** to be the same as the original (rows are cells and columns are genes), but behaves **differently** - looping
-on the UMIs of a gene will be slow, and looping on the UMIs of a cell will be fast. In addition, `relayout!` will work
-for both sparse and dense matrices. If the `source` is a `NamedMatrix`, then the result will be a `NamedMatrix` with the
-same axes (zero-copy shared from the `source`). If `destination` is already a `NamedMatrix`, then its axes must match
-`source`.
-
-!!! note
-
-    The caller is responsible for providing a sensible `destination` matrix (sparse for a sparse `source`, dense for a
-    non-sparse `source`).
-
 ```jldoctest
 using Test
 
 using LinearAlgebra
 
 source = rand(3, 4)
-destination = transpose(rand(4, 3))
+destination = flip(rand(4, 3))
 
 result = relayout!(destination, source)
 @test result === destination
 @test brief(source) == "3 x 4 x Float64 in Columns (Dense)"
-@test brief(result) == "3 x 4 x Float64 in Rows (Transpose, Dense)"
+@test brief(result) == "3 x 4 x Float64 in Rows (Permute, Dense)"
 @test result == source
 
 # Named
@@ -653,19 +662,19 @@ result = relayout!(destination, source)
 using NamedArrays
 
 named_source = NamedArray(rand(3, 4))
-destination = transpose(rand(4, 3))
+destination = flip(rand(4, 3))
 result = relayout!(destination, named_source)
 @test parent(result) === destination
 @test brief(named_source) == "3 x 4 x Float64 in Columns (Named, Dense)"
-@test brief(result) == "3 x 4 x Float64 in Rows (Named, Transpose, Dense)"
+@test brief(result) == "3 x 4 x Float64 in Rows (Named, Permute, Dense)"
 @test result == named_source
 
 source = rand(3, 4)
-named_destination = NamedArray(transpose(rand(4, 3)))
+named_destination = NamedArray(flip(rand(4, 3)))
 result = relayout!(named_destination, source)
 @test result === named_destination
 @test brief(source) == "3 x 4 x Float64 in Columns (Dense)"
-@test brief(result) == "3 x 4 x Float64 in Rows (Named, Transpose, Dense)"
+@test brief(result) == "3 x 4 x Float64 in Rows (Named, Permute, Dense)"
 @test result == source
 
 source = rand(3, 4)
@@ -677,11 +686,11 @@ result = relayout!(named_destination, source)
 @test result == source
 
 named_source = NamedArray(rand(3, 4))
-named_destination = NamedArray(transpose(rand(4, 3)))
+named_destination = NamedArray(flip(rand(4, 3)))
 result = relayout!(named_destination, named_source)
 @test result === named_destination
 @test brief(named_source) == "3 x 4 x Float64 in Columns (Named, Dense)"
-@test brief(result) == "3 x 4 x Float64 in Rows (Named, Transpose, Dense)"
+@test brief(result) == "3 x 4 x Float64 in Rows (Named, Permute, Dense)"
 @test result == named_source
 
 # Permuted
@@ -707,11 +716,11 @@ result = relayout!(destination, source)
 using SparseArrays
 
 source = SparseMatrixCSC([0.0 1.0 2.0; 3.0 4.0 0.0])
-destination = transpose(SparseMatrixCSC([30.0 0.0; 0.0 40.0; 20.0 10.0]))
+destination = flip(SparseMatrixCSC([30.0 0.0; 0.0 40.0; 20.0 10.0]))
 result = relayout!(destination, source)
 @test result === destination
 @test brief(source) == "2 x 3 x Float64 in Columns (Sparse Int64 67%)"
-@test brief(result) == "2 x 3 x Float64 in Rows (Transpose, Sparse Int64 67%)"
+@test brief(result) == "2 x 3 x Float64 in Rows (Permute, Sparse Int64 67%)"
 @test result == source
 
 println("OK")
@@ -765,7 +774,7 @@ function unnamed_relayout(
     if P == (Rows, Columns)
         @assert named_relayout(parent(destination), source) === parent(destination)
     elseif P == (Columns, Rows)
-        @assert named_relayout(parent(destination), transpose(source)) === parent(destination)
+        @assert named_relayout(parent(destination), flip(source)) === parent(destination)
     else
         @assert false
     end
@@ -775,7 +784,7 @@ end
 
 function unnamed_relayout(destination::Transpose, source::AbstractMatrix)::AbstractMatrix
     @debug "relayout! destination: $(brief(destination)) source: $(brief(source)) {"
-    @assert named_relayout(parent(destination), transpose(source)) === parent(destination)
+    @assert named_relayout(parent(destination), flip(source)) === parent(destination)
     @debug "relayout! result: $(brief(destination)) }"
     return destination
 end
@@ -791,7 +800,7 @@ function unnamed_relayout(destination::SparseMatrixCSC, source::AbstractMatrix):
     @debug "relayout! destination: $(brief(destination)) source: $(brief(source)) {"
     @assert size(destination) == size(source)
     @assert issparse(source)
-    @assert LinearAlgebra.transpose!(destination, transpose(mutable_array(source))) === destination  # NOJET
+    @assert LinearAlgebra.transpose!(destination, flip(mutable_array(source))) === destination  # NOJET
     @debug "relayout! result: $(brief(destination)) }"
     return destination
 end
@@ -800,7 +809,7 @@ function unnamed_relayout(destination::DenseMatrix, source::AbstractMatrix)::Den
     @debug "relayout! destination: $(brief(destination)) source: $(brief(source)) {"
     @assert size(destination) == size(source)
     @assert !issparse(source)
-    @assert LinearAlgebra.transpose!(destination, transpose(mutable_array(source))) === destination
+    @assert LinearAlgebra.transpose!(destination, flip(mutable_array(source))) === destination
     @debug "relayout! result: $(brief(destination)) }"
     return destination
 end
@@ -817,7 +826,7 @@ end
     relayout(matrix::NamedMatrix)::NamedMatrix
 
 Same as [`relayout!`](@ref) but allocates the destination matrix for you. Is equivalent to
-`transpose(transposer(matrix))`.
+`flip(flipped(matrix))`.
 
 ```jldoctest
 base = rand(3, 4)
@@ -828,11 +837,11 @@ base = rand(3, 4)
 ```
 """
 function relayout(matrix::AbstractMatrix)::AbstractMatrix
-    return transpose(transposer(matrix))
+    return flip(flipped(matrix))
 end
 
 """
-    transposer(matrix::AbstractMatrix)::AbstractMatrix
+    flipped(matrix::AbstractMatrix)::AbstractMatrix
 
 Return a transpose of a matrix, but instead of simply using a zero-copy wrapper, it actually rearranges the data. See
 [`relayout!`](@ref).
@@ -843,68 +852,68 @@ using Test
 # Dense
 
 base = rand(3, 4)
-@test transposer(base) == transpose(base)
+@test flipped(base) == flip(base)
 @test brief(base) == "3 x 4 x Float64 in Columns (Dense)"
-@test brief(transpose(base)) == "4 x 3 x Float64 in Rows (Transpose, Dense)"
-@test brief(transposer(base)) == "4 x 3 x Float64 in Columns (Dense)"
+@test brief(flip(base)) == "4 x 3 x Float64 in Rows (Permute, Dense)"
+@test brief(flipped(base)) == "4 x 3 x Float64 in Columns (Dense)"
 
 # Named
 
 using NamedArrays
 
 base = NamedArray(rand(3, 4))
-@test transposer(base) == transpose(base)
+@test flipped(base) == flip(base)
 @test brief(base) == "3 x 4 x Float64 in Columns (Named, Dense)"
-@test brief(transpose(base)) == "4 x 3 x Float64 in Rows (Named, Transpose, Dense)"
-@test brief(transposer(base)) == "4 x 3 x Float64 in Columns (Named, Dense)"
+@test brief(flip(base)) == "4 x 3 x Float64 in Rows (Named, Permute, Dense)"
+@test brief(flipped(base)) == "4 x 3 x Float64 in Columns (Named, Dense)"
 
 # Permuted
 
 base = PermutedDimsArray(rand(3, 4), (2,1))
-@test transposer(base) == transpose(base)
+@test flipped(base) == flip(base)
 @test brief(base) == "4 x 3 x Float64 in Rows (Permute, Dense)"
-@test brief(transpose(base)) == "3 x 4 x Float64 in Columns (Transpose, Permute, Dense)"
-@test brief(transposer(base)) == "3 x 4 x Float64 in Rows (Transpose, Dense)"
+@test brief(flip(base)) == "3 x 4 x Float64 in Columns (Dense)"
+@test brief(flipped(base)) == "3 x 4 x Float64 in Rows (Permute, Dense)"
 
 base = PermutedDimsArray(rand(3, 4), (1,2))
-@test transposer(base) == transpose(base)
+@test flipped(base) == flip(base)
 @test brief(base) == "3 x 4 x Float64 in Columns (!Permute, Dense)"
-@test brief(transpose(base)) == "4 x 3 x Float64 in Rows (Transpose, !Permute, Dense)"
-@test brief(transposer(base)) == "4 x 3 x Float64 in Columns (Dense)"
+@test brief(flip(base)) == "4 x 3 x Float64 in Rows (Permute, Dense)"
+@test brief(flipped(base)) == "4 x 3 x Float64 in Columns (Dense)"
 
 # LinearAlgebra
 
 using LinearAlgebra
 
 base = transpose(rand(3, 4))
-@test transposer(base) == transpose(base)
+@test flipped(base) == transpose(base)
 @test brief(base) == "4 x 3 x Float64 in Rows (Transpose, Dense)"
 @test brief(transpose(base)) == "3 x 4 x Float64 in Columns (Dense)"
-@test brief(transposer(base)) == "3 x 4 x Float64 in Rows (Transpose, Dense)"
+@test brief(flipped(base)) == "3 x 4 x Float64 in Rows (Permute, Dense)"
 
 base = adjoint(rand(3, 4))
-@test transposer(base) == transpose(base)
+@test flipped(base) == transpose(base)
 @test brief(base) == "4 x 3 x Float64 in Rows (Adjoint, Dense)"
-@test brief(transpose(base)) == "3 x 4 x Float64 in Columns (Dense)"
-@test brief(transposer(base)) == "3 x 4 x Float64 in Rows (Adjoint, Dense)"
+@test brief(flip(base)) == "3 x 4 x Float64 in Columns (Dense)"
+@test brief(flipped(base)) == "3 x 4 x Float64 in Rows (Permute, Dense)"
 
 # ReadOnly
 
 base = read_only_array(rand(3, 4))
-@test transposer(base) == transpose(base)
+@test flipped(base) == transpose(base)
 @test brief(base) == "3 x 4 x Float64 in Columns (ReadOnly, Dense)"
-@test brief(transpose(base)) == "4 x 3 x Float64 in Rows (Transpose, ReadOnly, Dense)"
-@test brief(transposer(base)) == "4 x 3 x Float64 in Columns (Dense)"
+@test brief(flip(base)) == "4 x 3 x Float64 in Rows (ReadOnly, Permute, Dense)"
+@test brief(flipped(base)) == "4 x 3 x Float64 in Columns (Dense)"
 
 # Sparse
 
 using SparseArrays
 
 base = SparseMatrixCSC([0.0 1.0 2.0; 3.0 4.0 0.0])
-@test transposer(base) == transpose(base)
+@test flipped(base) == flip(base)
 @test brief(base) == "2 x 3 x Float64 in Columns (Sparse Int64 67%)"
-@test brief(transpose(base)) == "3 x 2 x Float64 in Rows (Transpose, Sparse Int64 67%)"
-@test brief(transposer(base)) == "3 x 2 x Float64 in Columns (Sparse Int64 67%)"
+@test brief(flip(base)) == "3 x 2 x Float64 in Rows (Permute, Sparse Int64 67%)"
+@test brief(flipped(base)) == "3 x 2 x Float64 in Columns (Sparse Int64 67%)"
 
 println("OK")
 
@@ -913,8 +922,8 @@ println("OK")
 OK
 ```
 """
-function transposer(matrix::NamedMatrix)::NamedArray
-    return NamedArray(transposer(parent(matrix)), flip_tuple(matrix.dicts), flip_tuple(matrix.dimnames))
+function flipped(matrix::NamedMatrix)::NamedArray
+    return NamedArray(flipped(parent(matrix)), flip_tuple(matrix.dicts), flip_tuple(matrix.dimnames))
 end
 
 function flip_tuple(tuple::Tuple{T1, T2})::Tuple{T2, T1} where {T1, T2}
@@ -922,16 +931,16 @@ function flip_tuple(tuple::Tuple{T1, T2})::Tuple{T2, T1} where {T1, T2}
     return (value2, value1)
 end
 
-function transposer(matrix::AbstractMatrix)::AbstractMatrix
-    @debug "transposer $(brief(matrix)) {"
+function flipped(matrix::AbstractMatrix)::AbstractMatrix
+    @debug "flipped $(brief(matrix)) {"
 
     axis = require_major_axis(matrix)
 
     if issparse(matrix)
         if axis == Columns
-            result = SparseMatrixCSC(transpose(mutable_array(matrix)))
+            result = SparseMatrixCSC(flip(mutable_array(matrix)))
         elseif axis == Rows  # UNTESTED
-            result = transpose(SparseMatrixCSC(mutable_array(matrix)))  # UNTESTED
+            result = flip(SparseMatrixCSC(mutable_array(matrix)))  # UNTESTED
         else
             @assert false
         end
@@ -943,8 +952,8 @@ function transposer(matrix::AbstractMatrix)::AbstractMatrix
 
         elseif axis == Rows  # UNTESTED
             result = Matrix{eltype(matrix)}(undef, size(matrix, Rows), size(matrix, Columns))  # UNTESTED
-            result = permutedims!(result, transpose(mutable_array(matrix)), (2, 1))  # UNTESTED
-            result = transpose(result)  # UNTESTED
+            result = permutedims!(result, flip(mutable_array(matrix)), (2, 1))  # UNTESTED
+            result = flip(result)  # UNTESTED
 
         else
             @assert false
@@ -955,30 +964,92 @@ function transposer(matrix::AbstractMatrix)::AbstractMatrix
     @assert size(result, Rows) == size(matrix, Columns)
     @assert size(result, Columns) == size(matrix, Rows)
 
-    @debug "transposer $(brief(result)) }"
+    @debug "flipped $(brief(result)) }"
     return result
 end
 
-function transposer(matrix::ReadOnlyArray)::AbstractMatrix
-    return transposer(parent(matrix))
+function flipped(matrix::ReadOnlyArray)::AbstractMatrix
+    return flipped(parent(matrix))
 end
 
-function transposer(matrix::PermutedDimsArray{T, 2, P, IP, A})::AbstractMatrix where {T, P, IP, A}
+function flipped(matrix::PermutedDimsArray{T, 2, P, IP, A})::AbstractMatrix where {T, P, IP, A}
     if P == (Rows, Columns)
-        return transposer(parent(matrix))
+        return flipped(parent(matrix))
     elseif P == (Columns, Rows)
-        return transpose(transposer(parent(matrix)))
+        return flip(flipped(parent(matrix)))
     else
         @assert false
     end
 end
 
-function transposer(matrix::Transpose)::AbstractMatrix
-    return transpose(transposer(parent(matrix)))
+function flipped(matrix::Transpose{T})::AbstractMatrix{T} where {T}
+    if T <: Complex
+        return Transpose(flipped(parent(matrix)))  # UNTESTED
+    else
+        return flip(flipped(parent(matrix)))
+    end
 end
 
-function transposer(matrix::Adjoint)::AbstractMatrix
-    return adjoint(transposer(parent(matrix)))
+function flipped(matrix::Adjoint{T})::AbstractMatrix{T} where {T}
+    if T <: Complex
+        return Adjoint(flipped(parent(matrix)))  # UNTESTED
+    else
+        return flip(flipped(parent(matrix)))
+    end
+end
+
+"""
+    flip(AbstractMatrix)::AbstractMatrix
+
+Flip the axes of a matrix. This applies `PermutedDimsArray` to the matrix. However, unlike the standard Julia functions,
+which in their infinite wisdom blindly add a wrapper on top of the matrix, this function looks at the input first. As
+long as it is not a matrix of `Complex` values, it will strip away an existing `Transpose` and/or `Adjoint` and/or
+`PermutedDimsArray` wrapper, instead of attaching an additional one. In addition, `flip` will also look inside a
+`ReadOnlyArray` and/or `NamedArray` to cancel out an internal flip wrapper.
+
+!!! note
+
+    Something along these lines really should have been in `Base`. Since there isn't, everyone is expected to create
+    their own version of this - this is ours. We try to use it "universally" in our code instead of `PermutedDimsArray`,
+    `transpose`, `adjoint`, `m'`, etc.
+"""
+function flip(matrix::Transpose{T}) where {T}
+    if T <: Complex
+        return PermutedDimsArray(matrix, (Columns, Rows))  # UNTESTED
+    else
+        return parent(matrix)
+    end
+end
+
+function flip(matrix::Adjoint{T}) where {T}
+    if T <: Complex
+        return PermutedDimsArray(matrix, (Columns, Rows))  # UNTESTED
+    else
+        return parent(matrix)
+    end
+end
+
+function flip(matrix::PermutedDimsArray{T, 2, P, IP, A})::AbstractMatrix where {T, P, IP, A}
+    if P == (Columns, Rows)
+        return parent(matrix)
+    elseif P == (Rows, Columns)
+        return PermutedDimsArray(parent(matrix), (Columns, Rows))
+    else
+        @assert false
+    end
+end
+
+function flip(matrix::AbstractMatrix)::AbstractMatrix
+    return PermutedDimsArray(matrix, (Columns, Rows))
+end
+
+function flip(matrix::ReadOnlyArray)::AbstractMatrix
+    return ReadOnlyArray(flip(parent(matrix)))
+end
+
+function flip(matrix::NamedArray)::AbstractMatrix
+    @assert ndims(matrix) == 2
+    return NamedArray(flip(matrix.array), reverse(matrix.dicts), reverse(matrix.dimnames))
 end
 
 end # module

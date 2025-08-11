@@ -357,7 +357,7 @@ function copy_array(
         @assert major_axis(matrix) == Columns
         return sparse_matrix_csc(matrix; eltype, indtype)
     elseif major_axis(matrix) == Rows
-        return transpose(Matrix{eltype}(transpose(matrix)))  # UNTESTED
+        return flip(Matrix{eltype}(flip(matrix)))  # UNTESTED
     else
         return Matrix{eltype}(matrix)
     end
@@ -497,7 +497,7 @@ function similar_array(
 
     if length(size(array)) == 2 && default_major_axis == Rows && major_axis(array) === nothing
         n_rows, n_columns = size(array)  # UNTESTED
-        similar = transpose(Array{eltype}(undef, n_columns, n_rows))  # UNTESTED
+        similar = flip(Array{eltype}(undef, n_columns, n_rows))  # UNTESTED
     else
         similar = Array{eltype}(undef, size(array)...)
     end

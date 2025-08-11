@@ -10,9 +10,10 @@ TanayLabUtilities.MatrixLayouts.require_major_axis
 TanayLabUtilities.MatrixLayouts.minor_axis
 TanayLabUtilities.MatrixLayouts.require_minor_axis
 TanayLabUtilities.MatrixLayouts.other_axis
+TanayLabUtilities.MatrixLayouts.flip
+TanayLabUtilities.MatrixLayouts.flipped
 TanayLabUtilities.MatrixLayouts.relayout!
 TanayLabUtilities.MatrixLayouts.relayout
-TanayLabUtilities.MatrixLayouts.transposer
 TanayLabUtilities.MatrixLayouts.@assert_vector
 TanayLabUtilities.MatrixLayouts.@assert_matrix
 TanayLabUtilities.MatrixLayouts.GLOBAL_INEFFICIENT_ACTION_HANDLER
