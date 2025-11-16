@@ -963,8 +963,8 @@ end
 
 function densify(array::ReadOnlyArray; copy::Bool = false, eltype::Maybe{Type} = nothing)::AbstractArray
     parent_array = densify(parent(array); copy, eltype)
-    if parent_array === parent(array)
-        return array
+    if copy || parent_array === parent(array)
+        return parent_array
     else
         return ReadOnlyArray(parent_array)
     end

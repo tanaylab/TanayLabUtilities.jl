@@ -61,4 +61,7 @@ include("cross_validations.jl")
 include("global_weak_cache.jl")
 @reexport using .GlobalWeakCache
 
+include("kmeans.jl")
+@reexport using .KMeans
+
 end  # module

@@ -5,11 +5,11 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Handlers · TanayLabUtilities.jl v0.1.0
+<title>K-Means · TanayLabUtilities.jl v0.1.0
 </title>
-<meta name="title" content="Handlers · TanayLabUtilities.jl v0.1.0"/>
-<meta property="og:title" content="Handlers · TanayLabUtilities.jl v0.1.0"/>
-<meta property="twitter:title" content="Handlers · TanayLabUtilities.jl v0.1.0"/>
+<meta name="title" content="K-Means · TanayLabUtilities.jl v0.1.0"/>
+<meta property="og:title" content="K-Means · TanayLabUtilities.jl v0.1.0"/>
+<meta property="twitter:title" content="K-Means · TanayLabUtilities.jl v0.1.0"/>
 <meta name="description" content="Documentation for TanayLabUtilities.jl v0.1.0."/>
 <meta property="og:description" content="Documentation for TanayLabUtilities.jl v0.1.0."/>
 <meta property="twitter:description" content="Documentation for TanayLabUtilities.jl v0.1.0."/>
@@ -88,17 +88,9 @@
 <a class="tocitem" href="documentation.html">Documentation
 </a>
 </li>
-<li class="is-active">
+<li>
 <a class="tocitem" href="handlers.html">Handlers
 </a>
-<ul class="internal">
-<li>
-<a class="tocitem" href="#Index">
-<span>Index
-</span>
-</a>
-</li>
-</ul>
 </li>
 <li>
 <a class="tocitem" href="read_only_arrays.html">Read-Only Arrays
@@ -116,9 +108,17 @@
 <a class="tocitem" href="global_weak_cache.html">Global Weak Cache
 </a>
 </li>
-<li>
+<li class="is-active">
 <a class="tocitem" href="kmeans.html">K-Means
 </a>
+<ul class="internal">
+<li>
+<a class="tocitem" href="#Index">
+<span>Index
+</span>
+</a>
+</li>
+</ul>
 </li>
 </ul>
 <div class="docs-version-selector field has-addons">
@@ -141,13 +141,13 @@
 <nav class="breadcrumb">
 <ul class="is-hidden-mobile">
 <li class="is-active">
-<a href="handlers.html">Handlers
+<a href="kmeans.html">K-Means
 </a>
 </li>
 </ul>
 <ul class="is-hidden-tablet">
 <li class="is-active">
-<a href="handlers.html">Handlers
+<a href="kmeans.html">K-Means
 </a>
 </li>
 </ul>
@@ -166,20 +166,20 @@
 </div>
 </header>
 <article class="content" id="documenter-page">
-<h1 id="Handlers">
-<a class="docs-heading-anchor" href="#Handlers">Handlers
+<h1 id="K-Means">
+<a class="docs-heading-anchor" href="#K-Means">K-Means
 </a>
-<a id="Handlers-1">
+<a id="K-Means-1">
 </a>
-<a class="docs-heading-anchor-permalink" href="#Handlers" title="Permalink">
+<a class="docs-heading-anchor-permalink" href="#K-Means" title="Permalink">
 </a>
 </h1>
 <article class="docstring">
 <header>
 <a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring">
 </a>
-<a class="docstring-binding" id="TanayLabUtilities.Handlers" href="#TanayLabUtilities.Handlers">
-<code>TanayLabUtilities.Handlers
+<a class="docstring-binding" id="TanayLabUtilities.KMeans" href="#TanayLabUtilities.KMeans">
+<code>TanayLabUtilities.KMeans
 </code>
 </a> — 
 <span class="docstring-category">Module
@@ -189,7 +189,7 @@
 </header>
 <section>
 <div>
-<p>ma Functions for handling abnormal conditions.
+<p>Higher-level K-Means functions.
 </p>
 </div>
 </section>
@@ -198,44 +198,8 @@
 <header>
 <a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring">
 </a>
-<a class="docstring-binding" id="TanayLabUtilities.Handlers.AbnormalHandler" href="#TanayLabUtilities.Handlers.AbnormalHandler">
-<code>TanayLabUtilities.Handlers.AbnormalHandler
-</code>
-</a> — 
-<span class="docstring-category">Type
-</span>
-<span class="is-flex-grow-1 docstring-article-toggle-button" title="Collapse docstring">
-</span>
-</header>
-<section>
-<div>
-<p>The action to take when encountering an &quot;abnormal&quot; (but recoverable) operation.
-</p>
-<p>Valid values are:
-</p>
-<p>
-<code>IgnoreHandler
-</code> - ignore the issue and perform the recovery operation.
-</p>
-<p>
-<code>WarnHandler
-</code> - emit a warning using 
-<code>@warn
-</code> and perform the recovery operation.
-</p>
-<p>
-<code>ErrorHandler
-</code> - abort the program with an error message.
-</p>
-</div>
-</section>
-</article>
-<article class="docstring">
-<header>
-<a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring">
-</a>
-<a class="docstring-binding" id="TanayLabUtilities.Handlers.handle_abnormal" href="#TanayLabUtilities.Handlers.handle_abnormal">
-<code>TanayLabUtilities.Handlers.handle_abnormal
+<a class="docstring-binding" id="TanayLabUtilities.KMeans.kmeans_in_rounds" href="#TanayLabUtilities.KMeans.kmeans_in_rounds">
+<code>TanayLabUtilities.KMeans.kmeans_in_rounds
 </code>
 </a> — 
 <span class="docstring-category">Function
@@ -246,92 +210,21 @@
 <section>
 <div>
 <pre>
-<code class="language-julia hljs">handle_abnormal(message::Function, handler::AbnormalHandler)::Nothing
-handle_abnormal(handler::AbnormalHandler, message::AbstractString)::Nothing
+<code class="language-julia hljs">kmeans_in_rounds(
+    values_of_points::AbstractMatrix{&lt;:AbstractFloat},
+    k::Integer;
+    centers::Maybe{AbstractMatrix{&lt;:AbstractFloat}} = ```nothing```,
+    rounds::Integer = ```10```,
+    rng::AbstractRNG = default_rng(),
+)::KmeansResult
 </code>
 </pre>
-<p>Call this when encountering some abnormal, but recoverable, condition. Follow it by the recovery code (
-<code>handle_abnormal(abnormal_handler, &quot;message&quot;); recovery...
-</code> or 
-<code>handle_abnormal(abnormal_handler) do return &quot;...message...&quot; end; recovery...
-</code>).
+<p>Run 
+<code>kmeans
+</code> multiple times with different random seeds (using 
+<code>rng
+</code>) and return the best results. This is needed because K-Means is a heuristic and tends to occasionally get stuck in a local minimum.
 </p>
-<p>This will 
-<code>error
-</code> if the 
-<code>handler
-</code> is 
-<code>ErrorHandler
-</code>, and abort the program with the 
-<code>message
-</code>. If it is 
-<code>WarnHandler
-</code>, it will just 
-<code>@warn
-</code> and return. If it is 
-<code>IgnoreHandler
-</code> it will just return.
-</p>
-<p>If 
-<code>message
-</code> is a function, it should return the actual message to 
-<code>error
-</code> with.
-</p>
-<pre>
-<code class="language-julia hljs">handle_abnormal(IgnoreHandler, &quot;message&quot;)
-
-# output
-
-</code>
-</pre>
-<pre>
-<code class="language-julia hljs">handle_abnormal(IgnoreHandler) do
-    @assert false
-end
-
-# output
-
-</code>
-</pre>
-<pre>
-<code class="language-julia hljs">handle_abnormal(ErrorHandler, &quot;message&quot;)
-
-# output
-
-ERROR: message
-</code>
-</pre>
-<pre>
-<code class="language-julia hljs">handle_abnormal(ErrorHandler) do
-    return &quot;message&quot;
-end
-
-# output
-
-ERROR: message
-</code>
-</pre>
-<pre>
-<code class="language-julia hljs">handle_abnormal(WarnHandler, &quot;message&quot;)
-
-# output
-
-┌ Warning: message
-└ @ TanayLabUtilities.Handlers
-</code>
-</pre>
-<pre>
-<code class="language-julia hljs">handle_abnormal(WarnHandler) do
-    return &quot;message&quot;
-end
-
-# output
-
-┌ Warning: message
-└ @ TanayLabUtilities.Handlers
-</code>
-</pre>
 </div>
 </section>
 </article>
@@ -345,29 +238,21 @@ end
 </h2>
 <ul>
 <li>
-<a href="handlers.html#TanayLabUtilities.Handlers">
-<code>TanayLabUtilities.Handlers
+<a href="kmeans.html#TanayLabUtilities.KMeans">
+<code>TanayLabUtilities.KMeans
 </code>
 </a>
 </li>
 <li>
-<a href="handlers.html#TanayLabUtilities.Handlers.AbnormalHandler">
-<code>TanayLabUtilities.Handlers.AbnormalHandler
-</code>
-</a>
-</li>
-<li>
-<a href="handlers.html#TanayLabUtilities.Handlers.handle_abnormal">
-<code>TanayLabUtilities.Handlers.handle_abnormal
+<a href="kmeans.html#TanayLabUtilities.KMeans.kmeans_in_rounds">
+<code>TanayLabUtilities.KMeans.kmeans_in_rounds
 </code>
 </a>
 </li>
 </ul>
 </article>
 <nav class="docs-footer">
-<a class="docs-footer-prevpage" href="documentation.html">« Documentation
-</a>
-<a class="docs-footer-nextpage" href="read_only_arrays.html">Read-Only Arrays »
+<a class="docs-footer-prevpage" href="global_weak_cache.html">« Global Weak Cache
 </a>
 <div class="flexbox-break">
 </div>
