@@ -34,7 +34,11 @@ function set_metadata_of_function(
     if !isdefined(function_module, :__TLU_FUNCTION_METADATA__)
         @eval function_module __TLU_FUNCTION_METADATA__ = Dict{Symbol, Any}()
     end
-    function_module.__TLU_FUNCTION_METADATA__[function_name] = function_metadata
+
+    Base.invokelatest() do
+        return function_module.__TLU_FUNCTION_METADATA__[function_name] = function_metadata
+    end
+
     return nothing
 end
 

@@ -174,19 +174,16 @@
 <a class="docs-heading-anchor-permalink" href="#Parallel-Storage" title="Permalink">
 </a>
 </h1>
-<article class="docstring">
-<header>
-<a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring">
-</a>
-<a class="docstring-binding" id="TanayLabUtilities.ParallelStorage" href="#TanayLabUtilities.ParallelStorage">
+<article>
+<details class="docstring" open="true">
+<summary id="TanayLabUtilities.ParallelStorage">
+<a class="docstring-binding" href="#TanayLabUtilities.ParallelStorage">
 <code>TanayLabUtilities.ParallelStorage
 </code>
 </a> — 
 <span class="docstring-category">Module
 </span>
-<span class="is-flex-grow-1 docstring-article-toggle-button" title="Collapse docstring">
-</span>
-</header>
+</summary>
 <section>
 <div>
 <p>Allow reusing large data between parallel tasks. Using task local storage will re-allocate and re-initialize this data for each iteration, which is slow, and overwork the garbage collector. Using thread local storage is no longer safe because Julia has moved away from &quot;sticky&quot; threads (that is, a task may migrate between threads); if naively implemented, it also create an instance per thread regardless whether it is actually used. The 
@@ -197,20 +194,18 @@
 </p>
 </div>
 </section>
+</details>
 </article>
-<article class="docstring">
-<header>
-<a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring">
-</a>
-<a class="docstring-binding" id="TanayLabUtilities.ParallelStorage.ReusableStorage" href="#TanayLabUtilities.ParallelStorage.ReusableStorage">
+<article>
+<details class="docstring" open="true">
+<summary id="TanayLabUtilities.ParallelStorage.ReusableStorage">
+<a class="docstring-binding" href="#TanayLabUtilities.ParallelStorage.ReusableStorage">
 <code>TanayLabUtilities.ParallelStorage.ReusableStorage
 </code>
 </a> — 
 <span class="docstring-category">Type
 </span>
-<span class="is-flex-grow-1 docstring-article-toggle-button" title="Collapse docstring">
-</span>
-</header>
+</summary>
 <section>
 <div>
 <pre>
@@ -223,9 +218,9 @@
 <code>reset_reusable_storage!
 </code>]@(ref) to bring it back it to its initial state.
 </p>
-<div class="admonition is-info" id="Note-7b0bc234ae5e4f2a">
+<div class="admonition is-info" id="Note-122177ddc6228209">
 <header class="admonition-header">Note
-<a class="admonition-anchor" href="#Note-7b0bc234ae5e4f2a" title="Permalink">
+<a class="admonition-anchor" href="#Note-122177ddc6228209" title="Permalink">
 </a>
 </header>
 <div class="admonition-body">
@@ -285,20 +280,18 @@ end
 </pre>
 </div>
 </section>
+</details>
 </article>
-<article class="docstring">
-<header>
-<a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring">
-</a>
-<a class="docstring-binding" id="TanayLabUtilities.ParallelStorage.with_reusable" href="#TanayLabUtilities.ParallelStorage.with_reusable">
+<article>
+<details class="docstring" open="true">
+<summary id="TanayLabUtilities.ParallelStorage.with_reusable">
+<a class="docstring-binding" href="#TanayLabUtilities.ParallelStorage.with_reusable">
 <code>TanayLabUtilities.ParallelStorage.with_reusable
 </code>
 </a> — 
 <span class="docstring-category">Function
 </span>
-<span class="is-flex-grow-1 docstring-article-toggle-button" title="Collapse docstring">
-</span>
-</header>
+</summary>
 <section>
 <div>
 <pre>
@@ -323,20 +316,18 @@ end
 </p>
 </div>
 </section>
+</details>
 </article>
-<article class="docstring">
-<header>
-<a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring">
-</a>
-<a class="docstring-binding" id="TanayLabUtilities.ParallelStorage.get_reusable!" href="#TanayLabUtilities.ParallelStorage.get_reusable!">
+<article>
+<details class="docstring" open="true">
+<summary id="TanayLabUtilities.ParallelStorage.get_reusable!">
+<a class="docstring-binding" href="#TanayLabUtilities.ParallelStorage.get_reusable!">
 <code>TanayLabUtilities.ParallelStorage.get_reusable!
 </code>
 </a> — 
 <span class="docstring-category">Function
 </span>
-<span class="is-flex-grow-1 docstring-article-toggle-button" title="Collapse docstring">
-</span>
-</header>
+</summary>
 <section>
 <div>
 <pre>
@@ -353,20 +344,18 @@ end
 </p>
 </div>
 </section>
+</details>
 </article>
-<article class="docstring">
-<header>
-<a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring">
-</a>
-<a class="docstring-binding" id="TanayLabUtilities.ParallelStorage.put_reusable!" href="#TanayLabUtilities.ParallelStorage.put_reusable!">
+<article>
+<details class="docstring" open="true">
+<summary id="TanayLabUtilities.ParallelStorage.put_reusable!">
+<a class="docstring-binding" href="#TanayLabUtilities.ParallelStorage.put_reusable!">
 <code>TanayLabUtilities.ParallelStorage.put_reusable!
 </code>
 </a> — 
 <span class="docstring-category">Function
 </span>
-<span class="is-flex-grow-1 docstring-article-toggle-button" title="Collapse docstring">
-</span>
-</header>
+</summary>
 <section>
 <div>
 <pre>
@@ -383,20 +372,18 @@ end
 </p>
 </div>
 </section>
+</details>
 </article>
-<article class="docstring">
-<header>
-<a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring">
-</a>
-<a class="docstring-binding" id="TanayLabUtilities.ParallelStorage.reset_reusable_storage!" href="#TanayLabUtilities.ParallelStorage.reset_reusable_storage!">
+<article>
+<details class="docstring" open="true">
+<summary id="TanayLabUtilities.ParallelStorage.reset_reusable_storage!">
+<a class="docstring-binding" href="#TanayLabUtilities.ParallelStorage.reset_reusable_storage!">
 <code>TanayLabUtilities.ParallelStorage.reset_reusable_storage!
 </code>
 </a> — 
 <span class="docstring-category">Function
 </span>
-<span class="is-flex-grow-1 docstring-article-toggle-button" title="Collapse docstring">
-</span>
-</header>
+</summary>
 <section>
 <div>
 <pre>
@@ -409,6 +396,7 @@ end
 </p>
 </div>
 </section>
+</details>
 </article>
 <h2 id="Index">
 <a class="docs-heading-anchor" href="#Index">Index
@@ -508,7 +496,7 @@ end
 <hr/>
 <p>This document was generated with 
 <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl
-</a> version 1.14.1. Using Julia version 1.11.7.
+</a> version 1.16.1. Using Julia version 1.11.8.
 </p>
 </section>
 <footer class="modal-card-foot">
