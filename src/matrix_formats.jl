@@ -91,7 +91,7 @@ end
 
 function brief_array(array::AbstractArray, prefixes::Vector{String}; transposed::Bool)::String
     if issparse(array)
-        push!(prefixes, "Sparse $(SparseArrays.indtype(array)) $(percent(nnz(array), length(array)))")
+        push!(prefixes, "Sparse $(nnz(array)) ($(percent(nnz(array), length(array)))) [$(SparseArrays.indtype(array))]")
         return format_brief_array(array, prefixes; transposed)
     else
         push!(prefixes, string(nameof(typeof(array))))  # UNTESTED
@@ -160,7 +160,8 @@ function mask_suffix(array::AbstractArray{Bool})::AbstractString
     if issparse(array) && n_true == nnz(array)
         return ""
     else
-        return "; $(percent(sum(array), length(array))) true"  # NOJET
+        n_true = sum(array)
+        return "; $(n_true) ($(percent(n_true, length(array)))) true"  # NOJET
     end
 end
 
@@ -209,14 +210,14 @@ using SparseArrays
 sparse = SparseMatrixCSC(base)
 @test copy_array(sparse) == sparse
 @test copy_array(sparse) !== sparse
-@test brief(sparse) == "2 x 3 x Int64 in Columns (Sparse Int64 67%)"
-@test brief(copy_array(sparse)) == "2 x 3 x Int64 in Columns (Sparse Int64 67%)"
+@test brief(sparse) == "2 x 3 x Int64 in Columns (Sparse 4 (67%) [Int64])"
+@test brief(copy_array(sparse)) == "2 x 3 x Int64 in Columns (Sparse 4 (67%) [Int64])"
 
 @test copy_array(sparse; eltype = Int32) == sparse
-@test brief(copy_array(sparse; eltype = Int32)) == "2 x 3 x Int32 in Columns (Sparse Int64 67%)"
+@test brief(copy_array(sparse; eltype = Int32)) == "2 x 3 x Int32 in Columns (Sparse 4 (67%) [Int64])"
 
 @test copy_array(sparse; indtype = Int8) == sparse
-@test brief(copy_array(sparse; indtype = Int8)) == "2 x 3 x Int64 in Columns (Sparse Int8 67%)"
+@test brief(copy_array(sparse; indtype = Int8)) == "2 x 3 x Int64 in Columns (Sparse 4 (67%) [Int8])"
 
 # ReadOnly
 
@@ -290,8 +291,8 @@ base = [0, 1, 2]
 using SparseArrays
 
 sparse = SparseVector(base)
-@test brief(sparse) == "3 x Int64 (Sparse Int64 67%)"
-@test brief(copy_array(sparse)) == "3 x Int64 (Sparse Int64 67%)"
+@test brief(sparse) == "3 x Int64 (Sparse 2 (67%) [Int64])"
+@test brief(copy_array(sparse)) == "3 x Int64 (Sparse 2 (67%) [Int64])"
 @test copy_array(sparse) == sparse
 @test copy_array(sparse) !== sparse
 
@@ -587,33 +588,33 @@ using SparseArrays
 dense = rand(3, 4)
 @test sparsify(dense) == dense
 @test brief(dense) == "3 x 4 x Float64 in Columns (Dense)"
-@test brief(sparsify(dense)) == "3 x 4 x Float64 in Columns (Sparse UInt32 100%)"
+@test brief(sparsify(dense)) == "3 x 4 x Float64 in Columns (Sparse 12 (100%) [UInt32])"
 
 # Sparse
 
 sparse = SparseMatrixCSC([0 1 2; 3 4 0])
 @test sparsify(sparse) === sparse
-@test brief(sparse) == "2 x 3 x Int64 in Columns (Sparse Int64 67%)"
+@test brief(sparse) == "2 x 3 x Int64 in Columns (Sparse 4 (67%) [Int64])"
 
 @test sparsify(sparse; copy = true) == sparse
 @test sparsify(sparse; copy = true) !== sparse
-@test brief(sparsify(sparse)) == "2 x 3 x Int64 in Columns (Sparse Int64 67%)"
+@test brief(sparsify(sparse)) == "2 x 3 x Int64 in Columns (Sparse 4 (67%) [Int64])"
 
 @test sparsify(sparse; eltype = Int8) == sparse
-@test brief(sparsify(sparse; eltype = Int8)) == "2 x 3 x Int8 in Columns (Sparse Int64 67%)"
+@test brief(sparsify(sparse; eltype = Int8)) == "2 x 3 x Int8 in Columns (Sparse 4 (67%) [Int64])"
 
 @test sparsify(sparse; indtype = Int8) == sparse
-@test brief(sparsify(sparse; indtype = Int8)) == "2 x 3 x Int64 in Columns (Sparse Int8 67%)"
+@test brief(sparsify(sparse; indtype = Int8)) == "2 x 3 x Int64 in Columns (Sparse 4 (67%) [Int8])"
 
 # ReadOnly
 
 read_only = read_only_array(sparse)
 @test sparsify(read_only) === read_only
-@test brief(read_only) == "2 x 3 x Int64 in Columns (ReadOnly, Sparse Int64 67%)"
+@test brief(read_only) == "2 x 3 x Int64 in Columns (ReadOnly, Sparse 4 (67%) [Int64])"
 
 read_only = read_only_array(dense)
 @test sparsify(read_only) == read_only
-@test brief(sparsify(read_only)) == "3 x 4 x Float64 in Columns (ReadOnly, Sparse UInt32 100%)"
+@test brief(sparsify(read_only)) == "3 x 4 x Float64 in Columns (ReadOnly, Sparse 12 (100%) [UInt32])"
 
 # Named
 
@@ -621,51 +622,51 @@ using NamedArrays
 
 named = NamedArray(sparse)
 @test sparsify(named) === named
-@test brief(named) == "2 x 3 x Int64 in Columns (Named, Sparse Int64 67%)"
+@test brief(named) == "2 x 3 x Int64 in Columns (Named, Sparse 4 (67%) [Int64])"
 
 named = NamedArray(dense)
 @test sparsify(named) == named
-@test brief(sparsify(named)) == "3 x 4 x Float64 in Columns (Named, Sparse UInt32 100%)"
+@test brief(sparsify(named)) == "3 x 4 x Float64 in Columns (Named, Sparse 12 (100%) [UInt32])"
 
 # Permuted
 
 permuted = PermutedDimsArray(sparse, (2, 1))
 @test sparsify(permuted) === permuted
-@test brief(permuted) == "3 x 2 x Int64 in Rows (Permute, Sparse Int64 67%)"
+@test brief(permuted) == "3 x 2 x Int64 in Rows (Permute, Sparse 4 (67%) [Int64])"
 
 unpermuted = PermutedDimsArray(sparse, (1, 2))
 @test sparsify(unpermuted) === unpermuted
-@test brief(unpermuted) == "2 x 3 x Int64 in Columns (!Permute, Sparse Int64 67%)"
+@test brief(unpermuted) == "2 x 3 x Int64 in Columns (!Permute, Sparse 4 (67%) [Int64])"
 
 permuted = PermutedDimsArray(dense, (2, 1))
 @test sparsify(permuted) == permuted
 @test brief(permuted) == "4 x 3 x Float64 in Rows (Permute, Dense)"
-@test brief(sparsify(permuted)) == "4 x 3 x Float64 in Rows (Permute, Sparse UInt32 100%)"
+@test brief(sparsify(permuted)) == "4 x 3 x Float64 in Rows (Permute, Sparse 12 (100%) [UInt32])"
 
 unpermuted = PermutedDimsArray(dense, (1, 2))
 @test sparsify(unpermuted) == unpermuted
 @test brief(unpermuted) == "3 x 4 x Float64 in Columns (!Permute, Dense)"
-@test brief(sparsify(unpermuted)) == "3 x 4 x Float64 in Columns (!Permute, Sparse UInt32 100%)"
+@test brief(sparsify(unpermuted)) == "3 x 4 x Float64 in Columns (!Permute, Sparse 12 (100%) [UInt32])"
 
 # LinearAlgebra
 
 transposed = transpose(sparse)
 @test sparsify(transposed) === transposed
-@test brief(transposed) == "3 x 2 x Int64 in Rows (Transpose, Sparse Int64 67%)"
+@test brief(transposed) == "3 x 2 x Int64 in Rows (Transpose, Sparse 4 (67%) [Int64])"
 
 adjointed = adjoint(sparse)
 @test sparsify(adjointed) === adjointed
-@test brief(adjointed) == "3 x 2 x Int64 in Rows (Adjoint, Sparse Int64 67%)"
+@test brief(adjointed) == "3 x 2 x Int64 in Rows (Adjoint, Sparse 4 (67%) [Int64])"
 
 transposed = transpose(dense)
 @test sparsify(transposed) == transposed
 @test brief(transposed) == "4 x 3 x Float64 in Rows (Transpose, Dense)"
-@test brief(sparsify(transposed)) == "4 x 3 x Float64 in Rows (Transpose, Sparse UInt32 100%)"
+@test brief(sparsify(transposed)) == "4 x 3 x Float64 in Rows (Transpose, Sparse 12 (100%) [UInt32])"
 
 adjointed = adjoint(dense)
 @test sparsify(adjointed) == adjointed
 @test brief(adjointed) == "4 x 3 x Float64 in Rows (Adjoint, Dense)"
-@test brief(sparsify(adjointed)) == "4 x 3 x Float64 in Rows (Adjoint, Sparse UInt32 100%)"
+@test brief(sparsify(adjointed)) == "4 x 3 x Float64 in Rows (Adjoint, Sparse 12 (100%) [UInt32])"
 
 println("OK")
 
@@ -683,23 +684,23 @@ using SparseArrays
 dense = rand(4)
 @test sparsify(dense) == dense
 @test brief(dense) == "4 x Float64 (Dense)"
-@test brief(sparsify(dense)) == "4 x Float64 (Sparse UInt32 100%)"
+@test brief(sparsify(dense)) == "4 x Float64 (Sparse 4 (100%) [UInt32])"
 
 # Sparse
 
 sparse = SparseVector([0, 1, 2, 0])
 @test sparsify(sparse) === sparse
-@test brief(sparse) == "4 x Int64 (Sparse Int64 50%)"
+@test brief(sparse) == "4 x Int64 (Sparse 2 (50%) [Int64])"
 
 @test sparsify(sparse; copy = true) == sparse
 @test sparsify(sparse; copy = true) !== sparse
-@test brief(sparsify(sparse)) == "4 x Int64 (Sparse Int64 50%)"
+@test brief(sparsify(sparse)) == "4 x Int64 (Sparse 2 (50%) [Int64])"
 
 @test sparsify(sparse; eltype = Int8) == sparse
-@test brief(sparsify(sparse; eltype = Int8)) == "4 x Int8 (Sparse Int64 50%)"
+@test brief(sparsify(sparse; eltype = Int8)) == "4 x Int8 (Sparse 2 (50%) [Int64])"
 
 @test sparsify(sparse; indtype = Int8) == sparse
-@test brief(sparsify(sparse; indtype = Int8)) == "4 x Int64 (Sparse Int8 50%)"
+@test brief(sparsify(sparse; indtype = Int8)) == "4 x Int64 (Sparse 2 (50%) [Int8])"
 
 println("OK")
 
@@ -845,7 +846,7 @@ sparse = SparseMatrixCSC([0 1 2; 3 4 0])
 
 read_only = read_only_array(sparse)
 @test densify(read_only) == read_only
-@test brief(read_only) == "2 x 3 x Int64 in Columns (ReadOnly, Sparse Int64 67%)"
+@test brief(read_only) == "2 x 3 x Int64 in Columns (ReadOnly, Sparse 4 (67%) [Int64])"
 @test brief(densify(read_only)) == "2 x 3 x Int64 in Columns (ReadOnly, Dense)"
 
 read_only = read_only_array(dense)
@@ -857,7 +858,7 @@ using NamedArrays
 
 named = NamedArray(sparse)
 @test densify(named) == named
-@test brief(named) == "2 x 3 x Int64 in Columns (Named, Sparse Int64 67%)"
+@test brief(named) == "2 x 3 x Int64 in Columns (Named, Sparse 4 (67%) [Int64])"
 @test brief(densify(named)) == "2 x 3 x Int64 in Columns (Named, Dense)"
 
 named = NamedArray(dense)
@@ -875,12 +876,12 @@ unpermuted = PermutedDimsArray(dense, (1, 2))
 
 permuted = PermutedDimsArray(sparse, (2, 1))
 @test densify(permuted) == permuted
-@test brief(permuted) == "3 x 2 x Int64 in Rows (Permute, Sparse Int64 67%)"
+@test brief(permuted) == "3 x 2 x Int64 in Rows (Permute, Sparse 4 (67%) [Int64])"
 @test brief(densify(permuted)) == "3 x 2 x Int64 in Rows (Permute, Dense)"
 
 unpermuted = PermutedDimsArray(sparse, (1, 2))
 @test densify(unpermuted) == unpermuted
-@test brief(unpermuted) == "2 x 3 x Int64 in Columns (!Permute, Sparse Int64 67%)"
+@test brief(unpermuted) == "2 x 3 x Int64 in Columns (!Permute, Sparse 4 (67%) [Int64])"
 @test brief(densify(unpermuted)) == "2 x 3 x Int64 in Columns (!Permute, Dense)"
 
 # LinearAlgebra
@@ -895,12 +896,12 @@ adjointed = adjoint(dense)
 
 transposed = transpose(sparse)
 @test densify(transposed) == transposed
-@test brief(transposed) == "3 x 2 x Int64 in Rows (Transpose, Sparse Int64 67%)"
+@test brief(transposed) == "3 x 2 x Int64 in Rows (Transpose, Sparse 4 (67%) [Int64])"
 @test brief(densify(transposed)) == "3 x 2 x Int64 in Rows (Transpose, Dense)"
 
 adjointed = adjoint(sparse)
 @test densify(adjointed) == adjointed
-@test brief(adjointed) == "3 x 2 x Int64 in Rows (Adjoint, Sparse Int64 67%)"
+@test brief(adjointed) == "3 x 2 x Int64 in Rows (Adjoint, Sparse 4 (67%) [Int64])"
 @test brief(densify(adjointed)) == "3 x 2 x Int64 in Rows (Adjoint, Dense)"
 
 println("OK")
@@ -1066,17 +1067,17 @@ using Test
 
 # Matrix
 
-@test brief(sparse_matrix_csc([0 1 2; 3 4 0])) == "2 x 3 x Int64 in Columns (Sparse UInt32 67%)"
-@test brief(sparse_matrix_csc([0 1 2; 3 4 0]; eltype = Float32)) == "2 x 3 x Float32 in Columns (Sparse UInt32 67%)"
-@test brief(sparse_matrix_csc([0 1 2; 3 4 0]; indtype = UInt8)) == "2 x 3 x Int64 in Columns (Sparse UInt8 67%)"
+@test brief(sparse_matrix_csc([0 1 2; 3 4 0])) == "2 x 3 x Int64 in Columns (Sparse 4 (67%) [UInt32])"
+@test brief(sparse_matrix_csc([0 1 2; 3 4 0]; eltype = Float32)) == "2 x 3 x Float32 in Columns (Sparse 4 (67%) [UInt32])"
+@test brief(sparse_matrix_csc([0 1 2; 3 4 0]; indtype = UInt8)) == "2 x 3 x Int64 in Columns (Sparse 4 (67%) [UInt8])"
 
 # Vectors
 
 sparse = sparse_matrix_csc([0 1 2; 3 4 0])
 
-@test brief(sparse_matrix_csc(2, 3, sparse.colptr, sparse.rowval, sparse.nzval)) == "2 x 3 x Int64 in Columns (Sparse UInt32 67%)"
+@test brief(sparse_matrix_csc(2, 3, sparse.colptr, sparse.rowval, sparse.nzval)) == "2 x 3 x Int64 in Columns (Sparse 4 (67%) [UInt32])"
 @test brief(sparse_matrix_csc(2, 3, read_only_array(sparse.colptr), read_only_array(sparse.rowval), read_only_array(sparse.nzval))) ==
-      "2 x 3 x Int64 in Columns (ReadOnly, Sparse UInt32 67%)"
+      "2 x 3 x Int64 in Columns (ReadOnly, Sparse 4 (67%) [UInt32])"
 
 println("OK")
 
@@ -1144,13 +1145,13 @@ using Test
 
 # Vector
 
-@test brief(sparse_vector([0, 1, 2])) == "3 x Int64 (Sparse UInt32 67%)"
-@test brief(sparse_vector([0, 1, 2]; eltype = Float32)) == "3 x Float32 (Sparse UInt32 67%)"
+@test brief(sparse_vector([0, 1, 2])) == "3 x Int64 (Sparse 2 (67%) [UInt32])"
+@test brief(sparse_vector([0, 1, 2]; eltype = Float32)) == "3 x Float32 (Sparse 2 (67%) [UInt32])"
 
 # Vectors
 
-@test brief(sparse_vector(3, [1, 3], [1.0, 2.0])) == "3 x Float64 (Sparse Int64 67%)"
-@test brief(sparse_vector(3, read_only_array([1, 3]), read_only_array([1.0, 2.0]))) == "3 x Float64 (ReadOnly, Sparse Int64 67%)"
+@test brief(sparse_vector(3, [1, 3], [1.0, 2.0])) == "3 x Float64 (Sparse 2 (67%) [Int64])"
+@test brief(sparse_vector(3, read_only_array([1, 3]), read_only_array([1.0, 2.0]))) == "3 x Float64 (ReadOnly, Sparse 2 (67%) [Int64])"
 
 println("OK")
 
@@ -1194,8 +1195,8 @@ a vector of `Bool` for the data.
 ```jldoctest
 using Test
 
-@test brief(sparse_mask_vector(3, [1, 3])) == "3 x Bool (Sparse Int64 67%)"
-@test brief(sparse_mask_vector(3, read_only_array([1, 3]))) == "3 x Bool (ReadOnly, Sparse Int64 67%)"
+@test brief(sparse_mask_vector(3, [1, 3])) == "3 x Bool (Sparse 2 (67%) [Int64])"
+@test brief(sparse_mask_vector(3, read_only_array([1, 3]))) == "3 x Bool (ReadOnly, Sparse 2 (67%) [Int64])"
 
 println("OK")
 
@@ -1225,7 +1226,7 @@ println(brief(dense_mask_vector(4, [1, 3])))
 
 # output
 
-4 x Bool (Dense; 50% true)
+4 x Bool (Dense; 2 (50%) true)
 ```
 """
 function dense_mask_vector(size::Integer, indptr::AbstractVector)::Vector{Bool}
@@ -1293,7 +1294,7 @@ dense = zeros(Int32, 5, 5)
 view(dense, diagind(dense)) .= 1
 
 @test bestify(dense) == dense
-@test brief(bestify(dense)) == "5 x 5 x Int32 in Columns (Sparse UInt32 20%)"
+@test brief(bestify(dense)) == "5 x 5 x Int32 in Columns (Sparse 5 (20%) [UInt32])"
 
 @test bestify(dense; min_sparse_saving_fraction = 0.5) === dense
 
@@ -1301,7 +1302,7 @@ view(dense, diagind(dense)) .= 1
 
 sparse = sparse_matrix_csc(dense)
 @test bestify(sparse) === sparse
-@test brief(sparse) == "5 x 5 x Int32 in Columns (Sparse UInt32 20%)"
+@test brief(sparse) == "5 x 5 x Int32 in Columns (Sparse 5 (20%) [UInt32])"
 
 # ReadOnly
 
@@ -1310,11 +1311,11 @@ read_only = read_only_array(dense)
 @test brief(read_only) == "5 x 5 x Int32 in Columns (ReadOnly, Dense)"
 
 @test bestify(read_only) == read_only
-@test brief(bestify(read_only)) == "5 x 5 x Int32 in Columns (ReadOnly, Sparse UInt32 20%)"
+@test brief(bestify(read_only)) == "5 x 5 x Int32 in Columns (ReadOnly, Sparse 5 (20%) [UInt32])"
 
 read_only = read_only_array(sparse)
 @test bestify(read_only) === read_only
-@test brief(read_only) == "5 x 5 x Int32 in Columns (ReadOnly, Sparse UInt32 20%)"
+@test brief(read_only) == "5 x 5 x Int32 in Columns (ReadOnly, Sparse 5 (20%) [UInt32])"
 
 @test bestify(read_only; min_sparse_saving_fraction = 0.5) == read_only
 @test brief(bestify(read_only; min_sparse_saving_fraction = 0.5)) == "5 x 5 x Int32 in Columns (ReadOnly, Dense)"
@@ -1328,11 +1329,11 @@ named = NamedArray(dense)
 @test brief(named) == "5 x 5 x Int32 in Columns (Named, Dense)"
 
 @test bestify(named) == named
-@test brief(bestify(named)) == "5 x 5 x Int32 in Columns (Named, Sparse UInt32 20%)"
+@test brief(bestify(named)) == "5 x 5 x Int32 in Columns (Named, Sparse 5 (20%) [UInt32])"
 
 named = NamedArray(sparse)
 @test bestify(named) === named
-@test brief(named) == "5 x 5 x Int32 in Columns (Named, Sparse UInt32 20%)"
+@test brief(named) == "5 x 5 x Int32 in Columns (Named, Sparse 5 (20%) [UInt32])"
 
 @test bestify(named; min_sparse_saving_fraction = 0.5) == named
 @test brief(bestify(named; min_sparse_saving_fraction = 0.5)) == "5 x 5 x Int32 in Columns (Named, Dense)"
@@ -1344,11 +1345,11 @@ permuted = PermutedDimsArray(dense, (2, 1))
 @test brief(permuted) == "5 x 5 x Int32 in Rows (Permute, Dense)"
 
 @test bestify(permuted) == permuted
-@test brief(bestify(permuted)) == "5 x 5 x Int32 in Rows (Permute, Sparse UInt32 20%)"
+@test brief(bestify(permuted)) == "5 x 5 x Int32 in Rows (Permute, Sparse 5 (20%) [UInt32])"
 
 permuted = PermutedDimsArray(sparse, (1, 2))
 @test bestify(permuted) === permuted
-@test brief(permuted) == "5 x 5 x Int32 in Columns (!Permute, Sparse UInt32 20%)"
+@test brief(permuted) == "5 x 5 x Int32 in Columns (!Permute, Sparse 5 (20%) [UInt32])"
 
 @test bestify(permuted; min_sparse_saving_fraction = 0.5) == permuted
 @test brief(bestify(permuted; min_sparse_saving_fraction = 0.5)) == "5 x 5 x Int32 in Columns (!Permute, Dense)"
@@ -1360,11 +1361,11 @@ transposed = transpose(dense)
 @test brief(transposed) == "5 x 5 x Int32 in Rows (Transpose, Dense)"
 
 @test bestify(transposed) == transposed
-@test brief(bestify(transposed)) == "5 x 5 x Int32 in Rows (Transpose, Sparse UInt32 20%)"
+@test brief(bestify(transposed)) == "5 x 5 x Int32 in Rows (Transpose, Sparse 5 (20%) [UInt32])"
 
 adjointed = adjoint(sparse)
 @test bestify(adjointed) === adjointed
-@test brief(adjointed) == "5 x 5 x Int32 in Rows (Adjoint, Sparse UInt32 20%)"
+@test brief(adjointed) == "5 x 5 x Int32 in Rows (Adjoint, Sparse 5 (20%) [UInt32])"
 
 @test bestify(adjointed; min_sparse_saving_fraction = 0.5) == adjointed
 @test brief(bestify(adjointed; min_sparse_saving_fraction = 0.5)) == "5 x 5 x Int32 in Rows (Adjoint, Dense)"
@@ -1386,7 +1387,7 @@ dense = zeros(Int32, 3)
 dense[1] = 1
 
 @test bestify(dense) == dense
-@test brief(bestify(dense)) == "3 x Int32 (Sparse UInt32 33%)"
+@test brief(bestify(dense)) == "3 x Int32 (Sparse 1 (33%) [UInt32])"
 
 @test bestify(dense; min_sparse_saving_fraction = 0.5) === dense
 
@@ -1394,7 +1395,7 @@ dense[1] = 1
 
 sparse = sparse_vector(dense)
 @test bestify(sparse) === sparse
-@test brief(sparse) == "3 x Int32 (Sparse UInt32 33%)"
+@test brief(sparse) == "3 x Int32 (Sparse 1 (33%) [UInt32])"
 
 println("OK")
 

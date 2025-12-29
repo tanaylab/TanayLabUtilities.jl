@@ -31,7 +31,7 @@ using Test
 @test brief("foo" => :bar) == "\\"foo\\" => :bar"
 @test brief("foo") == "\\"foo\\""
 @test brief("foo "^10) == "\\"foo foo foo foo ...\\" (40)"
-@test brief([true, false]) == "2 x Bool (Dense; 50% true)"
+@test brief([true, false]) == "2 x Bool (Dense; 1 (50%) true)"
 @test brief(Int64) == "Int64"
 @test brief(String) == "Str"
 @test brief(AbstractString) == "Str"
@@ -53,13 +53,13 @@ struct Vaz end
 
 using SparseArrays
 
-@test brief(SparseVector([0.0, 1.0])) == "2 x Float64 (Sparse Int64 50%)"
-@test brief(SparseMatrixCSC([0.0 1.0 2.0; 3.0 4.0 0.0])) == "2 x 3 x Float64 in Columns (Sparse Int64 67%)"
+@test brief(SparseVector([0.0, 1.0])) == "2 x Float64 (Sparse 1 (50%) [Int64])"
+@test brief(SparseMatrixCSC([0.0 1.0 2.0; 3.0 4.0 0.0])) == "2 x 3 x Float64 in Columns (Sparse 4 (67%) [Int64])"
 
 using NamedArrays
 
 @test brief(NamedArray(rand(2))) == "2 x Float64 (Named, Dense)"
-@test brief(NamedArray(SparseVector([0.0, 1.0]))) == "2 x Float64 (Named, Sparse Int64 50%)"
+@test brief(NamedArray(SparseVector([0.0, 1.0]))) == "2 x Float64 (Named, Sparse 1 (50%) [Int64])"
 
 using LinearAlgebra
 

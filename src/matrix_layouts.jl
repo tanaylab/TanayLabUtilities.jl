@@ -719,8 +719,8 @@ source = SparseMatrixCSC([0.0 1.0 2.0; 3.0 4.0 0.0])
 destination = flip(SparseMatrixCSC([30.0 0.0; 0.0 40.0; 20.0 10.0]))
 result = relayout!(destination, source)
 @test result === destination
-@test brief(source) == "2 x 3 x Float64 in Columns (Sparse Int64 67%)"
-@test brief(result) == "2 x 3 x Float64 in Rows (Permute, Sparse Int64 67%)"
+@test brief(source) == "2 x 3 x Float64 in Columns (Sparse 4 (67%) [Int64])"
+@test brief(result) == "2 x 3 x Float64 in Rows (Permute, Sparse 4 (67%) [Int64])"
 @test result == source
 
 println("OK")
@@ -911,9 +911,9 @@ using SparseArrays
 
 base = SparseMatrixCSC([0.0 1.0 2.0; 3.0 4.0 0.0])
 @test flipped(base) == flip(base)
-@test brief(base) == "2 x 3 x Float64 in Columns (Sparse Int64 67%)"
-@test brief(flip(base)) == "3 x 2 x Float64 in Rows (Permute, Sparse Int64 67%)"
-@test brief(flipped(base)) == "3 x 2 x Float64 in Columns (Sparse Int64 67%)"
+@test brief(base) == "2 x 3 x Float64 in Columns (Sparse 4 (67%) [Int64])"
+@test brief(flip(base)) == "3 x 2 x Float64 in Rows (Permute, Sparse 4 (67%) [Int64])"
+@test brief(flipped(base)) == "3 x 2 x Float64 in Columns (Sparse 4 (67%) [Int64])"
 
 println("OK")
 

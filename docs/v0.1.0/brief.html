@@ -237,7 +237,7 @@
 @test brief(&quot;foo&quot; =&gt; :bar) == &quot;\&quot;foo\&quot; =&gt; :bar&quot;
 @test brief(&quot;foo&quot;) == &quot;\&quot;foo\&quot;&quot;
 @test brief(&quot;foo &quot;^10) == &quot;\&quot;foo foo foo foo ...\&quot; (40)&quot;
-@test brief([true, false]) == &quot;2 x Bool (Dense; 50% true)&quot;
+@test brief([true, false]) == &quot;2 x Bool (Dense; 1 (50%) true)&quot;
 @test brief(Int64) == &quot;Int64&quot;
 @test brief(String) == &quot;Str&quot;
 @test brief(AbstractString) == &quot;Str&quot;
@@ -259,13 +259,13 @@ struct Vaz end
 
 using SparseArrays
 
-@test brief(SparseVector([0.0, 1.0])) == &quot;2 x Float64 (Sparse Int64 50%)&quot;
-@test brief(SparseMatrixCSC([0.0 1.0 2.0; 3.0 4.0 0.0])) == &quot;2 x 3 x Float64 in Columns (Sparse Int64 67%)&quot;
+@test brief(SparseVector([0.0, 1.0])) == &quot;2 x Float64 (Sparse 1 (50%) [Int64])&quot;
+@test brief(SparseMatrixCSC([0.0 1.0 2.0; 3.0 4.0 0.0])) == &quot;2 x 3 x Float64 in Columns (Sparse 4 (67%) [Int64])&quot;
 
 using NamedArrays
 
 @test brief(NamedArray(rand(2))) == &quot;2 x Float64 (Named, Dense)&quot;
-@test brief(NamedArray(SparseVector([0.0, 1.0]))) == &quot;2 x Float64 (Named, Sparse Int64 50%)&quot;
+@test brief(NamedArray(SparseVector([0.0, 1.0]))) == &quot;2 x Float64 (Named, Sparse 1 (50%) [Int64])&quot;
 
 using LinearAlgebra
 
