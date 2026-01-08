@@ -64,4 +64,7 @@ include("global_weak_cache.jl")
 include("kmeans.jl")
 @reexport using .KMeans
 
+include("cached_ispath.jl")
+@reexport using .CachedIsPath
+
 end  # module
