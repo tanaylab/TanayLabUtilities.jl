@@ -67,4 +67,7 @@ include("kmeans.jl")
 include("cached_ispath.jl")
 @reexport using .CachedIsPath
 
+include("parallel_distances.jl")
+@reexport using .ParallelDistances
+
 end  # module

@@ -64,6 +64,8 @@ makedocs(;
         "cross_validations.md",
         "global_weak_cache.md",
         "kmeans.md",
+        "cached_ispath.md",
+        "parallel_distances.md",
     ],
 )
 
