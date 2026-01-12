@@ -96,7 +96,7 @@
 </g>
 </g>
 <!-- ReadOnlyArrays&#45;&gt;MatrixLayouts -->
-<g id="edge10" class="edge">
+<g id="edge11" class="edge">
 <title>ReadOnlyArrays&#45;&gt;MatrixLayouts</title>
 <path fill="none" stroke="black" d="M325.86,-165.57C337.69,-157.69 355.12,-146.07 369.16,-136.72"/>
 <polygon fill="black" stroke="black" points="371.01,-139.69 377.39,-131.23 367.13,-133.86 371.01,-139.69"/>
@@ -153,7 +153,7 @@
 </g>
 </g>
 <!-- MatrixFormats&#45;&gt;Downsample -->
-<g id="edge13" class="edge">
+<g id="edge12" class="edge">
 <title>MatrixFormats&#45;&gt;Downsample</title>
 <path fill="none" stroke="black" d="M356.19,-54.93C342.76,-46.89 322.87,-34.98 307.11,-25.53"/>
 <polygon fill="black" stroke="black" points="309.13,-22.66 298.76,-20.53 305.53,-28.67 309.13,-22.66"/>
@@ -204,7 +204,7 @@
 <polygon fill="black" stroke="black" points="288.79,-252.45 285.29,-242.45 281.79,-252.45 288.79,-252.45"/>
 </g>
 <!-- ParallelRNG&#45;&gt;Downsample -->
-<g id="edge12" class="edge">
+<g id="edge13" class="edge">
 <title>ParallelRNG&#45;&gt;Downsample</title>
 <path fill="none" stroke="black" d="M271.27,-110.41C273.17,-93.14 277.42,-54.67 280.05,-30.88"/>
 <polygon fill="black" stroke="black" points="283.5,-31.5 281.12,-21.18 276.55,-30.73 283.5,-31.5"/>
@@ -228,7 +228,7 @@
 </g>
 </g>
 <!-- Handlers&#45;&gt;MatrixLayouts -->
-<g id="edge11" class="edge">
+<g id="edge10" class="edge">
 <title>Handlers&#45;&gt;MatrixLayouts</title>
 <path fill="none" stroke="black" d="M408.15,-165.82C405.74,-159.06 402.33,-149.49 399.28,-140.94"/>
 <polygon fill="black" stroke="black" points="402.65,-139.97 396,-131.72 396.06,-142.32 402.65,-139.97"/>
