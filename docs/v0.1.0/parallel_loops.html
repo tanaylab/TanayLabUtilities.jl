@@ -5,11 +5,11 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>ParallelRNG · TanayLabUtilities.jl v0.1.0
+<title>Parallel Loops · TanayLabUtilities.jl v0.1.0
 </title>
-<meta name="title" content="ParallelRNG · TanayLabUtilities.jl v0.1.0"/>
-<meta property="og:title" content="ParallelRNG · TanayLabUtilities.jl v0.1.0"/>
-<meta property="twitter:title" content="ParallelRNG · TanayLabUtilities.jl v0.1.0"/>
+<meta name="title" content="Parallel Loops · TanayLabUtilities.jl v0.1.0"/>
+<meta property="og:title" content="Parallel Loops · TanayLabUtilities.jl v0.1.0"/>
+<meta property="twitter:title" content="Parallel Loops · TanayLabUtilities.jl v0.1.0"/>
 <meta name="description" content="Documentation for TanayLabUtilities.jl v0.1.0."/>
 <meta property="og:description" content="Documentation for TanayLabUtilities.jl v0.1.0."/>
 <meta property="twitter:description" content="Documentation for TanayLabUtilities.jl v0.1.0."/>
@@ -69,11 +69,11 @@
 </a>
 </li>
 <li>
-<a class="tocitem" href="parallel_storage.html">Parallel Storage
+<a class="tocitem" href="flame_time.html">Flame Time
 </a>
 </li>
 <li class="is-active">
-<a class="tocitem" href="parallel_rng.html">ParallelRNG
+<a class="tocitem" href="parallel_loops.html">Parallel Loops
 </a>
 <ul class="internal">
 <li>
@@ -83,6 +83,14 @@
 </a>
 </li>
 </ul>
+</li>
+<li>
+<a class="tocitem" href="parallel_distances.html">Parallel Distances
+</a>
+</li>
+<li>
+<a class="tocitem" href="parallel_storage.html">Parallel Storage
+</a>
 </li>
 <li>
 <a class="tocitem" href="locks.html">Locks
@@ -124,10 +132,6 @@
 <a class="tocitem" href="cached_ispath.html">Cached IsPath
 </a>
 </li>
-<li>
-<a class="tocitem" href="parallel_distances.html">Parallel Distances
-</a>
-</li>
 </ul>
 <div class="docs-version-selector field has-addons">
 <div class="control">
@@ -149,13 +153,13 @@
 <nav class="breadcrumb">
 <ul class="is-hidden-mobile">
 <li class="is-active">
-<a href="parallel_rng.html">ParallelRNG
+<a href="parallel_loops.html">Parallel Loops
 </a>
 </li>
 </ul>
 <ul class="is-hidden-tablet">
 <li class="is-active">
-<a href="parallel_rng.html">ParallelRNG
+<a href="parallel_loops.html">Parallel Loops
 </a>
 </li>
 </ul>
@@ -174,19 +178,19 @@
 </div>
 </header>
 <article class="content" id="documenter-page">
-<h1 id="ParallelRNG">
-<a class="docs-heading-anchor" href="#ParallelRNG">ParallelRNG
+<h1 id="Parallel-Loops">
+<a class="docs-heading-anchor" href="#Parallel-Loops">Parallel Loops
 </a>
-<a id="ParallelRNG-1">
+<a id="Parallel-Loops-1">
 </a>
-<a class="docs-heading-anchor-permalink" href="#ParallelRNG" title="Permalink">
+<a class="docs-heading-anchor-permalink" href="#Parallel-Loops" title="Permalink">
 </a>
 </h1>
 <article>
 <details class="docstring" open="true">
-<summary id="TanayLabUtilities.ParallelRNG">
-<a class="docstring-binding" href="#TanayLabUtilities.ParallelRNG">
-<code>TanayLabUtilities.ParallelRNG
+<summary id="TanayLabUtilities.ParallelLoops">
+<a class="docstring-binding" href="#TanayLabUtilities.ParallelLoops">
+<code>TanayLabUtilities.ParallelLoops
 </code>
 </a> — 
 <span class="docstring-category">Module
@@ -194,9 +198,7 @@
 </summary>
 <section>
 <div>
-<p>Reproducible random number generator for parallel loops. Yes, the 
-<code>TaskLocalRNG
-</code> is supposed to do this, but, it actually depends on the way tasks are allocated to threads. The implementation here will give the same results regardless of the thread scheduling policy.
+<p>Parallel loops.
 </p>
 </div>
 </section>
@@ -204,9 +206,105 @@
 </article>
 <article>
 <details class="docstring" open="true">
-<summary id="TanayLabUtilities.ParallelRNG.parallel_loop_with_rng">
-<a class="docstring-binding" href="#TanayLabUtilities.ParallelRNG.parallel_loop_with_rng">
-<code>TanayLabUtilities.ParallelRNG.parallel_loop_with_rng
+<summary id="TanayLabUtilities.ParallelLoops.parallel_loop_wo_rng">
+<a class="docstring-binding" href="#TanayLabUtilities.ParallelLoops.parallel_loop_wo_rng">
+<code>TanayLabUtilities.ParallelLoops.parallel_loop_wo_rng
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+</summary>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">parallel_loop_wo_rng(
+    body::Function,
+    name::AbstractString,
+    indices::AbstractVector{&lt;:Integer};
+    policy::Symbol = :greedy,
+    progress::Maybe{Progress} = nothing,
+)::Nothing
+</code>
+</pre>
+<p>Run the 
+<code>body
+</code> in parallel, passing it the iteration 
+<code>index
+</code>. The 
+<code>policy
+</code> is passed to 
+<code>@threads
+</code> if it is one of (the default 
+<code>:greedy
+</code>, 
+<code>:dynamic
+</code>, or 
+<code>:static
+</code>). If it is 
+<code>:serial
+</code>, then the loop is not run in parallel (useful for debugging).
+</p>
+<p>If this is nested (and the containing loop is parallel), 
+<code>policy
+</code> is ignored and the loop is executed serially. This allows functions to be parallel if invoked from the main thread, but become serial if invoked from inside an already parallel loop.
+</p>
+<p>The 
+<code>name
+</code> is used for 
+<a href="flame_time.html#TanayLabUtilities.FlameTime.flame_timed">
+<code>flame_timed
+</code>
+</a> for the whole loop. If the loop is parallel, the whole loop is a line in the serial flame file, and each iteration is a line in the parallel flame file. The serial file therefore gives a view of the elapsed time of the top-level loops, to identify what actually matters, and the parallel file shows the internal breakdown of the computations in each loop. It is sadly impossible to include threaded tasks in the same flamegraph in a meaningful way (at least not without extending the flamegraph format and visualization).
+</p>
+<p>If 
+<code>progress
+</code> is specified, it is updated for each iteration.
+</p>
+<div class="admonition is-info" id="Note-e37bb17db76583e4">
+<header class="admonition-header">Note
+<a class="admonition-anchor" href="#Note-e37bb17db76583e4" title="Permalink">
+</a>
+</header>
+<div class="admonition-body">
+<p>The code inside the loop body should not use any random number generation. Use 
+<a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.parallel_loop_with_rng">
+<code>parallel_loop_with_rng
+</code>
+</a> if random number generation is needed.
+</p>
+</div>
+</div>
+<pre>
+<code class="language-julia hljs">using Test
+using Random
+
+size = 10
+
+for policy in (:serial, :greedy, :dynamic, :static)
+    results = zeros(Int, size)
+    parallel_loop_wo_rng(&quot;test&quot;, 1:size; policy) do index
+        results[index] = index
+        return nothing
+    end
+    @test results == collect(1:size)
+end
+
+println(&quot;OK&quot;)
+
+# output
+
+OK
+</code>
+</pre>
+</div>
+</section>
+</details>
+</article>
+<article>
+<details class="docstring" open="true">
+<summary id="TanayLabUtilities.ParallelLoops.parallel_loop_with_rng">
+<a class="docstring-binding" href="#TanayLabUtilities.ParallelLoops.parallel_loop_with_rng">
+<code>TanayLabUtilities.ParallelLoops.parallel_loop_with_rng
 </code>
 </a> — 
 <span class="docstring-category">Function
@@ -217,8 +315,10 @@
 <pre>
 <code class="language-julia hljs">parallel_loop_with_rng(
     body::Function,
+    name::AbstractString,
     indices::AbstractVector{&lt;:Integer},
     policy::Symbol = :greedy,
+    progress::Maybe{Progress} = nothing,
     seed::Maybe{Integer} = nothing,
     rng::Maybe{AbstractRNG} = nothing
 )::Nothing
@@ -258,6 +358,34 @@
 <code>:serial
 </code>, then the loop is not run in parallel (useful for debugging).
 </p>
+<p>If this is nested (and the containing loop is parallel), 
+<code>policy
+</code> is ignored and the loop is executed serially. This allows functions to be parallel if invoked from the main thread, but become serial if invoked from inside an already parallel loop.
+</p>
+<p>The 
+<code>name
+</code> is used for 
+<a href="flame_time.html#TanayLabUtilities.FlameTime.flame_timed">
+<code>flame_timed
+</code>
+</a> for the whole loop. If the loop is parallel, the whole loop is a line in the serial flame file, and each iteration is a line in the parallel flame file. The serial file therefore gives a view of the elapsed time of the top-level loops, to identify what actually matters, and the parallel file shows the internal breakdown of the computations in each loop. It is sadly impossible to include threaded tasks in the same flamegraph in a meaningful way (at least not without extending the flamegraph format and visualization).
+</p>
+<p>If 
+<code>progress
+</code> is specified, it is updated for each iteration.
+</p>
+<div class="admonition is-info" id="Note-6458a9622a79cf96">
+<header class="admonition-header">Note
+<a class="admonition-anchor" href="#Note-6458a9622a79cf96" title="Permalink">
+</a>
+</header>
+<div class="admonition-body">
+<p>Yes, the 
+<code>TaskLocalRNG
+</code> is supposed to do this, but, it actually depends on the way tasks are allocated to threads. The implementation here will give the same results regardless of the thread scheduling policy. Sigh.
+</p>
+</div>
+</div>
 <pre>
 <code class="language-julia hljs">using Test
 using Random
@@ -266,7 +394,7 @@ size = 10
 
 function collect_rng(rng::AbstractRNG)::Vector{Float64}
     results = zeros(Float64, size)
-    parallel_loop_with_rng(1:size; rng) do index, rng
+    parallel_loop_with_rng(&quot;test&quot;, 1:size; rng) do index, rng
         results[index] = rand(rng)
     end
     @test results[1] != results[2]
@@ -277,7 +405,7 @@ end
 
 function collect_default_rng()::Vector{Float64}
     results = zeros(Float64, size)
-    parallel_loop_with_rng(1:size; seed = 123456, policy = :dynamic) do index, _
+    parallel_loop_with_rng(&quot;test&quot;, 1:size; seed = 123456, policy = :dynamic) do index, _
         results[index] = rand()
     end
     @test results[1] != results[2]
@@ -297,6 +425,36 @@ OK
 </section>
 </details>
 </article>
+<article>
+<details class="docstring" open="true">
+<summary id="TanayLabUtilities.ParallelLoops.DebugProgress">
+<a class="docstring-binding" href="#TanayLabUtilities.ParallelLoops.DebugProgress">
+<code>TanayLabUtilities.ParallelLoops.DebugProgress
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+</summary>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">DebugProgress(n::Integer; kwargs...)::Maybe{Progress}
+</code>
+</pre>
+<p>Same as 
+<code>Progress
+</code> in 
+<code>ProgressMeter
+</code>, but returns 
+<code>nothing
+</code> if debug is not enabled for the modules calling 
+<code>DebugProgress
+</code>.
+</p>
+</div>
+</section>
+</details>
+</article>
 <h2 id="Index">
 <a class="docs-heading-anchor" href="#Index">Index
 </a>
@@ -307,23 +465,35 @@ OK
 </h2>
 <ul>
 <li>
-<a href="parallel_rng.html#TanayLabUtilities.ParallelRNG">
-<code>TanayLabUtilities.ParallelRNG
+<a href="parallel_loops.html#TanayLabUtilities.ParallelLoops">
+<code>TanayLabUtilities.ParallelLoops
 </code>
 </a>
 </li>
 <li>
-<a href="parallel_rng.html#TanayLabUtilities.ParallelRNG.parallel_loop_with_rng">
-<code>TanayLabUtilities.ParallelRNG.parallel_loop_with_rng
+<a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.DebugProgress">
+<code>TanayLabUtilities.ParallelLoops.DebugProgress
+</code>
+</a>
+</li>
+<li>
+<a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.parallel_loop_with_rng">
+<code>TanayLabUtilities.ParallelLoops.parallel_loop_with_rng
+</code>
+</a>
+</li>
+<li>
+<a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.parallel_loop_wo_rng">
+<code>TanayLabUtilities.ParallelLoops.parallel_loop_wo_rng
 </code>
 </a>
 </li>
 </ul>
 </article>
 <nav class="docs-footer">
-<a class="docs-footer-prevpage" href="parallel_storage.html">« Parallel Storage
+<a class="docs-footer-prevpage" href="flame_time.html">« Flame Time
 </a>
-<a class="docs-footer-nextpage" href="locks.html">Locks »
+<a class="docs-footer-nextpage" href="parallel_distances.html">Parallel Distances »
 </a>
 <div class="flexbox-break">
 </div>
@@ -371,7 +541,7 @@ OK
 <hr/>
 <p>This document was generated with 
 <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl
-</a> version 1.16.1. Using Julia version 1.11.5.
+</a> version 1.16.1. Using Julia version 1.11.8.
 </p>
 </section>
 <footer class="modal-card-foot">

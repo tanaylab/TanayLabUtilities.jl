@@ -22,17 +22,14 @@ include("types.jl")
 include("brief.jl")
 @reexport using .Brief
 
+include("flame_time.jl")
+@reexport using .FlameTime
+
 include("logger.jl")
 @reexport using .Logger
 
 include("parallel_storage.jl")
 @reexport using .ParallelStorage
-
-include("parallel_rng.jl")
-@reexport using .ParallelRNG
-
-include("locks.jl")
-@reexport using .Locks
 
 include("unique_names.jl")
 @reexport using .UniqueNames
@@ -52,9 +49,6 @@ include("matrix_layouts.jl")
 include("matrix_formats.jl")
 @reexport using .MatrixFormats
 
-include("downsample.jl")
-@reexport using .Downsample
-
 include("cross_validations.jl")
 @reexport using .CrossValidations
 
@@ -67,7 +61,16 @@ include("kmeans.jl")
 include("cached_ispath.jl")
 @reexport using .CachedIsPath
 
+include("parallel_loops.jl")
+@reexport using .ParallelLoops
+
 include("parallel_distances.jl")
 @reexport using .ParallelDistances
+
+include("locks.jl")
+@reexport using .Locks
+
+include("downsample.jl")
+@reexport using .Downsample
 
 end  # module

@@ -53,8 +53,10 @@ makedocs(;
         "types.md",
         "brief.md",
         "logger.md",
+        "flame_time.md",
+        "parallel_loops.md",
+        "parallel_distances.md",
         "parallel_storage.md",
-        "parallel_rng.md",
         "locks.md",
         "unique_names.md",
         "documentation.md",
@@ -65,7 +67,6 @@ makedocs(;
         "global_weak_cache.md",
         "kmeans.md",
         "cached_ispath.md",
-        "parallel_distances.md",
     ],
 )
 

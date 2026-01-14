@@ -5,11 +5,11 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Logger · TanayLabUtilities.jl v0.1.0
+<title>Flame Time · TanayLabUtilities.jl v0.1.0
 </title>
-<meta name="title" content="Logger · TanayLabUtilities.jl v0.1.0"/>
-<meta property="og:title" content="Logger · TanayLabUtilities.jl v0.1.0"/>
-<meta property="twitter:title" content="Logger · TanayLabUtilities.jl v0.1.0"/>
+<meta name="title" content="Flame Time · TanayLabUtilities.jl v0.1.0"/>
+<meta property="og:title" content="Flame Time · TanayLabUtilities.jl v0.1.0"/>
+<meta property="twitter:title" content="Flame Time · TanayLabUtilities.jl v0.1.0"/>
 <meta name="description" content="Documentation for TanayLabUtilities.jl v0.1.0."/>
 <meta property="og:description" content="Documentation for TanayLabUtilities.jl v0.1.0."/>
 <meta property="twitter:description" content="Documentation for TanayLabUtilities.jl v0.1.0."/>
@@ -64,8 +64,12 @@
 <a class="tocitem" href="brief.html">Brief
 </a>
 </li>
-<li class="is-active">
+<li>
 <a class="tocitem" href="logger.html">Logger
+</a>
+</li>
+<li class="is-active">
+<a class="tocitem" href="flame_time.html">Flame Time
 </a>
 <ul class="internal">
 <li>
@@ -75,10 +79,6 @@
 </a>
 </li>
 </ul>
-</li>
-<li>
-<a class="tocitem" href="flame_time.html">Flame Time
-</a>
 </li>
 <li>
 <a class="tocitem" href="parallel_loops.html">Parallel Loops
@@ -153,13 +153,13 @@
 <nav class="breadcrumb">
 <ul class="is-hidden-mobile">
 <li class="is-active">
-<a href="logger.html">Logger
+<a href="flame_time.html">Flame Time
 </a>
 </li>
 </ul>
 <ul class="is-hidden-tablet">
 <li class="is-active">
-<a href="logger.html">Logger
+<a href="flame_time.html">Flame Time
 </a>
 </li>
 </ul>
@@ -178,19 +178,19 @@
 </div>
 </header>
 <article class="content" id="documenter-page">
-<h1 id="Logger">
-<a class="docs-heading-anchor" href="#Logger">Logger
+<h1 id="Flame-Time">
+<a class="docs-heading-anchor" href="#Flame-Time">Flame Time
 </a>
-<a id="Logger-1">
+<a id="Flame-Time-1">
 </a>
-<a class="docs-heading-anchor-permalink" href="#Logger" title="Permalink">
+<a class="docs-heading-anchor-permalink" href="#Flame-Time" title="Permalink">
 </a>
 </h1>
 <article>
 <details class="docstring" open="true">
-<summary id="TanayLabUtilities.Logger">
-<a class="docstring-binding" href="#TanayLabUtilities.Logger">
-<code>TanayLabUtilities.Logger
+<summary id="TanayLabUtilities.FlameTime">
+<a class="docstring-binding" href="#TanayLabUtilities.FlameTime">
+<code>TanayLabUtilities.FlameTime
 </code>
 </a> — 
 <span class="docstring-category">Module
@@ -198,7 +198,39 @@
 </summary>
 <section>
 <div>
-<p>Setup a global logger the way we like it.
+<p>Generate a coarse-grained flamegraph. If the environment variable 
+<code>JULIA_FLAME_MEASUREMENTS_FILE
+</code> is set, it should contain the path of a file to append measurements into. Every call to 
+<a href="flame_time.html#TanayLabUtilities.FlameTime.flame_timed">
+<code>flame_timed
+</code>
+</a> will append measurement into this file. This file can&#39;t be directly viewed using 
+<code>flamegraph.pl
+</code>. It needs to be converted to a proper flamegraph file using 
+<a href="flame_time.html#TanayLabUtilities.FlameTime.finalize_flamegraph">
+<code>finalize_flamegraph
+</code>
+</a>.
+</p>
+<div class="admonition is-info" id="Note-109935dfb3535a54">
+<header class="admonition-header">Note
+<a class="admonition-anchor" href="#Note-109935dfb3535a54" title="Permalink">
+</a>
+</header>
+<div class="admonition-body">
+<p>Measurements are appended into the file, so that running multiple programs automatically creates a unified file for a whole computational pipeline. If you want to separately measure each program execution, use a different measurements file for each.
+</p>
+</div>
+</div>
+<p>This serves as a very lightweight mechanism for visualizing program performance. Every 
+<code>@logged
+</code> function and every 
+<code>parallel_loop
+</code> is automatically a measured step, so one gets a pretty decent level of detail &quot;for free&quot;. It is possible to supplement this with occasional calls to 
+<code>flame_timed
+</code> to increase the level of detail. Of course one can ignore all of this and use heavyweight tools such as 
+<code>Profile
+</code> when profiling for performance in anger.
 </p>
 </div>
 </section>
@@ -206,9 +238,9 @@
 </article>
 <article>
 <details class="docstring" open="true">
-<summary id="TanayLabUtilities.Logger.setup_logger">
-<a class="docstring-binding" href="#TanayLabUtilities.Logger.setup_logger">
-<code>TanayLabUtilities.Logger.setup_logger
+<summary id="TanayLabUtilities.FlameTime.flame_timed">
+<a class="docstring-binding" href="#TanayLabUtilities.FlameTime.flame_timed">
+<code>TanayLabUtilities.FlameTime.flame_timed
 </code>
 </a> — 
 <span class="docstring-category">Function
@@ -217,114 +249,65 @@
 <section>
 <div>
 <pre>
-<code class="language-julia hljs">setup_logger(
-    io::IO = stderr;
-    [level::LogLevel = Warn,
-    show_time::Bool = true,
-    show_module::Bool = true,
-    show_location::Bool = false]
-)::Nothing
+<code class="language-julia hljs">flame_timed(body::Function, name::AbstractString)::Any
 </code>
 </pre>
-<p>Setup a global logger that will print into 
-<code>io
-</code>.
+<p>Add a measurement line to the flamegrah file for the execution of the 
+<code>body
+</code> under the specified 
+<code>name
+</code>. The measurement is of the elapsed time for the body in nanoseconds. We distinguish between &quot;serial&quot; measurements (in the top-level main thread) and &quot;parallel&quot; measurements (inside tasks invoked from within a 
+<code>parallel_loop
+</code>).
 </p>
-<p>By default, this will only print warnings. Note that increasing the log level will apply to 
-<strong>everything
-</strong>. An alternative is to set up the environment variable 
-<code>JULIA_DEBUG
-</code> to a comma-separated list of modules you wish to see the debug messages of.
-</p>
-<p>If 
-<code>show_time
-</code>, each message will be prefixed with a 
-<code>yyyy-dd-mm HH:MM:SS.sss
-</code> timestamp prefix.
-</p>
-<p>If 
-<code>show_module
-</code>, each message will be prefixed with the name of the module emitting the message.
-</p>
-<p>If 
-<code>show_location
-</code>, each message will be prefixed with the file name and the line number emitting the message.
-</p>
-<div class="admonition is-info" id="Note-2dbc2f9a70043031">
-<header class="admonition-header">Note
-<a class="admonition-anchor" href="#Note-2dbc2f9a70043031" title="Permalink">
-</a>
-</header>
-<div class="admonition-body">
-<p>When multi-processing is used, a 
-<code>P&lt;id&gt;:
-</code> process index is added to the log entries. When multi-threading is used, a 
-<code>T&lt;id&gt;:
-</code> thread index is added to the log entries, as well as a 
-<code>K&lt;id&gt;:
-</code> task index. To generate the latter, this stores a unique 
-<code>:task_id
-</code> index in the 
-<code>task_local_storage
-</code>. This is important since a task may migrate between threads.
-</p>
-</div>
-</div>
 </div>
 </section>
 </details>
 </article>
 <article>
 <details class="docstring" open="true">
-<summary id="TanayLabUtilities.Logger.@logged">
-<a class="docstring-binding" href="#TanayLabUtilities.Logger.@logged">
-<code>TanayLabUtilities.Logger.@logged
+<summary id="TanayLabUtilities.FlameTime.finalize_flamegraph">
+<a class="docstring-binding" href="#TanayLabUtilities.FlameTime.finalize_flamegraph">
+<code>TanayLabUtilities.FlameTime.finalize_flamegraph
 </code>
 </a> — 
-<span class="docstring-category">Macro
+<span class="docstring-category">Function
 </span>
 </summary>
 <section>
 <div>
 <pre>
-<code class="language-julia hljs">@logged function something(...)
-    return ...
-end
+<code class="language-julia hljs">finalize_flamegraph(; measurements_path::AbstractString, flamegraph_path::AbstractString)::Nothing
 </code>
 </pre>
-<p>Automatically log (in 
-<code>Debug
-</code> level) every invocation to the function. This will also log the values of the arguments. Emits a second log entry when the function returns, with the result (if any).
+<p>Convert the collected measurements in the 
+<code>measurement_path
+</code> into a proper flamegraph file, suitable for use with 
+<code>flamegraph.pl
+</code> and similar tools. This is needed for two reasons: first, the measurements are inclusive (that is, the elapsed time of a step includes the elapsed time of all nested steps). Second, measurements of serial steps (which should add to the total execution time) are mixed with the measurements of parallel steps (which would add up to much more).
 </p>
-<pre>
-<code class="language-julia hljs">@logged function bar()::Nothing
-    return nothing
-end
-
-@logged function foo(positional; named = 1 + 2)
-    bar()
-    return positional + named
-end
-
-using Logging
-using Test
-logger = TestLogger(; min_level = Logging.Debug)
-with_logger(logger) do
-    return foo(1; named = 2)
-end
-print(join([&quot;$(record.level) : $(record.message)&quot; for record in logger.logs], &quot;
-&quot;))
-
-# output
-
-Debug : foo {
-Debug : - positional: 1
-Debug : - named: 2
-Debug : bar {
-Debug : bar return }
-Debug : foo return: 3 }
+<p>Each 
+<code>parallel_loop
+</code> is therefore measured twice, once as a serial step and once as a parallel step. We scale the parallel time (and everything nested in it) so it adds up to the serial time. We then convert all the inclusive measurements to exclusive ones. The result is a flamegraph that shows the contribution of everything (serial and parallel steps) to the total execution time, under the assumption that the number of iterations in the parallel loops is large enough that it is the sum of parallel steps that matters.
+</p>
+<div class="admonition is-info" id="Note-70682558b60f37e9">
+<header class="admonition-header">Note
+<a class="admonition-anchor" href="#Note-70682558b60f37e9" title="Permalink">
+</a>
+</header>
+<div class="admonition-body">
+<p>This will not work if you call 
+<a href="flame_time.html#TanayLabUtilities.FlameTime.flame_timed">
+<code>flame_timed
 </code>
-</pre>
+</a> inside an explicit 
+<code>@threads
+</code> loops. You must use a 
+<code>parallel_loop
+</code> instead.
+</p>
+</div>
+</div>
 </div>
 </section>
 </details>
@@ -339,29 +322,29 @@ Debug : foo return: 3 }
 </h2>
 <ul>
 <li>
-<a href="logger.html#TanayLabUtilities.Logger">
-<code>TanayLabUtilities.Logger
+<a href="flame_time.html#TanayLabUtilities.FlameTime">
+<code>TanayLabUtilities.FlameTime
 </code>
 </a>
 </li>
 <li>
-<a href="logger.html#TanayLabUtilities.Logger.setup_logger">
-<code>TanayLabUtilities.Logger.setup_logger
+<a href="flame_time.html#TanayLabUtilities.FlameTime.finalize_flamegraph">
+<code>TanayLabUtilities.FlameTime.finalize_flamegraph
 </code>
 </a>
 </li>
 <li>
-<a href="logger.html#TanayLabUtilities.Logger.@logged">
-<code>TanayLabUtilities.Logger.@logged
+<a href="flame_time.html#TanayLabUtilities.FlameTime.flame_timed">
+<code>TanayLabUtilities.FlameTime.flame_timed
 </code>
 </a>
 </li>
 </ul>
 </article>
 <nav class="docs-footer">
-<a class="docs-footer-prevpage" href="brief.html">« Brief
+<a class="docs-footer-prevpage" href="logger.html">« Logger
 </a>
-<a class="docs-footer-nextpage" href="flame_time.html">Flame Time »
+<a class="docs-footer-nextpage" href="parallel_loops.html">Parallel Loops »
 </a>
 <div class="flexbox-break">
 </div>

@@ -69,11 +69,27 @@
 </a>
 </li>
 <li>
-<a class="tocitem" href="parallel_storage.html">Parallel Storage
+<a class="tocitem" href="flame_time.html">Flame Time
 </a>
 </li>
 <li>
-<a class="tocitem" href="parallel_rng.html">ParallelRNG
+<a class="tocitem" href="parallel_loops.html">Parallel Loops
+</a>
+</li>
+<li class="is-active">
+<a class="tocitem" href="parallel_distances.html">Parallel Distances
+</a>
+<ul class="internal">
+<li>
+<a class="tocitem" href="#Index">
+<span>Index
+</span>
+</a>
+</li>
+</ul>
+</li>
+<li>
+<a class="tocitem" href="parallel_storage.html">Parallel Storage
 </a>
 </li>
 <li>
@@ -115,18 +131,6 @@
 <li>
 <a class="tocitem" href="cached_ispath.html">Cached IsPath
 </a>
-</li>
-<li class="is-active">
-<a class="tocitem" href="parallel_distances.html">Parallel Distances
-</a>
-<ul class="internal">
-<li>
-<a class="tocitem" href="#Index">
-<span>Index
-</span>
-</a>
-</li>
-</ul>
 </li>
 </ul>
 <div class="docs-version-selector field has-addons">
@@ -215,24 +219,35 @@
 <section>
 <div>
 <pre>
-<code class="language-julia hljs">parallel_pairwise(distance, X[, Y]; dims::Integer, policy::Sumbol = :greedy)::AbstractMatrix
+<code class="language-julia hljs">parallel_pairwise(
+    distance, X[, Y];
+    dims::Integer,
+    policy::Symbol = :greedy,
+    progress::Maybe{Progress} = nothing
+)::AbstractMatrix
 </code>
 </pre>
 <p>A parallel version of 
 <code>pairwise
 </code>. This will use 
-<code>@threads
-</code> and the specified 
+<a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.parallel_loop_wo_rng">
+<code>parallel_loop_wo_rng
+</code>
+</a> over the columns of 
+<code>Y
+</code>, with the specified 
 <code>policy
+</code> and 
+<code>progress
 </code>. If 
 <code>policy
-</code> is set to 
+</code> is 
 <code>:serial
-</code>, falls back to the default 
+</code>, then the standard version of 
 <code>pairwise
-</code> from 
-<code>Distances.jl
-</code>.
+</code> is called and 
+<code>progress
+</code> is ignored.
 </p>
 <pre>
 <code class="language-julia hljs">using Test
@@ -280,24 +295,36 @@ OK
 <section>
 <div>
 <pre>
-<code class="language-julia hljs">parallel_colwise(distance, X[, Y]; = :greedy)::AbstractVector
+<code class="language-julia hljs">parallel_colwise(
+    distance, X, Y;
+    policy::Symbol = :greedy,
+    progress::Maybe{Progress} = nothing,
+)::AbstractVector
 </code>
 </pre>
 <p>A parallel version of 
 <code>colwise
 </code>. This will use 
-<code>@threads
-</code> and the specified 
+<a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.parallel_loop_wo_rng">
+<code>parallel_loop_wo_rng
+</code>
+</a> over the columns of 
+<code>X
+</code> and 
+<code>Y
+</code>, using the specified 
 <code>policy
+</code> and 
+<code>progress
 </code>. If 
 <code>policy
-</code> is set to 
+</code> is 
 <code>:serial
-</code>, falls back to the default 
-<code>colwise
-</code> from 
-<code>Distances.jl
-</code>.
+</code>, then the standard version of 
+<code>pairwise
+</code> is called and 
+<code>progress
+</code> is ignored.
 </p>
 <p>```jldoctest using Test using Distances using Random
 </p>
@@ -353,7 +380,9 @@ OK
 </ul>
 </article>
 <nav class="docs-footer">
-<a class="docs-footer-prevpage" href="cached_ispath.html">« Cached IsPath
+<a class="docs-footer-prevpage" href="parallel_loops.html">« Parallel Loops
+</a>
+<a class="docs-footer-nextpage" href="parallel_storage.html">Parallel Storage »
 </a>
 <div class="flexbox-break">
 </div>
@@ -401,7 +430,7 @@ OK
 <hr/>
 <p>This document was generated with 
 <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl
-</a> version 1.16.1. Using Julia version 1.11.5.
+</a> version 1.16.1. Using Julia version 1.11.8.
 </p>
 </section>
 <footer class="modal-card-foot">

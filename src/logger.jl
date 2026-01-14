@@ -7,6 +7,7 @@ export @logged
 export setup_logger
 
 using ..Brief
+using ..FlameTime
 using ..Types
 using Base.Threads
 using Dates
@@ -112,6 +113,7 @@ macro logged(definition)
     has_result = get(inner_definition, :rtype, :Any) != :Nothing
     arg_names = [parse_arg(arg) for arg in get(outer_definition, :args, [])]
     inner_definition[:name] = Symbol(function_name, :_logged)
+    function_name = string(function_name)
     if startswith(full_name, "TanayLabUtilities.") || contains(full_name, ".TanayLabUtilities.")
         outer_definition[:body] = Expr(
             :call,
@@ -119,6 +121,7 @@ macro logged(definition)
                 $function_module,
                 $function_file,
                 $function_line,
+                $function_name,
                 $full_name,
                 $arg_names,
                 $has_result,
@@ -134,6 +137,7 @@ macro logged(definition)
                 $function_module,
                 $function_file,
                 $function_line,
+                $function_name,
                 $full_name,
                 $arg_names,
                 $has_result,
@@ -159,24 +163,27 @@ function logged_wrapper(
     _module::Module,
     _file::AbstractString,
     _line::Integer,
-    name::AbstractString,
+    function_name::AbstractString,
+    full_name::AbstractString,
     arg_names::AbstractVector{<:AbstractString},
     has_result::Bool,
     inner_function,
 )
     return (args...; kwargs...) -> (
-        @debug "$(name) {" _module = _module _file = _file _line = _line;
-        for (arg_name, value) in zip(arg_names, args)
-            @debug "- $(arg_name): $(brief(value))" _module = _module _file = _file _line = _line
+        @debug "$(full_name) {" _module = _module _file = _file _line = _line;
+        for (arg_name, arg_value) in zip(arg_names, args)
+            @debug "- $(arg_name): $(brief(arg_value))" _module = _module _file = _file _line = _line
         end;
-        for (name, value) in kwargs
-            @debug "- $(name): $(brief(value))" _module = _module _file = _file _line = _line
+        for (arg_name, arg_value) in kwargs
+            @debug "- $(arg_name): $(brief(arg_value))" _module = _module _file = _file _line = _line
         end;
-        result = inner_function(args...; kwargs...);
+        result = flame_timed(function_name) do
+            return inner_function(args...; kwargs...)
+        end;
         if has_result
-            @debug "$(name) return: $(brief(result)) }" _module = _module _file = _file _line = _line
+            @debug "$(full_name) return: $(brief(result)) }" _module = _module _file = _file _line = _line
         else
-            @debug "$(name) return }" _module = _module _file = _file _line = _line
+            @debug "$(full_name) return }" _module = _module _file = _file _line = _line
         end;
         result
     )  # flaky tested
