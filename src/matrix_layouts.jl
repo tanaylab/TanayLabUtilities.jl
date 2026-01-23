@@ -43,6 +43,7 @@ export GLOBAL_INEFFICIENT_ACTION_HANDLER
 using ..Documentation
 using ..Types
 using ..Brief
+using ..FlameTime
 using ..Handlers
 using ..ReadOnlyArrays
 using Distributed
@@ -108,7 +109,7 @@ base = [0 1 2; 3 4 0]
 
 # Slice
 
-@test major_axis(@view base[:, [1, 3, 2]]) == nothing
+@test major_axis(@view base[:, [1, 3, 2]]) == Columns
 
 # Named
 
@@ -188,8 +189,12 @@ function major_axis(matrix::AbstractMatrix)::Maybe{Int8}
         end
 
     catch MethodError  # NOLINT
-        return nothing
+        return nothing  # UNTESTED
     end
+end
+
+function major_axis(matrix::SubArray)::Maybe{Int8}
+    return major_axis(matrix.parent)
 end
 
 """
@@ -203,18 +208,19 @@ using Test
 base = [0 1 2; 3 4 0]
 
 @test require_major_axis(base) == Columns
+@test require_major_axis(@view base[:, [1, 3, 2]]) == Columns
 
-require_major_axis(@view base[:, [1, 3, 2]])
+println("OK")
 
 # output
 
-ERROR: type: SubArray{Int64, 2, Matrix{Int64}, Tuple{Base.Slice{Base.OneTo{Int64}}, Vector{Int64}}, false} is not in any-major layout
+OK
 ```
 """
 function require_major_axis(matrix::AbstractMatrix)::Int8
     axis = major_axis(matrix)
     if axis === nothing
-        error("type: $(typeof(matrix)) is not in any-major layout")
+        error("type: $(typeof(matrix)) is not in any-major layout")  # UNTESTED
     end
     return axis
 end
@@ -234,7 +240,7 @@ base = [0 1 2; 3 4 0]
 
 # Slice
 
-@test minor_axis(@view base[:, [1, 3, 2]]) == nothing
+@test minor_axis(@view base[:, [1, 3, 2]]) == Rows
 
 # Named
 
@@ -294,11 +300,13 @@ base = [0 1 2; 3 4 0]
 
 @test require_minor_axis(base) == Rows
 
-require_minor_axis(@view base[:, [1, 3, 2]])
+@test require_minor_axis(@view base[:, [1, 3, 2]]) == Rows
+
+println("OK")
 
 # output
 
-ERROR: type: SubArray{Int64, 2, Matrix{Int64}, Tuple{Base.Slice{Base.OneTo{Int64}}, Vector{Int64}}, false} is not in any-major layout
+OK
 ```
 """
 function require_minor_axis(matrix::AbstractMatrix)::Int8
@@ -314,7 +322,7 @@ returns `nothing`.
 ```jldoctest
 using Test
 
-@test other_axis(nothing) == nothing
+@test other_axis(nothing) === nothing
 @test other_axis(Rows) == Columns
 @test other_axis(Columns) == Rows
 
@@ -932,40 +940,47 @@ function flip_tuple(tuple::Tuple{T1, T2})::Tuple{T2, T1} where {T1, T2}
 end
 
 function flipped(matrix::AbstractMatrix)::AbstractMatrix
-    @debug "flipped $(brief(matrix)) {"
+    return flame_timed("flipped") do
+        @debug "flipped $(brief(matrix)) {"
 
-    axis = require_major_axis(matrix)
+        axis = require_major_axis(matrix)
+        local result  # UNTESTED
 
-    if issparse(matrix)
-        if axis == Columns
-            result = SparseMatrixCSC(flip(mutable_array(matrix)))
-        elseif axis == Rows  # UNTESTED
-            result = flip(SparseMatrixCSC(mutable_array(matrix)))  # UNTESTED
-        else
-            @assert false
-        end
-
-    else
-        if axis == Columns
-            result = Matrix{eltype(matrix)}(undef, size(matrix, Columns), size(matrix, Rows))
-            result = permutedims!(result, mutable_array(matrix), (2, 1))
-
-        elseif axis == Rows  # UNTESTED
-            result = Matrix{eltype(matrix)}(undef, size(matrix, Rows), size(matrix, Columns))  # UNTESTED
-            result = permutedims!(result, flip(mutable_array(matrix)), (2, 1))  # UNTESTED
-            result = flip(result)  # UNTESTED
+        if issparse(matrix)
+            flame_timed("flipped.sparse") do
+                if axis == Columns
+                    result = SparseMatrixCSC(flip(mutable_array(matrix)))
+                elseif axis == Rows  # UNTESTED
+                    result = flip(SparseMatrixCSC(mutable_array(matrix)))  # UNTESTED
+                else
+                    @assert false
+                end
+            end
 
         else
-            @assert false
+            flame_timed("flipped.dense") do
+                if axis == Columns
+                    result = Matrix{eltype(matrix)}(undef, size(matrix, Columns), size(matrix, Rows))
+                    result = permutedims!(result, mutable_array(matrix), (2, 1))
+
+                elseif axis == Rows  # UNTESTED
+                    result = Matrix{eltype(matrix)}(undef, size(matrix, Rows), size(matrix, Columns))  # UNTESTED
+                    result = permutedims!(result, flip(mutable_array(matrix)), (2, 1))  # UNTESTED
+                    result = flip(result)  # UNTESTED
+
+                else
+                    @assert false
+                end
+            end
         end
+
+        @assert major_axis(result) == axis
+        @assert size(result, Rows) == size(matrix, Columns)
+        @assert size(result, Columns) == size(matrix, Rows)
+
+        @debug "flipped $(brief(result)) }"
+        return result
     end
-
-    @assert major_axis(result) == axis
-    @assert size(result, Rows) == size(matrix, Columns)
-    @assert size(result, Columns) == size(matrix, Rows)
-
-    @debug "flipped $(brief(result)) }"
-    return result
 end
 
 function flipped(matrix::ReadOnlyArray)::AbstractMatrix

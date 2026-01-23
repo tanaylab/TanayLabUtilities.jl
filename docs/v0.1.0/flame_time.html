@@ -198,27 +198,31 @@
 </summary>
 <section>
 <div>
-<p>Generate a coarse-grained flamegraph. If the environment variable 
+<p>Generate a coarse-grained flameview. If the environment variable 
 <code>JULIA_FLAME_MEASUREMENTS_FILE
 </code> is set, it should contain the path of a file to append measurements into. Every call to 
 <a href="flame_time.html#TanayLabUtilities.FlameTime.flame_timed">
 <code>flame_timed
 </code>
-</a> will append measurement into this file. This file can&#39;t be directly viewed using 
-<code>flamegraph.pl
-</code>. It needs to be converted to a proper flamegraph file using 
-<a href="flame_time.html#TanayLabUtilities.FlameTime.finalize_flamegraph">
-<code>finalize_flamegraph
+</a> will collect measurements, and on normal program exit, the total (&quot;folded&quot;) measurements are written into this file. The file can&#39;t be directly viewed using 
+<code>flameview.py
+</code>; it needs to be converted to a proper flameview file using 
+<a href="flame_time.html#TanayLabUtilities.FlameTime.finalize_flameview">
+<code>finalize_flameview
 </code>
 </a>.
 </p>
-<div class="admonition is-info" id="Note-109935dfb3535a54">
+<div class="admonition is-info" id="Note-8722dee924ea3d76">
 <header class="admonition-header">Note
-<a class="admonition-anchor" href="#Note-109935dfb3535a54" title="Permalink">
+<a class="admonition-anchor" href="#Note-8722dee924ea3d76" title="Permalink">
 </a>
 </header>
 <div class="admonition-body">
-<p>Measurements are appended into the file, so that running multiple programs automatically creates a unified file for a whole computational pipeline. If you want to separately measure each program execution, use a different measurements file for each.
+<p>Measurements are appended into the file, so that running multiple programs automatically creates a unified file for a whole computational pipeline. Measurement stacks are prefixed by the program name (
+<code>basename(source_path())
+</code> or 
+<code>Main
+</code>). If you want to separately measure each program execution, use a different measurements file for each. Also, there&#39;s no locking done, so running programs in parallel with the same measurements file will not end well.
 </p>
 </div>
 </div>
@@ -228,7 +232,7 @@
 <code>parallel_loop
 </code> is automatically a measured step, so one gets a pretty decent level of detail &quot;for free&quot;. It is possible to supplement this with occasional calls to 
 <code>flame_timed
-</code> to increase the level of detail. Of course one can ignore all of this and use heavyweight tools such as 
+</code> to increase the level of detail. Of course one can ignore all of this and use more detailed tools such as 
 <code>Profile
 </code> when profiling for performance in anger.
 </p>
@@ -252,23 +256,57 @@
 <code class="language-julia hljs">flame_timed(body::Function, name::AbstractString)::Any
 </code>
 </pre>
-<p>Add a measurement line to the flamegrah file for the execution of the 
+<p>Add a measurement to the flameview file for the execution of the 
 <code>body
 </code> under the specified 
 <code>name
-</code>. The measurement is of the elapsed time for the body in nanoseconds. We distinguish between &quot;serial&quot; measurements (in the top-level main thread) and &quot;parallel&quot; measurements (inside tasks invoked from within a 
+</code>. We distinguish between &quot;serial&quot; measurements (in the top-level main thread) and &quot;parallel&quot; measurements (inside tasks invoked from within a 
 <code>parallel_loop
-</code>).
+</code>). For parallel code we can only meaningfully measure elapsed time. For serial code (including complete 
+<code>parallel_loop
+</code>), we measure much more - GC overhead, CPU time, page faults, IO, and context switches.
 </p>
+<p>If 
+<code>name
+</code> starts with 
+<code>.
+</code>, then we take the name of the surrounding 
+<code>flame_timed
+</code> context (which must exist) and append the 
+<code>name
+</code> to it. This allows easily marking sections inside logged functions (e.g. 
+<code>flame_timed(&quot;.loop&quot;)
+</code>) in a way that still makes sense when generating a reversed flame graph.
+</p>
+<p>If 
+<code>JULIA_FLAME_MEASUREMENTS_FILE
+</code> was not specified, this just invokes the 
+<code>body
+</code> without (almost) any overhead.
+</p>
+<div class="admonition is-info" id="Note-8184939b5b6cbbc0">
+<header class="admonition-header">Note
+<a class="admonition-anchor" href="#Note-8184939b5b6cbbc0" title="Permalink">
+</a>
+</header>
+<div class="admonition-body">
+<p>This is automatically invoked for every 
+<code>@logged
+</code> function, which greatly reduces the need to manually annotate code sections with an explicit 
+<code>flame_timed
+</code> call, though this is still useful when sections of a function need to be measured, or for wrapping calls to expensive standard library functions of interest.
+</p>
+</div>
+</div>
 </div>
 </section>
 </details>
 </article>
 <article>
 <details class="docstring" open="true">
-<summary id="TanayLabUtilities.FlameTime.finalize_flamegraph">
-<a class="docstring-binding" href="#TanayLabUtilities.FlameTime.finalize_flamegraph">
-<code>TanayLabUtilities.FlameTime.finalize_flamegraph
+<summary id="TanayLabUtilities.FlameTime.finalize_flameview">
+<a class="docstring-binding" href="#TanayLabUtilities.FlameTime.finalize_flameview">
+<code>TanayLabUtilities.FlameTime.finalize_flameview
 </code>
 </a> — 
 <span class="docstring-category">Function
@@ -277,18 +315,34 @@
 <section>
 <div>
 <pre>
-<code class="language-julia hljs">finalize_flamegraph(; measurements_path::AbstractString, flamegraph_path::AbstractString)::Nothing
+<code class="language-julia hljs">finalize_flameview(;
+    measurements_path::AbstractString,
+    flameview_path::AbstractString,
+    reversed::Bool = false,
+)::Nothing
 </code>
 </pre>
 <p>Convert the collected measurements in the 
 <code>measurement_path
-</code> into a proper flamegraph file, suitable for use with 
-<code>flamegraph.pl
-</code> and similar tools. This is needed for two reasons: first, the measurements are inclusive (that is, the elapsed time of a step includes the elapsed time of all nested steps). Second, measurements of serial steps (which should add to the total execution time) are mixed with the measurements of parallel steps (which would add up to much more).
+</code> into a proper 
+<code>flameview
+</code> file, suitable for use with This is needed for several reasons:
+</p>
+<ul>
+<li>The measurements are inclusive (that is, the elapsed time of a step includes the elapsed time of all nested steps).
+</li>
+<li>Measurements of serial steps (which should add to the total execution time) are mixed with the measurements of parallel steps (which would add up to much more).
+</li>
+<li>We collect much more than (elapsed) time, so we need to generate a nive HTML annotation for each line to show the extra data.
+</li>
+</ul>
+<p>In addition, a reversed flamegraph (showing callers instead of callees) doesn&#39;t work well when just reversing the stacks of the flameview file, because the annotations won&#39;t be properly computed. Specify 
+<code>reversed
+</code> to generate a proper reversed flameview file.
 </p>
 <p>Each 
 <code>parallel_loop
-</code> is therefore measured twice, once as a serial step and once as a parallel step. We scale the parallel time (and everything nested in it) so it adds up to the serial time. We then convert all the inclusive measurements to exclusive ones. The result is a flamegraph that shows the contribution of everything (serial and parallel steps) to the total execution time, under the assumption that the number of iterations in the parallel loops is large enough that it is the sum of parallel steps that matters.
+</code> is therefore measured twice, once as a serial step and once as a parallel step. We scale the parallel time (and everything nested in it) so it adds up to the serial time. We then convert all the inclusive measurements to exclusive ones. The result is a flameview that shows the contribution of everything (serial and parallel steps) to the total execution time, under the assumption that the number of iterations in the parallel loops is large enough that it is the sum of parallel steps that matters.
 </p>
 <div class="admonition is-info" id="Note-70682558b60f37e9">
 <header class="admonition-header">Note
@@ -308,6 +362,22 @@
 </p>
 </div>
 </div>
+<p>Parallel names are suffixed with 
+<code>_[1]
+</code> to allow using different colors for serial and parallel code. This only works with 
+<code>flameview
+</code>; in general the generated file only works with 
+<code>flameview.py
+</code>. If you want to feed it into a 
+<code>flamegraph
+</code> tool, you will need to pass it through 
+<code>sed &#39;s/ #.*//;s/_\[1\]/_[j]/&#39;
+</code> - that is, get rid of the (very useful) annotations attached to each node, and switch to a 
+<code>_[j]
+</code> suffix (or any other suffix you choose that works with 
+<code>flamegraph.pl
+</code>, or even completely get rid of the suffix.)
+</p>
 </div>
 </section>
 </details>
@@ -328,8 +398,8 @@
 </a>
 </li>
 <li>
-<a href="flame_time.html#TanayLabUtilities.FlameTime.finalize_flamegraph">
-<code>TanayLabUtilities.FlameTime.finalize_flamegraph
+<a href="flame_time.html#TanayLabUtilities.FlameTime.finalize_flameview">
+<code>TanayLabUtilities.FlameTime.finalize_flameview
 </code>
 </a>
 </li>

@@ -77,7 +77,7 @@ OK
 """
 function brief(value::Any)::AbstractString
     try
-        return "$(join(string.(size(value)), " x ")) x $(brief(eltype(value))) ($(brief(typeof(value))))"
+        return "$(join(string.(size(value)), " x ")) x $(brief(eltype(value))) ($(brief(typeof(value))))"  # NOJET
     catch
         try
             return "$(length(value)) x $(brief(eltype(value))) ($(brief(typeof(value))))"
@@ -213,8 +213,6 @@ percent(1000, 1000)
 ```
 """
 function percent(used::Real, out_of::Real)::AbstractString
-    @assert 0 <= used <= out_of
-
     if out_of == 0
         return "NA%"
     end
@@ -229,10 +227,10 @@ function percent(used::Real, out_of::Real)::AbstractString
 
     float_percent = 100.0 * Float64(used) / Float64(out_of)
 
-    if float_percent < 1
+    if 0 < float_percent < 1
         return "<1%"
 
-    elseif float_percent > 99
+    elseif 99 < float_percent < 100
         return ">99%"
 
     else

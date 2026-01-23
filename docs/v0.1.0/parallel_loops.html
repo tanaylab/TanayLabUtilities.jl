@@ -219,8 +219,8 @@
 <pre>
 <code class="language-julia hljs">parallel_loop_wo_rng(
     body::Function,
-    name::AbstractString,
     indices::AbstractVector{&lt;:Integer};
+    name::AbstractString = &quot;.loop&quot;,
     policy::Symbol = :greedy,
     progress::Maybe{Progress} = nothing,
 )::Nothing
@@ -282,7 +282,7 @@ size = 10
 
 for policy in (:serial, :greedy, :dynamic, :static)
     results = zeros(Int, size)
-    parallel_loop_wo_rng(&quot;test&quot;, 1:size; policy) do index
+    parallel_loop_wo_rng(1:size; policy) do index
         results[index] = index
         return nothing
     end
@@ -315,8 +315,8 @@ OK
 <pre>
 <code class="language-julia hljs">parallel_loop_with_rng(
     body::Function,
-    name::AbstractString,
-    indices::AbstractVector{&lt;:Integer},
+    indices::AbstractVector{&lt;:Integer};
+    name::AbstractString = &quot;.loop&quot;,
     policy::Symbol = :greedy,
     progress::Maybe{Progress} = nothing,
     seed::Maybe{Integer} = nothing,
@@ -394,7 +394,7 @@ size = 10
 
 function collect_rng(rng::AbstractRNG)::Vector{Float64}
     results = zeros(Float64, size)
-    parallel_loop_with_rng(&quot;test&quot;, 1:size; rng) do index, rng
+    parallel_loop_with_rng(1:size; rng) do index, rng
         results[index] = rand(rng)
     end
     @test results[1] != results[2]
@@ -405,7 +405,7 @@ end
 
 function collect_default_rng()::Vector{Float64}
     results = zeros(Float64, size)
-    parallel_loop_with_rng(&quot;test&quot;, 1:size; seed = 123456, policy = :dynamic) do index, _
+    parallel_loop_with_rng(1:size; seed = 123456, policy = :dynamic) do index, _
         results[index] = rand()
     end
     @test results[1] != results[2]

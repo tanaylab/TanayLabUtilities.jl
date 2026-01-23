@@ -339,7 +339,7 @@ base = [0 1 2; 3 4 0]
 
 # Slice
 
-@test major_axis(@view base[:, [1, 3, 2]]) == nothing
+@test major_axis(@view base[:, [1, 3, 2]]) == Columns
 
 # Named
 
@@ -415,12 +415,13 @@ OK
 base = [0 1 2; 3 4 0]
 
 @test require_major_axis(base) == Columns
+@test require_major_axis(@view base[:, [1, 3, 2]]) == Columns
 
-require_major_axis(@view base[:, [1, 3, 2]])
+println(&quot;OK&quot;)
 
 # output
 
-ERROR: type: SubArray{Int64, 2, Matrix{Int64}, Tuple{Base.Slice{Base.OneTo{Int64}}, Vector{Int64}}, false} is not in any-major layout
+OK
 </code>
 </pre>
 </div>
@@ -458,7 +459,7 @@ base = [0 1 2; 3 4 0]
 
 # Slice
 
-@test minor_axis(@view base[:, [1, 3, 2]]) == nothing
+@test minor_axis(@view base[:, [1, 3, 2]]) == Rows
 
 # Named
 
@@ -537,11 +538,13 @@ base = [0 1 2; 3 4 0]
 
 @test require_minor_axis(base) == Rows
 
-require_minor_axis(@view base[:, [1, 3, 2]])
+@test require_minor_axis(@view base[:, [1, 3, 2]]) == Rows
+
+println(&quot;OK&quot;)
 
 # output
 
-ERROR: type: SubArray{Int64, 2, Matrix{Int64}, Tuple{Base.Slice{Base.OneTo{Int64}}, Vector{Int64}}, false} is not in any-major layout
+OK
 </code>
 </pre>
 </div>
@@ -585,7 +588,7 @@ ERROR: type: SubArray{Int64, 2, Matrix{Int64}, Tuple{Base.Slice{Base.OneTo{Int64
 <pre>
 <code class="language-julia hljs">using Test
 
-@test other_axis(nothing) == nothing
+@test other_axis(nothing) === nothing
 @test other_axis(Rows) == Columns
 @test other_axis(Columns) == Rows
 

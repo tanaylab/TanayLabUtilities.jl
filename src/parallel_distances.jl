@@ -71,7 +71,7 @@ function parallel_pairwise(
 
     @assert policy in (:serial, :greedy, :dynamic, :static)
     if policy == :serial
-        return flame_timed("pairwise_" * string(typeof(distance))) do
+        return flame_timed("pairwise." * string(nameof(typeof(distance)))) do
             return pairwise(distance, X, Y; dims)
         end
     else
@@ -81,7 +81,12 @@ function parallel_pairwise(
         @views Y_column = Y[:, 1]
         first_distance = evaluate(distance, X_column, Y_column)
         result = Matrix{typeof(first_distance)}(undef, n_X_columns, n_Y_columns)
-        parallel_loop_wo_rng("pairwise_" * string(typeof(distance)), 1:n_Y_columns; policy, progress) do Y_column_index
+        parallel_loop_wo_rng(
+            1:n_Y_columns;
+            name = "pairwise." * string(nameof(typeof(distance))),
+            policy,
+            progress,
+        ) do Y_column_index
             @views Y_column = Y[:, Y_column_index]
             result[:, Y_column_index] = colwise(distance, X, Y_column)
             return nothing
@@ -105,7 +110,7 @@ function parallel_pairwise(
 
     @assert policy in (:serial, :greedy, :dynamic, :static)
     if policy == :serial
-        return flame_timed("pairwise_" * string(typeof(distance))) do
+        return flame_timed("pairwise." * string(nameof(typeof(distance)))) do
             return pairwise(distance, X; dims)
         end
     else
@@ -113,7 +118,12 @@ function parallel_pairwise(
         @views column = X[:, 1]
         first_distance = evaluate(distance, column, column)
         result = Matrix{typeof(first_distance)}(undef, n_columns, n_columns)
-        parallel_loop_wo_rng("pairwise_" * string(typeof(distance)), 1:n_columns; policy, progress) do column_index
+        parallel_loop_wo_rng(
+            1:n_columns;
+            name = "pairwise." * string(nameof(typeof(distance))),
+            policy,
+            progress,
+        ) do column_index
             @views column = X[:, column_index]
             @views columns = X[:, column_index:n_columns]
             result[column_index, column_index:n_columns] =
@@ -167,7 +177,7 @@ function parallel_colwise(  # FLAKY TESTED
 )::AbstractVector
     @assert policy in (:serial, :greedy, :dynamic, :static)
     if policy == :serial
-        return flame_timed("colwise_" * string(typeof(distance))) do
+        return flame_timed("colwise." * string(nameof(typeof(distance)))) do
             return colwise(distance, X, Y)
         end
     else
@@ -179,7 +189,12 @@ function parallel_colwise(  # FLAKY TESTED
         @views Y_column = Y[:, 1]
         first_distance = evaluate(distance, X_column, Y_column)
         result = Vector{typeof(first_distance)}(undef, n_X_columns)
-        parallel_loop_wo_rng("colwise_" * string(typeof(distance)), 1:n_X_columns; policy, progress) do column_index
+        parallel_loop_wo_rng(
+            1:n_X_columns;
+            name = "colwise." * string(nameof(typeof(distance))),
+            policy,
+            progress,
+        ) do column_index
             @views X_column = X[:, column_index]
             @views Y_column = Y[:, column_index]
             return result[column_index] = evaluate(distance, X_column, Y_column)

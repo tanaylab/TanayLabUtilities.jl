@@ -9,6 +9,7 @@ using Random
 using Clustering
 
 using ..Documentation
+using ..FlameTime
 using ..MatrixFormats
 using ..Types
 
@@ -37,9 +38,13 @@ because K-Means is a heuristic and tends to occasionally get stuck in a local mi
 
     for _ in 1:rounds
         if centers === nothing
-            kmeans_result = kmeans(values_of_points, k; rng)  # NOJET
+            kmeans_result = flame_timed("kmeans") do
+                return kmeans(values_of_points, k; rng)  # NOJET
+            end
         else
-            kmeans_result = kmeans!(values_of_points, copy_array(centers); rng)
+            kmeans_result = flame_timed("kmeans") do
+                return kmeans!(values_of_points, copy_array(centers); rng)
+            end
         end
 
         if best_kmeans_result === nothing || kmeans_result.totalcost < best_kmeans_result.totalcost

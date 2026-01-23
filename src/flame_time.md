@@ -3,7 +3,7 @@
 ```@docs
 TanayLabUtilities.FlameTime
 TanayLabUtilities.FlameTime.flame_timed
-TanayLabUtilities.FlameTime.finalize_flamegraph
+TanayLabUtilities.FlameTime.finalize_flameview
 ```
 
 ## Index

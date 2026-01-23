@@ -18,7 +18,7 @@ using Logging
 """
     setup_logger(
         io::IO = stderr;
-        [level::LogLevel = Warn,
+        [level::LogLevel = Info,
         show_time::Bool = true,
         show_module::Bool = true,
         show_location::Bool = false]
@@ -45,7 +45,7 @@ If `show_location`, each message will be prefixed with the file name and the lin
 """
 function setup_logger(
     io::IO = stderr;
-    level::LogLevel = Warn,
+    level::LogLevel = Info,
     show_time::Bool = true,
     show_module::Bool = true,
     show_location::Bool = false,

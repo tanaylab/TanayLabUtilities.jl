@@ -14,6 +14,7 @@ export empty_ispath_cache!
 using Base.Threads
 using ConcurrentUtils
 
+using ..FlameTime
 using ..Types
 
 """
@@ -48,44 +49,48 @@ function cached_ispath(path::AbstractString)::Bool
         return ispath(path)
     end
 
-    file_name = basename(path)
-    @assert file_name != ""
+    return flame_timed("cached_ispath") do
+        file_name = basename(path)
+        @assert file_name != ""
 
-    dir_name = dirname(path)
-    if dir_name == ""
-        dir_name = "."
-    end
-
-    if isabspath(path)
-        cwd = "/"
-    else
-        cwd = pwd()
-    end
-
-    for is_write in (false, true)
-        result = (is_write ? lock : lock_read)(IS_PATH_CACHE_LOCK) do
-            cached = get(IS_PATH_CACHE_DICT, (cwd, dir_name), nothing)
-
-            now_ns = time_ns()
-            if cached !== nothing && now_ns - cached.at_ns <= IS_PATH_CACHE_TIMEOUT_NS
-                return file_name in cached.file_names
-            end
-
-            if is_write
-                cached = IsPathCacheEntry(now_ns, Set(readdir(dir_name)))
-                IS_PATH_CACHE_DICT[(cwd, dir_name)] = cached
-                return file_name in cached.file_names
-            end
-
-            return nothing
+        dir_name = dirname(path)
+        if dir_name == ""
+            dir_name = "."
         end
 
-        if result !== nothing
-            return result
+        if isabspath(path)
+            cwd = "/"
+        else
+            cwd = pwd()
         end
-    end
 
-    @assert false
+        for is_write in (false, true)
+            result = flame_timed(is_write ? "cached_ispath.write" : "cached_ispath.read") do
+                (is_write ? lock : lock_read)(IS_PATH_CACHE_LOCK) do
+                    cached = get(IS_PATH_CACHE_DICT, (cwd, dir_name), nothing)
+
+                    now_ns = time_ns()
+                    if cached !== nothing && now_ns - cached.at_ns <= IS_PATH_CACHE_TIMEOUT_NS
+                        return file_name in cached.file_names
+                    end
+
+                    if is_write
+                        cached = IsPathCacheEntry(now_ns, Set(readdir(dir_name)))
+                        IS_PATH_CACHE_DICT[(cwd, dir_name)] = cached
+                        return file_name in cached.file_names
+                    end
+
+                    return nothing
+                end
+            end
+
+            if result !== nothing
+                return result
+            end
+        end
+
+        @assert false
+    end
 end
 
 """

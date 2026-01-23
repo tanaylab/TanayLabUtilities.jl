@@ -155,14 +155,14 @@ function downsample(
     end
 
     if dims == Rows
-        parallel_loop_with_rng("downsample", 1:n_rows; rng) do row_index, rng
+        parallel_loop_with_rng(1:n_rows; name = "downsample", rng) do row_index, rng
             @views row_vector = matrix[row_index, :]
             @views output_vector = output[row_index, :]
             return downsample(row_vector, samples; rng, output = output_vector)
         end
 
     elseif dims == Columns
-        parallel_loop_with_rng("downsample", 1:n_columns; rng) do column_index, rng
+        parallel_loop_with_rng(1:n_columns; name = "downsample", rng) do column_index, rng
             @views column_vector = matrix[:, column_index]
             @views output_vector = output[:, column_index]
             return downsample(column_vector, samples; rng, output = output_vector)
