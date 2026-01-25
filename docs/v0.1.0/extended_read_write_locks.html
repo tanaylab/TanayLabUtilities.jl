@@ -5,11 +5,11 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Locks · TanayLabUtilities.jl v0.1.0
+<title>Extended Read-Write Locks · TanayLabUtilities.jl v0.1.0
 </title>
-<meta name="title" content="Locks · TanayLabUtilities.jl v0.1.0"/>
-<meta property="og:title" content="Locks · TanayLabUtilities.jl v0.1.0"/>
-<meta property="twitter:title" content="Locks · TanayLabUtilities.jl v0.1.0"/>
+<meta name="title" content="Extended Read-Write Locks · TanayLabUtilities.jl v0.1.0"/>
+<meta property="og:title" content="Extended Read-Write Locks · TanayLabUtilities.jl v0.1.0"/>
+<meta property="twitter:title" content="Extended Read-Write Locks · TanayLabUtilities.jl v0.1.0"/>
 <meta name="description" content="Documentation for TanayLabUtilities.jl v0.1.0."/>
 <meta property="og:description" content="Documentation for TanayLabUtilities.jl v0.1.0."/>
 <meta property="twitter:description" content="Documentation for TanayLabUtilities.jl v0.1.0."/>
@@ -84,22 +84,14 @@
 <a class="tocitem" href="parallel_storage.html">Parallel Storage
 </a>
 </li>
+<li>
+<a class="tocitem" href="mostly_read_write_locks.html">Mostly-Read Write Locks
+</a>
+</li>
 <li class="is-active">
-<a class="tocitem" href="locks.html">Locks
+<a class="tocitem" href="extended_read_write_locks.html">Extended Read-Write Locks
 </a>
 <ul class="internal">
-<li>
-<a class="tocitem" href="#Write-Lock">
-<span>Write Lock
-</span>
-</a>
-</li>
-<li>
-<a class="tocitem" href="#Read-Locks">
-<span>Read Locks
-</span>
-</a>
-</li>
 <li>
 <a class="tocitem" href="#Index">
 <span>Index
@@ -165,13 +157,13 @@
 <nav class="breadcrumb">
 <ul class="is-hidden-mobile">
 <li class="is-active">
-<a href="locks.html">Locks
+<a href="extended_read_write_locks.html">Extended Read-Write Locks
 </a>
 </li>
 </ul>
 <ul class="is-hidden-tablet">
 <li class="is-active">
-<a href="locks.html">Locks
+<a href="extended_read_write_locks.html">Extended Read-Write Locks
 </a>
 </li>
 </ul>
@@ -190,19 +182,19 @@
 </div>
 </header>
 <article class="content" id="documenter-page">
-<h1 id="Locks">
-<a class="docs-heading-anchor" href="#Locks">Locks
+<h1 id="Extended-Read-Write-Locks">
+<a class="docs-heading-anchor" href="#Extended-Read-Write-Locks">Extended Read-Write Locks
 </a>
-<a id="Locks-1">
+<a id="Extended-Read-Write-Locks-1">
 </a>
-<a class="docs-heading-anchor-permalink" href="#Locks" title="Permalink">
+<a class="docs-heading-anchor-permalink" href="#Extended-Read-Write-Locks" title="Permalink">
 </a>
 </h1>
 <article>
 <details class="docstring" open="true">
-<summary id="TanayLabUtilities.Locks">
-<a class="docstring-binding" href="#TanayLabUtilities.Locks">
-<code>TanayLabUtilities.Locks
+<summary id="TanayLabUtilities.ExtendedReadWriteLocks">
+<a class="docstring-binding" href="#TanayLabUtilities.ExtendedReadWriteLocks">
+<code>TanayLabUtilities.ExtendedReadWriteLocks
 </code>
 </a> — 
 <span class="docstring-category">Module
@@ -210,44 +202,65 @@
 </summary>
 <section>
 <div>
-<p>Generic (reentrant) read-write locks.
+<p>Enhanced (reentrant) read-write locks.
 </p>
-<p>These add functionality on top of 
-<code>ConcurrentUtils
-</code>; specifically, they allow querying the status of the lock, and querying the status of the lock. We also provide explicit 
-<code>write_*
-</code> and 
-<code>read_*
-</code> functions instead of relying on 
-<code>lock
-</code> to be 
-<code>write_lock
-</code>. That is, 
-<a href="locks.html#TanayLabUtilities.Locks.ReentrantReadWriteLock">
-<code>ReentrantReadWriteLock
+<p>These add functionality on top of &quot;any&quot; simple read-write locks, such as 
+<code>ConcurrentUtils.ReadWriteLock
+</code> or 
+<a href="mostly_read_write_locks.html#TanayLabUtilities.MostlyReadWriteLocks.MostlyReadWriteLock">
+<code>MostlyReadWriteLock
 </code>
-</a> is 
-<strong>not
-</strong> an 
-<code>AbstractLock
-</code>.
+</a>. Specifically, they allow querying the status of the lock.
 </p>
+<p>We also provide aliases 
+<code>lock_write
+</code> and 
+<code>unlock_write
+</code> to 
+<code>lock
+</code> and 
+<code>unlock
+</code> for clearer code. These will work for &quot;any&quot; read-write lock, basic or extended.
+</p>
+<p>The locking and unlocking functions are extended to generate 
+<code>@debug
+</code> log messages for the operation(s). If a named 
+<code>what
+</code> parameter is given to the function(s), it is included in the message. Enabling debugging for 
+<code>ExtendedReadWriteLocks
+</code> will therefore log each and every operation, which is a blunt tool, but useful in desperate cases to debug multi-threaded locking behavior.
+</p>
+<div class="admonition is-info" id="Note-a665de8ba45e1164">
+<header class="admonition-header">Note
+<a class="admonition-anchor" href="#Note-a665de8ba45e1164" title="Permalink">
+</a>
+</header>
+<div class="admonition-body">
+<p>There&#39;s no standard abstract type for &quot;any&quot; read-write lock. Defining a new one doesn&#39;t help since 
+<code>ConcurrentUtils.ReadWriteLock
+</code> won&#39;t use it. Sigh.
+</p>
+</div>
+</div>
 <pre>
-<code class="language-julia hljs">read_write_lock = ReentrantReadWriteLock()
+<code class="language-julia hljs">using Base.Threads
+using ConcurrentUtils
+
+read_write_lock = ExtendedReadWriteLock()
 
 @assert !has_write_lock(read_write_lock)
 @assert !has_read_lock(read_write_lock)
 
-with_write_lock(read_write_lock, &quot;top_write&quot;) do
+lock_write(read_write_lock; what = &quot;top_write&quot;) do
     @assert has_write_lock(read_write_lock)
     @assert has_read_lock(read_write_lock)
 
-    with_write_lock(read_write_lock, &quot;nested_write&quot;) do
+    lock_write(read_write_lock; what = &quot;nested_write&quot;) do
         @assert has_write_lock(read_write_lock)
         @assert has_read_lock(read_write_lock)
     end
 
-    with_read_lock(read_write_lock, &quot;nested_read&quot;) do
+    lock_read(read_write_lock; what = &quot;nested_read&quot;) do
         @assert has_write_lock(read_write_lock)
         @assert has_read_lock(read_write_lock)
     end
@@ -261,16 +274,19 @@ end
 </code>
 </pre>
 <pre>
-<code class="language-julia hljs">read_write_lock = ReentrantReadWriteLock()
+<code class="language-julia hljs">using Base.Threads
+using ConcurrentUtils
+
+read_write_lock = ExtendedReadWriteLock()
 
 @assert !has_write_lock(read_write_lock)
 @assert !has_read_lock(read_write_lock)
 
-with_read_lock(read_write_lock, &quot;top_read&quot;) do
+lock_read(read_write_lock; what = &quot;top_read&quot;) do
     @assert !has_write_lock(read_write_lock)
     @assert has_read_lock(read_write_lock)
 
-    with_read_lock(read_write_lock, &quot;nested_read&quot;) do
+    lock_read(read_write_lock; what = &quot;nested_read&quot;) do
         @assert !has_write_lock(read_write_lock)
         @assert has_read_lock(read_write_lock)
     end
@@ -284,16 +300,19 @@ end
 </code>
 </pre>
 <pre>
-<code class="language-julia hljs">read_write_lock = ReentrantReadWriteLock()
+<code class="language-julia hljs">using Base.Threads
+using ConcurrentUtils
+
+read_write_lock = ExtendedReadWriteLock()
 
 @assert !has_write_lock(read_write_lock)
 @assert !has_read_lock(read_write_lock)
 
-with_read_lock(read_write_lock, &quot;top_read&quot;) do
+lock_read(read_write_lock; what = &quot;top_read&quot;) do
     @assert !has_write_lock(read_write_lock)
     @assert has_read_lock(read_write_lock)
 
-    with_write_lock(read_write_lock, &quot;nested_write&quot;) do
+    lock_write(read_write_lock; what = &quot;nested_write&quot;) do
         @assert false
     end
 end
@@ -310,9 +329,9 @@ while holding read lock:
 </article>
 <article>
 <details class="docstring" open="true">
-<summary id="TanayLabUtilities.Locks.ReentrantReadWriteLock">
-<a class="docstring-binding" href="#TanayLabUtilities.Locks.ReentrantReadWriteLock">
-<code>TanayLabUtilities.Locks.ReentrantReadWriteLock
+<summary id="TanayLabUtilities.ExtendedReadWriteLocks.ExtendedReadWriteLock">
+<a class="docstring-binding" href="#TanayLabUtilities.ExtendedReadWriteLocks.ExtendedReadWriteLock">
+<code>TanayLabUtilities.ExtendedReadWriteLocks.ExtendedReadWriteLock
 </code>
 </a> — 
 <span class="docstring-category">Type
@@ -321,28 +340,28 @@ while holding read lock:
 <section>
 <div>
 <pre>
-<code class="language-julia hljs">struct ReentrantReadWriteLock &lt;: AbstractLock ... end
+<code class="language-julia hljs">struct ExtendedReadWriteLock{BasicReadWriteLock} &lt;: AbstractLock ... end
+where {ReadWriteLockType &lt;: AbstractLock}
+
+ExtendedReadWriteLock(basic_read_write_lock::ReadWriteLockType)::ExtendedReadWriteLock{ReadWriteLockType}
+where {ReadWriteLockType &lt;: AbstractLock}
+
+ExtendedReadWriteLock()::ExtendedReadWriteLock{MostlyReadWriteLock}
 </code>
 </pre>
-<p>A read-write lock that supports nested calls. You can nest read locks, write locks, and read locks inside write locks. However, you can&#39;t nest write locks in read locks.
+<p>A read-write lock that supports extended operations (querying lock status). The 
+<code>basic_read_write_lock
+</code> provides the core functionality. It is wrapped to support the additional operations.
 </p>
 </div>
 </section>
 </details>
 </article>
-<h2 id="Write-Lock">
-<a class="docs-heading-anchor" href="#Write-Lock">Write Lock
-</a>
-<a id="Write-Lock-1">
-</a>
-<a class="docs-heading-anchor-permalink" href="#Write-Lock" title="Permalink">
-</a>
-</h2>
 <article>
 <details class="docstring" open="true">
-<summary id="TanayLabUtilities.Locks.write_lock">
-<a class="docstring-binding" href="#TanayLabUtilities.Locks.write_lock">
-<code>TanayLabUtilities.Locks.write_lock
+<summary id="TanayLabUtilities.ExtendedReadWriteLocks.has_read_lock">
+<a class="docstring-binding" href="#TanayLabUtilities.ExtendedReadWriteLocks.has_read_lock">
+<code>TanayLabUtilities.ExtendedReadWriteLocks.has_read_lock
 </code>
 </a> — 
 <span class="docstring-category">Function
@@ -351,24 +370,12 @@ while holding read lock:
 <section>
 <div>
 <pre>
-<code class="language-julia hljs">write_lock(read_write_lock::ReentrantReadWriteLock, what::Any...)::Nothing
+<code class="language-julia hljs">has_read_lock(read_write_lock::ExtendedReadWriteLock; read_only::Bool = false)::Bool
 </code>
 </pre>
-<p>Obtain a write lock. Each call must be matched by 
-<a href="locks.html#TanayLabUtilities.Locks.write_unlock">
-<code>write_unlock
-</code>
-</a>. It is possible to nest 
-<code>write_lock
-</code>/
-<code>write_unlock
-</code> call pairs.
-</p>
-<p>When a task has a write lock, no other task can have any lock.
-</p>
-<p>The log messages includes 
-<code>what
-</code> is being locked.
+<p>Return whether the current task has a read lock or the write lock. If 
+<code>read_only
+</code> is set, then this will only return whether the current task as a read lock.
 </p>
 </div>
 </section>
@@ -376,9 +383,9 @@ while holding read lock:
 </article>
 <article>
 <details class="docstring" open="true">
-<summary id="TanayLabUtilities.Locks.write_unlock">
-<a class="docstring-binding" href="#TanayLabUtilities.Locks.write_unlock">
-<code>TanayLabUtilities.Locks.write_unlock
+<summary id="TanayLabUtilities.ExtendedReadWriteLocks.has_write_lock">
+<a class="docstring-binding" href="#TanayLabUtilities.ExtendedReadWriteLocks.has_write_lock">
+<code>TanayLabUtilities.ExtendedReadWriteLocks.has_write_lock
 </code>
 </a> — 
 <span class="docstring-category">Function
@@ -387,75 +394,7 @@ while holding read lock:
 <section>
 <div>
 <pre>
-<code class="language-julia hljs">write_unlock(read_write_lock::ReentrantReadWriteLock, what::Any)::Nothing
-</code>
-</pre>
-<p>Release a write lock. Each call must matched a call to 
-<a href="locks.html#TanayLabUtilities.Locks.write_lock">
-<code>write_lock
-</code>
-</a>. It is possible to nest 
-<code>write_lock
-</code>/
-<code>write_unlock
-</code> call pairs.
-</p>
-<p>The log messages includes 
-<code>what
-</code> is being unlocked.
-</p>
-</div>
-</section>
-</details>
-</article>
-<article>
-<details class="docstring" open="true">
-<summary id="TanayLabUtilities.Locks.with_write_lock">
-<a class="docstring-binding" href="#TanayLabUtilities.Locks.with_write_lock">
-<code>TanayLabUtilities.Locks.with_write_lock
-</code>
-</a> — 
-<span class="docstring-category">Function
-</span>
-</summary>
-<section>
-<div>
-<pre>
-<code class="language-julia hljs">with_write_lock(action::Function, read_write_lock::ReentrantReadWriteLock, what::Any...)::Any
-</code>
-</pre>
-<p>Perform an 
-<code>action
-</code> while holding a 
-<a href="locks.html#TanayLabUtilities.Locks.write_lock">
-<code>write_lock
-</code>
-</a> for the 
-<code>read_write_lock
-</code>, return its result and 
-<a href="locks.html#TanayLabUtilities.Locks.write_unlock">
-<code>write_unlock
-</code>
-</a>.
-</p>
-</div>
-</section>
-</details>
-</article>
-<article>
-<details class="docstring" open="true">
-<summary id="TanayLabUtilities.Locks.has_write_lock">
-<a class="docstring-binding" href="#TanayLabUtilities.Locks.has_write_lock">
-<code>TanayLabUtilities.Locks.has_write_lock
-</code>
-</a> — 
-<span class="docstring-category">Function
-</span>
-</summary>
-<section>
-<div>
-<pre>
-<code class="language-julia hljs">has_write_lock(read_write_lock::ReentrantReadWriteLock)::Bool
+<code class="language-julia hljs">has_write_lock(read_write_lock::ExtendedReadWriteLock)::Bool
 </code>
 </pre>
 <p>Return whether the current task has the write lock.
@@ -464,19 +403,11 @@ while holding read lock:
 </section>
 </details>
 </article>
-<h2 id="Read-Locks">
-<a class="docs-heading-anchor" href="#Read-Locks">Read Locks
-</a>
-<a id="Read-Locks-1">
-</a>
-<a class="docs-heading-anchor-permalink" href="#Read-Locks" title="Permalink">
-</a>
-</h2>
 <article>
 <details class="docstring" open="true">
-<summary id="TanayLabUtilities.Locks.read_lock">
-<a class="docstring-binding" href="#TanayLabUtilities.Locks.read_lock">
-<code>TanayLabUtilities.Locks.read_lock
+<summary id="TanayLabUtilities.ExtendedReadWriteLocks.lock_write">
+<a class="docstring-binding" href="#TanayLabUtilities.ExtendedReadWriteLocks.lock_write">
+<code>TanayLabUtilities.ExtendedReadWriteLocks.lock_write
 </code>
 </a> — 
 <span class="docstring-category">Function
@@ -485,36 +416,12 @@ while holding read lock:
 <section>
 <div>
 <pre>
-<code class="language-julia hljs">read_lock(read_write_lock::ReentrantReadWriteLock, what::Any...)::Nothing
+<code class="language-julia hljs">const lock_write = Base.lock
 </code>
 </pre>
-<p>Obtain a read lock. Each call must be matched by 
-<a href="locks.html#TanayLabUtilities.Locks.read_unlock">
-<code>read_unlock
-</code>
-</a>. It is possible to nest 
-<code>read_lock
-</code>/
-<code>read_unlock
-</code> call pairs, even inside 
-<code>write_lock
-</code>/
-<code>write_unlock
-</code> pair(s); however, you can&#39;t nest 
-<code>write_lock
-</code>/
-<code>write_unlock
-</code> inside a 
-<code>read_lock
-</code>/
-<code>read_unlock
-</code> pair.
-</p>
-<p>When a task has a read lock, no other task can have a write lock, but other tasks may also have a read lock.
-</p>
-<p>The log messages includes 
-<code>what
-</code> is being locked.
+<p>Alias for 
+<code>Base.lock
+</code> for read-write locks to clarify the intent.
 </p>
 </div>
 </section>
@@ -522,9 +429,9 @@ while holding read lock:
 </article>
 <article>
 <details class="docstring" open="true">
-<summary id="TanayLabUtilities.Locks.read_unlock">
-<a class="docstring-binding" href="#TanayLabUtilities.Locks.read_unlock">
-<code>TanayLabUtilities.Locks.read_unlock
+<summary id="TanayLabUtilities.ExtendedReadWriteLocks.trylock_write">
+<a class="docstring-binding" href="#TanayLabUtilities.ExtendedReadWriteLocks.trylock_write">
+<code>TanayLabUtilities.ExtendedReadWriteLocks.trylock_write
 </code>
 </a> — 
 <span class="docstring-category">Function
@@ -533,22 +440,12 @@ while holding read lock:
 <section>
 <div>
 <pre>
-<code class="language-julia hljs">read_unlock(read_write_lock::ReentrantReadWriteLock, what::Any...)::Nothing
+<code class="language-julia hljs">const trylock_write = Base.lock
 </code>
 </pre>
-<p>Release a read lock. Each call must matched a call to 
-<a href="locks.html#TanayLabUtilities.Locks.read_lock">
-<code>read_lock
-</code>
-</a>. It is possible to nest 
-<code>read_lock
-</code>/
-<code>read_unlock
-</code> call pairs.
-</p>
-<p>The log messages includes 
-<code>what
-</code> is being unlocked.
+<p>Alias for 
+<code>Base.trylock
+</code> for read-write locks to clarify the intent.
 </p>
 </div>
 </section>
@@ -556,9 +453,9 @@ while holding read lock:
 </article>
 <article>
 <details class="docstring" open="true">
-<summary id="TanayLabUtilities.Locks.with_read_lock">
-<a class="docstring-binding" href="#TanayLabUtilities.Locks.with_read_lock">
-<code>TanayLabUtilities.Locks.with_read_lock
+<summary id="TanayLabUtilities.ExtendedReadWriteLocks.unlock_write">
+<a class="docstring-binding" href="#TanayLabUtilities.ExtendedReadWriteLocks.unlock_write">
+<code>TanayLabUtilities.ExtendedReadWriteLocks.unlock_write
 </code>
 </a> — 
 <span class="docstring-category">Function
@@ -567,46 +464,12 @@ while holding read lock:
 <section>
 <div>
 <pre>
-<code class="language-julia hljs">with_read_lock(action::Function, read_write_lock::ReentrantReadWriteLock, what::Any...)::Any
+<code class="language-julia hljs">const unlock_write = Base.lock
 </code>
 </pre>
-<p>Perform an 
-<code>action
-</code> while holding a 
-<a href="locks.html#TanayLabUtilities.Locks.read_lock">
-<code>read_lock
-</code>
-</a> for the 
-<code>read_write_lock
-</code>, return its result and 
-<a href="locks.html#TanayLabUtilities.Locks.read_unlock">
-<code>read_unlock
-</code>
-</a>.
-</p>
-</div>
-</section>
-</details>
-</article>
-<article>
-<details class="docstring" open="true">
-<summary id="TanayLabUtilities.Locks.has_read_lock">
-<a class="docstring-binding" href="#TanayLabUtilities.Locks.has_read_lock">
-<code>TanayLabUtilities.Locks.has_read_lock
-</code>
-</a> — 
-<span class="docstring-category">Function
-</span>
-</summary>
-<section>
-<div>
-<pre>
-<code class="language-julia hljs">has_read_lock(read_write_lock::ReentrantReadWriteLock; read_only::Bool = false)::Bool
-</code>
-</pre>
-<p>Return whether the current task has a read lock or the write lock. If 
-<code>read_only
-</code> is set, then this will only return whether the current task as a read lock.
+<p>Alias for 
+<code>Base.unlock
+</code> for read-write locks to clarify the intent.
 </p>
 </div>
 </section>
@@ -622,69 +485,51 @@ while holding read lock:
 </h2>
 <ul>
 <li>
-<a href="locks.html#TanayLabUtilities.Locks">
-<code>TanayLabUtilities.Locks
+<a href="extended_read_write_locks.html#TanayLabUtilities.ExtendedReadWriteLocks">
+<code>TanayLabUtilities.ExtendedReadWriteLocks
 </code>
 </a>
 </li>
 <li>
-<a href="locks.html#TanayLabUtilities.Locks.ReentrantReadWriteLock">
-<code>TanayLabUtilities.Locks.ReentrantReadWriteLock
+<a href="extended_read_write_locks.html#TanayLabUtilities.ExtendedReadWriteLocks.ExtendedReadWriteLock">
+<code>TanayLabUtilities.ExtendedReadWriteLocks.ExtendedReadWriteLock
 </code>
 </a>
 </li>
 <li>
-<a href="locks.html#TanayLabUtilities.Locks.has_read_lock">
-<code>TanayLabUtilities.Locks.has_read_lock
+<a href="extended_read_write_locks.html#TanayLabUtilities.ExtendedReadWriteLocks.has_read_lock">
+<code>TanayLabUtilities.ExtendedReadWriteLocks.has_read_lock
 </code>
 </a>
 </li>
 <li>
-<a href="locks.html#TanayLabUtilities.Locks.has_write_lock">
-<code>TanayLabUtilities.Locks.has_write_lock
+<a href="extended_read_write_locks.html#TanayLabUtilities.ExtendedReadWriteLocks.has_write_lock">
+<code>TanayLabUtilities.ExtendedReadWriteLocks.has_write_lock
 </code>
 </a>
 </li>
 <li>
-<a href="locks.html#TanayLabUtilities.Locks.read_lock">
-<code>TanayLabUtilities.Locks.read_lock
+<a href="extended_read_write_locks.html#TanayLabUtilities.ExtendedReadWriteLocks.lock_write">
+<code>TanayLabUtilities.ExtendedReadWriteLocks.lock_write
 </code>
 </a>
 </li>
 <li>
-<a href="locks.html#TanayLabUtilities.Locks.read_unlock">
-<code>TanayLabUtilities.Locks.read_unlock
+<a href="extended_read_write_locks.html#TanayLabUtilities.ExtendedReadWriteLocks.trylock_write">
+<code>TanayLabUtilities.ExtendedReadWriteLocks.trylock_write
 </code>
 </a>
 </li>
 <li>
-<a href="locks.html#TanayLabUtilities.Locks.with_read_lock">
-<code>TanayLabUtilities.Locks.with_read_lock
-</code>
-</a>
-</li>
-<li>
-<a href="locks.html#TanayLabUtilities.Locks.with_write_lock">
-<code>TanayLabUtilities.Locks.with_write_lock
-</code>
-</a>
-</li>
-<li>
-<a href="locks.html#TanayLabUtilities.Locks.write_lock">
-<code>TanayLabUtilities.Locks.write_lock
-</code>
-</a>
-</li>
-<li>
-<a href="locks.html#TanayLabUtilities.Locks.write_unlock">
-<code>TanayLabUtilities.Locks.write_unlock
+<a href="extended_read_write_locks.html#TanayLabUtilities.ExtendedReadWriteLocks.unlock_write">
+<code>TanayLabUtilities.ExtendedReadWriteLocks.unlock_write
 </code>
 </a>
 </li>
 </ul>
 </article>
 <nav class="docs-footer">
-<a class="docs-footer-prevpage" href="parallel_storage.html">« Parallel Storage
+<a class="docs-footer-prevpage" href="mostly_read_write_locks.html">« Mostly-Read Write Locks
 </a>
 <a class="docs-footer-nextpage" href="unique_names.html">Unique Names »
 </a>

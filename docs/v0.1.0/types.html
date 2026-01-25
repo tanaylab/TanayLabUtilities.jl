@@ -93,7 +93,11 @@
 </a>
 </li>
 <li>
-<a class="tocitem" href="locks.html">Locks
+<a class="tocitem" href="mostly_read_write_locks.html">Mostly-Read Write Locks
+</a>
+</li>
+<li>
+<a class="tocitem" href="extended_read_write_locks.html">Extended Read-Write Locks
 </a>
 </li>
 <li>
@@ -232,6 +236,24 @@
 <code>Union{..., Missing}
 </code> for completeness, but we do not actually use it anywhere. We assume it is useful for Julia code dealing specifically with statistical analysis.
 </p>
+<div class="admonition is-info" id="Note-969c94b56eef396b">
+<header class="admonition-header">Note
+<a class="admonition-anchor" href="#Note-969c94b56eef396b" title="Permalink">
+</a>
+</header>
+<div class="admonition-body">
+<p>Yes, there&#39;s the 
+<code>Some
+</code> type. Which is cumbersome to use. Take for example 
+<code>foo(; parameter::Maybe{Int} = nothing)
+</code>. Using 
+<code>Some
+</code> would mean callers would have to write 
+<code>foo(parameter=Some(5))
+</code>. Yuck.
+</p>
+</div>
+</div>
 </div>
 </section>
 </details>
@@ -256,7 +278,7 @@
 <code>Union
 </code> with 
 <code>Nothing
-</code> but is shorter and more readable. This is extremely common.
+</code> but is shorter and more readable. This is extremely common in our code.
 </p>
 </div>
 </section>

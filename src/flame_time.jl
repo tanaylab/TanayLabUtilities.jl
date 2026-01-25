@@ -312,7 +312,7 @@ function flame_timed(body::Function, name::AbstractString; iterations::Integer =
             )
         end
 
-        lock(FLAME_MEASUREMENTS_LOCK) do         # UNTESTED # NOLINT
+        lock(FLAME_MEASUREMENTS_LOCK) do                      # UNTESTED # NOLINT
             update!(
                 FLAME_MEASUREMENTS_DICT,  # NOLINT
                 key,

@@ -5,11 +5,11 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Cached IsPath · TanayLabUtilities.jl v0.1.0
+<title>Mostly-Read Write Locks · TanayLabUtilities.jl v0.1.0
 </title>
-<meta name="title" content="Cached IsPath · TanayLabUtilities.jl v0.1.0"/>
-<meta property="og:title" content="Cached IsPath · TanayLabUtilities.jl v0.1.0"/>
-<meta property="twitter:title" content="Cached IsPath · TanayLabUtilities.jl v0.1.0"/>
+<meta name="title" content="Mostly-Read Write Locks · TanayLabUtilities.jl v0.1.0"/>
+<meta property="og:title" content="Mostly-Read Write Locks · TanayLabUtilities.jl v0.1.0"/>
+<meta property="twitter:title" content="Mostly-Read Write Locks · TanayLabUtilities.jl v0.1.0"/>
 <meta name="description" content="Documentation for TanayLabUtilities.jl v0.1.0."/>
 <meta property="og:description" content="Documentation for TanayLabUtilities.jl v0.1.0."/>
 <meta property="twitter:description" content="Documentation for TanayLabUtilities.jl v0.1.0."/>
@@ -84,9 +84,17 @@
 <a class="tocitem" href="parallel_storage.html">Parallel Storage
 </a>
 </li>
-<li>
+<li class="is-active">
 <a class="tocitem" href="mostly_read_write_locks.html">Mostly-Read Write Locks
 </a>
+<ul class="internal">
+<li>
+<a class="tocitem" href="#Index">
+<span>Index
+</span>
+</a>
+</li>
+</ul>
 </li>
 <li>
 <a class="tocitem" href="extended_read_write_locks.html">Extended Read-Write Locks
@@ -124,17 +132,9 @@
 <a class="tocitem" href="kmeans.html">K-Means
 </a>
 </li>
-<li class="is-active">
+<li>
 <a class="tocitem" href="cached_ispath.html">Cached IsPath
 </a>
-<ul class="internal">
-<li>
-<a class="tocitem" href="#Index">
-<span>Index
-</span>
-</a>
-</li>
-</ul>
 </li>
 </ul>
 <div class="docs-version-selector field has-addons">
@@ -157,13 +157,13 @@
 <nav class="breadcrumb">
 <ul class="is-hidden-mobile">
 <li class="is-active">
-<a href="cached_ispath.html">Cached IsPath
+<a href="mostly_read_write_locks.html">Mostly-Read Write Locks
 </a>
 </li>
 </ul>
 <ul class="is-hidden-tablet">
 <li class="is-active">
-<a href="cached_ispath.html">Cached IsPath
+<a href="mostly_read_write_locks.html">Mostly-Read Write Locks
 </a>
 </li>
 </ul>
@@ -182,19 +182,19 @@
 </div>
 </header>
 <article class="content" id="documenter-page">
-<h1 id="Cached-IsPath">
-<a class="docs-heading-anchor" href="#Cached-IsPath">Cached IsPath
+<h1 id="Mostly-Read-Write-Locks">
+<a class="docs-heading-anchor" href="#Mostly-Read-Write-Locks">Mostly-Read Write Locks
 </a>
-<a id="Cached-IsPath-1">
+<a id="Mostly-Read-Write-Locks-1">
 </a>
-<a class="docs-heading-anchor-permalink" href="#Cached-IsPath" title="Permalink">
+<a class="docs-heading-anchor-permalink" href="#Mostly-Read-Write-Locks" title="Permalink">
 </a>
 </h1>
 <article>
 <details class="docstring" open="true">
-<summary id="TanayLabUtilities.CachedIsPath">
-<a class="docstring-binding" href="#TanayLabUtilities.CachedIsPath">
-<code>TanayLabUtilities.CachedIsPath
+<summary id="TanayLabUtilities.MostlyReadWriteLocks">
+<a class="docstring-binding" href="#TanayLabUtilities.MostlyReadWriteLocks">
+<code>TanayLabUtilities.MostlyReadWriteLocks
 </code>
 </a> — 
 <span class="docstring-category">Module
@@ -202,117 +202,31 @@
 </summary>
 <section>
 <div>
-<p>Wrap 
-<code>ispath
-</code> with a cache such that repeated calls do not go to the OS. This greatly speeds up operations when working with NFS data.
+<p>Read-oriented (reentrant) read-write locks.
 </p>
-<div class="admonition is-info" id="Note-c65ad2f7d6d3617d">
-<header class="admonition-header">Note
-<a class="admonition-anchor" href="#Note-c65ad2f7d6d3617d" title="Permalink">
-</a>
-</header>
-<div class="admonition-body">
-<p>The code here is thread-safe.
-</p>
-</div>
-</div>
 </div>
 </section>
 </details>
 </article>
 <article>
 <details class="docstring" open="true">
-<summary id="TanayLabUtilities.CachedIsPath.cached_ispath">
-<a class="docstring-binding" href="#TanayLabUtilities.CachedIsPath.cached_ispath">
-<code>TanayLabUtilities.CachedIsPath.cached_ispath
+<summary id="TanayLabUtilities.MostlyReadWriteLocks.MostlyReadWriteLock">
+<a class="docstring-binding" href="#TanayLabUtilities.MostlyReadWriteLocks.MostlyReadWriteLock">
+<code>TanayLabUtilities.MostlyReadWriteLocks.MostlyReadWriteLock
 </code>
 </a> — 
-<span class="docstring-category">Function
+<span class="docstring-category">Type
 </span>
 </summary>
 <section>
 <div>
 <pre>
-<code class="language-julia hljs">cached_ispath(path::AbstractString)::Bool
+<code class="language-julia hljs">mutable struct MostlyReadWriteLock &lt;: AbstractLock ... end
 </code>
 </pre>
-<p>Same as 
-<code>ispath
-</code>, except that if less than 
-<a href="cached_ispath.html#TanayLabUtilities.CachedIsPath.IS_PATH_CACHE_TIMEOUT_NS">
-<code>IS_PATH_CACHE_TIMEOUT_NS
-</code>
-</a> has passed since the last time 
-<code>cached_ispath
-</code> was called for the same path, we reuse the result. If 
-<a href="cached_ispath.html#TanayLabUtilities.CachedIsPath.IS_PATH_CACHE_TIMEOUT_NS">
-<code>IS_PATH_CACHE_TIMEOUT_NS
-</code>
-</a> is zero, this ignores the cache and simply calls 
-<code>ispath
-</code>.
-</p>
-<div class="admonition is-info" id="Note-6808cfee8e1ad376">
-<header class="admonition-header">Note
-<a class="admonition-anchor" href="#Note-6808cfee8e1ad376" title="Permalink">
-</a>
-</header>
-<div class="admonition-body">
-<p>Do not pass this a path that ends with a 
-<code>/
-</code>, or the empty string. We actually cache the list of files in the directory, since this gives much faster results when checking for multiple files in the same directory.
-</p>
-</div>
-</div>
-</div>
-</section>
-</details>
-</article>
-<article>
-<details class="docstring" open="true">
-<summary id="TanayLabUtilities.CachedIsPath.empty_ispath_cache!">
-<a class="docstring-binding" href="#TanayLabUtilities.CachedIsPath.empty_ispath_cache!">
-<code>TanayLabUtilities.CachedIsPath.empty_ispath_cache!
-</code>
-</a> — 
-<span class="docstring-category">Function
-</span>
-</summary>
-<section>
-<div>
-<pre>
-<code class="language-julia hljs">empty_ispath_cache!(path::Maybe{AbstractString} = nothing)::Nothing
-</code>
-</pre>
-<p>Empty the 
-<code>cached_ispath
-</code> cache. If a path is specified, only clears the cached entry for this path (and every other file in the same directory).
-</p>
-</div>
-</section>
-</details>
-</article>
-<article>
-<details class="docstring" open="true">
-<summary id="TanayLabUtilities.CachedIsPath.IS_PATH_CACHE_TIMEOUT_NS">
-<a class="docstring-binding" href="#TanayLabUtilities.CachedIsPath.IS_PATH_CACHE_TIMEOUT_NS">
-<code>TanayLabUtilities.CachedIsPath.IS_PATH_CACHE_TIMEOUT_NS
-</code>
-</a> — 
-<span class="docstring-category">Constant
-</span>
-</summary>
-<section>
-<div>
-<p>How long to hold on to 
-<code>ispath
-</code> results before going back to the OS and asking for an updated result. By default, this is set to 1 second (10^9 ns). If this is zero then 
-<a href="cached_ispath.html#TanayLabUtilities.CachedIsPath.cached_ispath">
-<code>cached_ispath
-</code>
-</a> ignores the cache and simply calls 
-<code>ispath
-</code>.
+<p>Drop-in replacement for 
+<code>ConcurrentUtils.ReadWriteLock
+</code> which is optimized to be more efficient for many fast readers and rare slow writers. That is, code assumes that read locks are common and are held for a short time (in particular, spinning waiting for readers to release their lock is sensible) while write locks are uncommon and held for a long time (that is, waiting for a writer to release its lock via a proper mutex and a context switch is sensible).
 </p>
 </div>
 </section>
@@ -328,33 +242,23 @@
 </h2>
 <ul>
 <li>
-<a href="cached_ispath.html#TanayLabUtilities.CachedIsPath">
-<code>TanayLabUtilities.CachedIsPath
+<a href="mostly_read_write_locks.html#TanayLabUtilities.MostlyReadWriteLocks">
+<code>TanayLabUtilities.MostlyReadWriteLocks
 </code>
 </a>
 </li>
 <li>
-<a href="cached_ispath.html#TanayLabUtilities.CachedIsPath.IS_PATH_CACHE_TIMEOUT_NS">
-<code>TanayLabUtilities.CachedIsPath.IS_PATH_CACHE_TIMEOUT_NS
-</code>
-</a>
-</li>
-<li>
-<a href="cached_ispath.html#TanayLabUtilities.CachedIsPath.cached_ispath">
-<code>TanayLabUtilities.CachedIsPath.cached_ispath
-</code>
-</a>
-</li>
-<li>
-<a href="cached_ispath.html#TanayLabUtilities.CachedIsPath.empty_ispath_cache!">
-<code>TanayLabUtilities.CachedIsPath.empty_ispath_cache!
+<a href="mostly_read_write_locks.html#TanayLabUtilities.MostlyReadWriteLocks.MostlyReadWriteLock">
+<code>TanayLabUtilities.MostlyReadWriteLocks.MostlyReadWriteLock
 </code>
 </a>
 </li>
 </ul>
 </article>
 <nav class="docs-footer">
-<a class="docs-footer-prevpage" href="kmeans.html">« K-Means
+<a class="docs-footer-prevpage" href="parallel_storage.html">« Parallel Storage
+</a>
+<a class="docs-footer-nextpage" href="extended_read_write_locks.html">Extended Read-Write Locks »
 </a>
 <div class="flexbox-break">
 </div>

@@ -67,8 +67,11 @@ include("parallel_loops.jl")
 include("parallel_distances.jl")
 @reexport using .ParallelDistances
 
-include("locks.jl")
-@reexport using .Locks
+include("mostly_read_write_locks.jl")
+@reexport using .MostlyReadWriteLocks
+
+include("extended_read_write_locks.jl")
+@reexport using .ExtendedReadWriteLocks
 
 include("downsample.jl")
 @reexport using .Downsample

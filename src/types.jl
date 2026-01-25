@@ -15,6 +15,11 @@ Under this interpretation, `Union{..., Nothing}` has (almost) the same semantics
 called it (other languages call this `Optional` or `Opt`). It is used heavily in our (and a lot of other) Julia code. We
 also added `Unsure` as a shorthand for `Union{..., Missing}` for completeness, but we do not actually use it anywhere.
 We assume it is useful for Julia code dealing specifically with statistical analysis.
+
+!!! note
+
+    Yes, there's the `Some` type. Which is cumbersome to use. Take for example `foo(; parameter::Maybe{Int} = nothing)`.
+    Using `Some` would mean callers would have to write `foo(parameter=Some(5))`. Yuck.
 """
 module Types
 
@@ -25,7 +30,7 @@ export Unsure
     Maybe{T} = Union{T, Nothing}
 
 The type to use when maybe there is a value, maybe there isn't. This is exactly as if writing the explicit `Union`
-with `Nothing` but is shorter and more readable. This is extremely common.
+with `Nothing` but is shorter and more readable. This is extremely common in our code.
 """
 Maybe = Union{T, Nothing} where {T}
 
