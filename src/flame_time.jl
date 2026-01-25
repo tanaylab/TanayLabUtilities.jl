@@ -23,6 +23,7 @@ using DictTools
 
 export flame_timed
 export finalize_flameview
+export warn_about_expensive_operation_in_parallel
 
 using ..Brief
 using ..Types
@@ -312,7 +313,7 @@ function flame_timed(body::Function, name::AbstractString; iterations::Integer =
             )
         end
 
-        lock(FLAME_MEASUREMENTS_LOCK) do                      # UNTESTED # NOLINT
+        lock(FLAME_MEASUREMENTS_LOCK) do   # UNTESTED # NOLINT
             update!(
                 FLAME_MEASUREMENTS_DICT,  # NOLINT
                 key,
@@ -659,6 +660,30 @@ function measurement_text(  # UNTESTED
         push!(texts, " (", replace(percent(samples, base), "<" => "&lt;", ">" => "&gt;"), ")")
     end
     return join(texts)
+end
+
+DID_WARN_ABOUT_EXPENSIVE_OPERATIONS_IN_PARALLEL = Set{Tuple{AbstractString, AbstractString}}()
+
+function warn_about_expensive_operation_in_parallel(name::AbstractString)::Nothing  # UNTESTED
+    private_storage = task_local_storage()
+    is_in_parallel = get(private_storage, :is_in_parallel, false)
+    if is_in_parallel
+        flame_stack = get(private_storage, :flame_stack, nothing)
+        if flame_stack === nothing
+            flame_stack = "Main"
+        else
+            flame_stack = join(flame_stack, ";")
+        end
+
+        key = (flame_stack, name)
+        lock(FLAME_MEASUREMENTS_LOCK) do   # NOLINT
+            if !(key in DID_WARN_ABOUT_EXPENSIVE_OPERATIONS_IN_PARALLEL)
+                push!(DID_WARN_ABOUT_EXPENSIVE_OPERATIONS_IN_PARALLEL, key)
+                @warn "Expensive operation: $(name) called by: $(flame_stack)"
+            end
+        end
+    end
+    return nothing
 end
 
 end

@@ -10,6 +10,7 @@ using ConcurrentUtils
 
 import Base.AbstractLock
 
+using ..FlameTime
 using ..Types
 
 """
@@ -41,7 +42,9 @@ end
 function Base.lock(lock::MostlyReadWriteLock)::Nothing
     atomic_add!(lock.writers_waiting, 1)
 
-    Base.lock(lock.write_mutex)  # NOLINT
+    flame_timed("ReentrantLock.lock") do
+        return Base.lock(lock.write_mutex)  # NOLINT
+    end
 
     atomic_sub!(lock.writers_waiting, 1)
     lock.writer_active[] = true
@@ -66,7 +69,9 @@ end
 
 function Base.unlock(lock::MostlyReadWriteLock)::Nothing
     lock.writer_active[] = false
-    Base.unlock(lock.write_mutex)
+    flame_timed("ReentrantLock.unlock") do
+        return Base.unlock(lock.write_mutex)
+    end
     return nothing
 end
 
