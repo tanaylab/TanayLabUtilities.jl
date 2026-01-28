@@ -226,7 +226,7 @@
 <code>@debug
 </code> log messages for the operation(s). If a named 
 <code>what
-</code> parameter is given to the function(s), it is included in the message. Enabling debugging for 
+</code> parameter is given to the function(s), it (or its return value if it is a function) is included in the message. Enabling debugging for 
 <code>ExtendedReadWriteLocks
 </code> will therefore log each and every operation, which is a blunt tool, but useful in desperate cases to debug multi-threaded locking behavior.
 </p>
@@ -282,11 +282,11 @@ read_write_lock = ExtendedReadWriteLock()
 @assert !has_write_lock(read_write_lock)
 @assert !has_read_lock(read_write_lock)
 
-lock_read(read_write_lock; what = &quot;top_read&quot;) do
+lock_read(read_write_lock; what = () -&gt; &quot;top_read&quot;) do
     @assert !has_write_lock(read_write_lock)
     @assert has_read_lock(read_write_lock)
 
-    lock_read(read_write_lock; what = &quot;nested_read&quot;) do
+    lock_read(read_write_lock; what = () -&gt; &quot;nested_read&quot;) do
         @assert !has_write_lock(read_write_lock)
         @assert has_read_lock(read_write_lock)
     end
@@ -312,7 +312,7 @@ lock_read(read_write_lock; what = &quot;top_read&quot;) do
     @assert !has_write_lock(read_write_lock)
     @assert has_read_lock(read_write_lock)
 
-    lock_write(read_write_lock; what = &quot;nested_write&quot;) do
+    lock_write(read_write_lock; what = () -&gt; &quot;nested_write&quot;) do
         @assert false
     end
 end

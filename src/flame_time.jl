@@ -50,7 +50,7 @@ end
 FLAME_MEASUREMENTS_FILE = nothing
 FLAME_MEASUREMENTS_DICT = nothing
 FLAME_PREFIX = "Main"
-FLAME_MEASUREMENTS_LOCK = SpinLock()  # UNTESTED
+FLAME_MEASUREMENTS_LOCK = SpinLock()
 
 function __init__()::Nothing
     path = get(ENV, "TLU_FLAME_MEASUREMENTS_FILE", nothing)
@@ -320,7 +320,7 @@ function flame_timed(body::Function, name::AbstractString; iterations::Integer =
             )
         end
 
-        lock(FLAME_MEASUREMENTS_LOCK) do        # UNTESTED
+        lock(FLAME_MEASUREMENTS_LOCK) do          # UNTESTED
             update!(
                 FLAME_MEASUREMENTS_DICT,
                 key,

@@ -8,9 +8,9 @@ We also provide aliases `lock_write` and `unlock_write` to `lock` and `unlock` f
 "any" read-write lock, basic or extended.
 
 The locking and unlocking functions are extended to generate `@debug` log messages for the operation(s). If a named
-`what` parameter is given to the function(s), it is included in the message. Enabling debugging for
-`ExtendedReadWriteLocks` will therefore log each and every operation, which is a blunt tool, but useful in desperate
-cases to debug multi-threaded locking behavior.
+`what` parameter is given to the function(s), it (or its return value if it is a function) is included in the message.
+Enabling debugging for `ExtendedReadWriteLocks` will therefore log each and every operation, which is a blunt tool, but
+useful in desperate cases to debug multi-threaded locking behavior.
 
 !!! note
 
@@ -57,11 +57,11 @@ read_write_lock = ExtendedReadWriteLock()
 @assert !has_write_lock(read_write_lock)
 @assert !has_read_lock(read_write_lock)
 
-lock_read(read_write_lock; what = "top_read") do
+lock_read(read_write_lock; what = () -> "top_read") do
     @assert !has_write_lock(read_write_lock)
     @assert has_read_lock(read_write_lock)
 
-    lock_read(read_write_lock; what = "nested_read") do
+    lock_read(read_write_lock; what = () -> "nested_read") do
         @assert !has_write_lock(read_write_lock)
         @assert has_read_lock(read_write_lock)
     end
@@ -87,7 +87,7 @@ lock_read(read_write_lock; what = "top_read") do
     @assert !has_write_lock(read_write_lock)
     @assert has_read_lock(read_write_lock)
 
-    lock_write(read_write_lock; what = "nested_write") do
+    lock_write(read_write_lock; what = () -> "nested_write") do
         @assert false
     end
 end
@@ -136,61 +136,55 @@ function ExtendedReadWriteLock()::ExtendedReadWriteLock{MostlyReadWriteLock}
     return ExtendedReadWriteLock(MostlyReadWriteLock())
 end
 
-function Base.lock(read_write_lock::ExtendedReadWriteLock; what::Maybe{AbstractString} = nothing)::Nothing
+function Base.lock(
+    read_write_lock::ExtendedReadWriteLock;
+    what::Maybe{Union{Function, AbstractString}} = nothing,
+)::Nothing
     private_storage = task_local_storage()
     lock_id = objectid(read_write_lock.lock)
     write_key = Symbol((lock_id, true))
 
-    if what === nothing
-        what = ""
-    else
-        what = " " * what
-    end
-
     write_depth = get(private_storage, write_key, nothing)
     if write_depth !== nothing
         write_depth[1] += 1
-        @debug "WLOCKED $(UInt64(lock_id)) $(write_depth[1])$(what)) {{{"
+        @debug "WLOCKED $(UInt64(lock_id)) $(write_depth[1])$(what_suffix(what))) {{{"
     else
         read_key = Symbol((lock_id, false))
         if haskey(private_storage, read_key)
             error("""
-                trying to obtain write lock for:$(what)
+                trying to obtain write lock for:$(what_suffix(what))
                 while holding read lock: $(UInt64(lock_id))
                 """)
         end
         private_storage[write_key] = [1]
-        @debug "WLOCK $(UInt64(lock_id)) 1 (what) {{{"
+        @debug "WLOCK $(UInt64(lock_id)) 1$(what_suffix(what)) {{{"
         lock(read_write_lock.lock)
-        @debug "WLOCKED $(UInt64(lock_id)) 1$(what)"
+        @debug "WLOCKED $(UInt64(lock_id)) 1$(what_suffix(what))"
     end
 
     return nothing
 end
 
-function Base.unlock(read_write_lock::ExtendedReadWriteLock; what::Maybe{AbstractString} = nothing)::Nothing
+function Base.unlock(
+    read_write_lock::ExtendedReadWriteLock;
+    what::Maybe{Union{Function, AbstractString}} = nothing,
+)::Nothing
     private_storage = task_local_storage()
     lock_id = objectid(read_write_lock.lock)
     write_key = Symbol((lock_id, true))
     @assert haskey(private_storage, write_key)
 
-    if what === nothing
-        what = ""
-    else
-        what = " " * what
-    end
-
     write_depth = private_storage[write_key]
     if write_depth[1] > 1
         write_depth[1] -= 1
-        @debug "WUNLOCKED $(UInt64(lock_id)) $(write_depth[1])$(what) }}}"
+        @debug "WUNLOCKED $(UInt64(lock_id)) $(write_depth[1])$(what_suffix(what)) }}}"
     else
         read_key = Symbol((lock_id, false))
         @assert !haskey(private_storage, read_key)
         @assert write_depth[1] == 1
         delete!(private_storage, write_key)
         unlock(read_write_lock.lock)
-        @debug "WUNLOCKED $(UInt64(lock_id)) 0$(what) }}}"
+        @debug "WUNLOCKED $(UInt64(lock_id)) 0$(what_suffix(what)) }}}"
     end
     return nothing
 end
@@ -209,30 +203,24 @@ end
 
 function ConcurrentUtils.lock_read(  # NOLINT
     read_write_lock::ExtendedReadWriteLock;
-    what::Maybe{AbstractString} = nothing,
+    what::Maybe{Union{Function, AbstractString}} = nothing,
 )::Nothing
     private_storage = task_local_storage()
     lock_id = objectid(read_write_lock.lock)
     write_key = Symbol((lock_id, true))
     read_key = Symbol((lock_id, false))
 
-    if what === nothing
-        what = ""  # UNTESTED
-    else
-        what = " " * what
-    end
-
     read_depth = get(private_storage, read_key, nothing)
     if read_depth !== nothing
         read_depth[1] += 1
-        @debug "RLOCKED $(UInt64(lock_id)) $(read_depth[1])$(what) {{{"
+        @debug "RLOCKED $(UInt64(lock_id)) $(read_depth[1])$(what_suffix(what)) {{{"
     else
         private_storage[read_key] = [1]
         if !haskey(private_storage, write_key)
-            @debug "RLOCK $(UInt64(lock_id)) 1$(what) {{{"
+            @debug "RLOCK $(UInt64(lock_id)) 1$(what_suffix(what)) {{{"
             lock_read(read_write_lock.lock)
         end
-        @debug "RLOCKED $(UInt64(lock_id)) 1$(what)"
+        @debug "RLOCKED $(UInt64(lock_id)) 1$(what_suffix(what))"
     end
 
     return nothing
@@ -240,7 +228,7 @@ end
 
 function ConcurrentUtils.unlock_read(  # NOLINT
     read_write_lock::ExtendedReadWriteLock;
-    what::Maybe{AbstractString} = nothing,
+    what::Maybe{Union{AbstractString, Function}} = nothing,
 )::Nothing
     private_storage = task_local_storage()
     lock_id = objectid(read_write_lock.lock)
@@ -248,23 +236,17 @@ function ConcurrentUtils.unlock_read(  # NOLINT
     read_key = Symbol((lock_id, false))
     @assert haskey(private_storage, read_key)
 
-    if what === nothing
-        what = ""  # UNTESTED
-    else
-        what = " " * what
-    end
-
     read_depth = private_storage[read_key]
     if read_depth[1] > 1
         read_depth[1] -= 1
-        @debug "RUNLOCKED $(UInt64(lock_id)) $(read_depth[1])$(what) }}}"
+        @debug "RUNLOCKED $(UInt64(lock_id)) $(read_depth[1])$(what_suffix(what)) }}}"
     else
         @assert read_depth[1] == 1
         delete!(private_storage, read_key)
         if !haskey(private_storage, write_key)
             unlock_read(read_write_lock.lock)
         end
-        @debug "RUNLOCKED $(UInt64(lock_id)) 0 $(what) }}}"
+        @debug "RUNLOCKED $(UInt64(lock_id)) 0 $(what_suffix(what)) }}}"
     end
 
     return nothing
@@ -283,7 +265,11 @@ function has_read_lock(read_write_lock::ExtendedReadWriteLock; read_only::Bool =
            (!read_only && haskey(private_storage, Symbol((lock_id, true))))
 end
 
-function Base.lock(action::Function, read_write_lock::ExtendedReadWriteLock; what::Maybe{AbstractString} = nothing)::Any
+function Base.lock(
+    action::Function,
+    read_write_lock::ExtendedReadWriteLock;
+    what::Maybe{Union{Function, AbstractString}} = nothing,
+)::Any
     lock_write(read_write_lock; what)
     try
         return action()
@@ -295,7 +281,7 @@ end
 function ConcurrentUtils.lock_read(  # NOLINT
     action::Function,
     read_write_lock::ExtendedReadWriteLock;
-    what::Maybe{AbstractString} = nothing,
+    what::Maybe{Union{Function, AbstractString}} = nothing,
 )::Any
     lock_read(read_write_lock; what)
     try
@@ -325,5 +311,17 @@ const trylock_write = Base.trylock
 Alias for `Base.unlock` for read-write locks to clarify the intent.
 """
 const unlock_write = Base.unlock
+
+function what_suffix(what::Function)::AbstractString
+    return what_suffix(what())
+end
+
+function what_suffix(::Nothing)::AbstractString  # UNTESTED
+    return ""
+end
+
+function what_suffix(what::AbstractString)::AbstractString
+    return " " * what
+end
 
 end
