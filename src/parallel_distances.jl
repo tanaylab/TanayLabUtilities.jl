@@ -197,8 +197,10 @@ function parallel_colwise(  # FLAKY TESTED
         ) do column_index
             @views X_column = X[:, column_index]
             @views Y_column = Y[:, column_index]
-            return result[column_index] = evaluate(distance, X_column, Y_column)
+            result[column_index] = evaluate(distance, X_column, Y_column)
+            return nothing
         end
+        return result
     end
 end
 

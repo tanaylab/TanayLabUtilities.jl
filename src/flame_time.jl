@@ -1,5 +1,5 @@
 """
-Generate a coarse-grained flameview. If the environment variable `JULIA_FLAME_MEASUREMENTS_FILE` is set, it should
+Generate a coarse-grained flameview. If the environment variable `TLU_FLAME_MEASUREMENTS_FILE` is set, it should
 contain the path of a file to append measurements into. Every call to [`flame_timed`](@ref) will collect measurements,
 and on normal program exit, the total ("folded") measurements are written into this file. The file can't be directly
 viewed using `flameview.py`; it needs to be converted to a proper flameview file using [`finalize_flameview`](@ref).
@@ -47,11 +47,39 @@ mutable struct RUsage
     ru_nivcsw::Int64               # Involuntary context switches
 end
 
+FLAME_MEASUREMENTS_FILE = nothing
+FLAME_MEASUREMENTS_DICT = nothing
+FLAME_PREFIX = "Main"
+FLAME_MEASUREMENTS_LOCK = SpinLock()  # UNTESTED
+
+function __init__()::Nothing
+    path = get(ENV, "TLU_FLAME_MEASUREMENTS_FILE", nothing)
+    global FLAME_MEASUREMENTS_DICT
+    global FLAME_MEASUREMENTS_FILE
+    global FLAME_PREFIX
+    if path === nothing
+        FLAME_MEASUREMENTS_DICT = nothing
+    else
+        FLAME_MEASUREMENTS_DICT =  # UNTESTED
+            Dict{Tuple{AbstractString, Bool}, Union{SerialMeasurement, ParallelMeasurement}}()
+        FLAME_MEASUREMENTS_FILE = path  # NOLINT  # UNTESTED
+        FLAME_PREFIX = Base.source_path()  # UNTESTED
+        if FLAME_PREFIX === nothing  # UNTESTED
+            FLAME_PREFIX = "Main"  # UNTESTED
+        else
+            FLAME_PREFIX = Base.basename(FLAME_PREFIX)  # UNTESTED
+        end
+        @info "Will append flameview measurements into: $(path) under: $(FLAME_PREFIX)"  # UNTESTED
+        atexit(__end__)  # UNTESTED # NOJET
+    end
+    return nothing
+end
+
 function __end__()::Nothing
-    @assert FLAME_MEASUREMENTS_DICT !== nothing  # NOLINT
-    @assert FLAME_MEASUREMENTS_FILE !== nothing  # NOLINT
-    open(FLAME_MEASUREMENTS_FILE, "a") do file  # NOLINT
-        for ((stack, is_in_parallel), measurement) in FLAME_MEASUREMENTS_DICT  # NOLINT
+    @assert FLAME_MEASUREMENTS_DICT !== nothing
+    @assert FLAME_MEASUREMENTS_FILE !== nothing
+    open(FLAME_MEASUREMENTS_FILE, "a") do file  # NOJET
+        for ((stack, is_in_parallel), measurement) in FLAME_MEASUREMENTS_DICT
             print(file, "$(stack) $(is_in_parallel)")
             if is_in_parallel
                 @assert measurement isa ParallelMeasurement
@@ -78,34 +106,13 @@ function __end__()::Nothing
     return nothing
 end
 
-function __init__()::Nothing
-    path = get(ENV, "JULIA_FLAME_MEASUREMENTS_FILE", nothing)
-    if path === nothing
-        global FLAME_MEASUREMENTS_DICT = nothing
-    else
-        global FLAME_MEASUREMENTS_DICT =  # UNTESTED
-            Dict{Tuple{AbstractString, Bool}, Union{SerialMeasurement, ParallelMeasurement}}()
-        global FLAME_MEASUREMENTS_FILE = path  # NOLINT  # UNTESTED
-        global FLAME_PREFIX = Base.source_path()  # UNTESTED
-        global FLAME_MEASUREMENTS_LOCK = SpinLock()  # NOLINT  # UNTESTED
-        if FLAME_PREFIX === nothing  # UNTESTED
-            FLAME_PREFIX = "Main"  # UNTESTED
-        else
-            FLAME_PREFIX = Base.basename(FLAME_PREFIX)  # UNTESTED
-        end
-        @info "Will append flameview measurements into: $(path) under: $(FLAME_PREFIX)"  # UNTESTED
-        atexit(__end__)  # UNTESTED
-    end
-    return nothing
-end
-
 @inline function get_flame_stack(private_storage)
-    if FLAME_MEASUREMENTS_DICT === nothing  # NOLINT
+    if FLAME_MEASUREMENTS_DICT === nothing
         return nothing
     else
         flame_stack = get(private_storage, :flame_stack, nothing)  # UNTESTED
         if flame_stack === nothing  # UNTESTED
-            flame_stack = AbstractString[FLAME_PREFIX]  # UNTESTED # NOLINT
+            flame_stack = AbstractString[FLAME_PREFIX]  # UNTESTED
             private_storage[:flame_stack] = flame_stack  # UNTESTED
         end
         return flame_stack  # UNTESTED
@@ -238,7 +245,7 @@ If `name` starts with `.`, then we take the name of the surrounding `flame_timed
 the `name` to it. This allows easily marking sections inside logged functions (e.g. `flame_timed(".loop")`) in a way that
 still makes sense when generating a reversed flame graph.
 
-If `JULIA_FLAME_MEASUREMENTS_FILE` was not specified, this just invokes the `body` without (almost) any overhead.
+If `TLU_FLAME_MEASUREMENTS_FILE` was not specified, this just invokes the `body` without (almost) any overhead.
 
 !!! note
 
@@ -247,7 +254,7 @@ If `JULIA_FLAME_MEASUREMENTS_FILE` was not specified, this just invokes the `bod
     measured, or for wrapping calls to expensive standard library functions of interest.
 """
 function flame_timed(body::Function, name::AbstractString; iterations::Integer = 0)::Any
-    if FLAME_MEASUREMENTS_DICT === nothing  # NOLINT
+    if FLAME_MEASUREMENTS_DICT === nothing
         return body()
     end
 
@@ -313,9 +320,9 @@ function flame_timed(body::Function, name::AbstractString; iterations::Integer =
             )
         end
 
-        lock(FLAME_MEASUREMENTS_LOCK) do   # UNTESTED # NOLINT
+        lock(FLAME_MEASUREMENTS_LOCK) do        # UNTESTED
             update!(
-                FLAME_MEASUREMENTS_DICT,  # NOLINT
+                FLAME_MEASUREMENTS_DICT,
                 key,
                 old_measurement -> combine_measurements(old_measurement, new_measurement),
                 new_measurement,
@@ -676,7 +683,7 @@ function warn_about_expensive_operation_in_parallel(name::AbstractString)::Nothi
         end
 
         key = (flame_stack, name)
-        lock(FLAME_MEASUREMENTS_LOCK) do   # NOLINT
+        lock(FLAME_MEASUREMENTS_LOCK) do
             if !(key in DID_WARN_ABOUT_EXPENSIVE_OPERATIONS_IN_PARALLEL)
                 push!(DID_WARN_ABOUT_EXPENSIVE_OPERATIONS_IN_PARALLEL, key)
                 @warn "Expensive operation: $(name) called by: $(flame_stack)"
