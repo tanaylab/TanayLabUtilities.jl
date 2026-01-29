@@ -449,6 +449,26 @@ OK
 </article>
 <article>
 <details class="docstring" open="true">
+<summary id="TanayLabUtilities.ParallelLoops.TLU_LIVE_BYTES_GC_THRESHOLD_FRACTION">
+<a class="docstring-binding" href="#TanayLabUtilities.ParallelLoops.TLU_LIVE_BYTES_GC_THRESHOLD_FRACTION">
+<code>TanayLabUtilities.ParallelLoops.TLU_LIVE_BYTES_GC_THRESHOLD_FRACTION
+</code>
+</a> — 
+<span class="docstring-category">Constant
+</span>
+</summary>
+<section>
+<div>
+<p>Above what fraction of the total memory to enable GC in parallel loops. By default, 80%, that is, assume the machine is &quot;mostly&quot; dedicated to the computation. This is initialized from the 
+<code>TLU_LIVE_BYTES_GC_THRESHOLD_FRACTION
+</code> environment variable. By default, or if set to zero, this is disabled and GC works normally.
+</p>
+</div>
+</section>
+</details>
+</article>
+<article>
+<details class="docstring" open="true">
 <summary id="TanayLabUtilities.ParallelLoops.parallel_gc">
 <a class="docstring-binding" href="#TanayLabUtilities.ParallelLoops.parallel_gc">
 <code>TanayLabUtilities.ParallelLoops.parallel_gc
@@ -463,11 +483,21 @@ OK
 <code class="language-julia hljs">parallel_gc()::Nothing
 </code>
 </pre>
-<p>Invoke GC inside a parallel loop if the memory pressure is high. This is invoked automatically at the start of each iteration. If the parallel code does so many allocations that it makes sense to sprinkle calls to this in the middle of it, then it is worthwhile to reconsider it. Using 
+<p>Enable GC inside a parallel loop if the memory pressure is high, that is, if the currently used memory is above 
+<a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.TLU_LIVE_BYTES_GC_THRESHOLD_FRACTION">
+<code>TLU_LIVE_BYTES_GC_THRESHOLD_FRACTION
+</code>
+</a> of the total system memory. If the memory usage is less, disabled GC. This is invoked automatically at the start of each iteration. If the parallel code does so many allocations that it makes sense to sprinkle additional calls to this in the middle of it, then it is worthwhile to reconsider it. Using 
 <a href="parallel_storage.html#TanayLabUtilities.ParallelStorage">
 <code>ParallelStorage
 </code>
 </a> may help.
+</p>
+<p>This is a no-op unless 
+<a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.TLU_LIVE_BYTES_GC_THRESHOLD_FRACTION">
+<code>TLU_LIVE_BYTES_GC_THRESHOLD_FRACTION
+</code>
+</a> is set to a zero value (the default).
 </p>
 </div>
 </section>
@@ -515,6 +545,12 @@ OK
 <li>
 <a href="parallel_loops.html#TanayLabUtilities.ParallelLoops">
 <code>TanayLabUtilities.ParallelLoops
+</code>
+</a>
+</li>
+<li>
+<a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.TLU_LIVE_BYTES_GC_THRESHOLD_FRACTION">
+<code>TanayLabUtilities.ParallelLoops.TLU_LIVE_BYTES_GC_THRESHOLD_FRACTION
 </code>
 </a>
 </li>

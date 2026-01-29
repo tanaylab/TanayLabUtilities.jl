@@ -320,7 +320,7 @@ function flame_timed(body::Function, name::AbstractString; iterations::Integer =
             )
         end
 
-        lock(FLAME_MEASUREMENTS_LOCK) do                     # UNTESTED
+        lock(FLAME_MEASUREMENTS_LOCK) do                          # UNTESTED
             update!(
                 FLAME_MEASUREMENTS_DICT,
                 key,

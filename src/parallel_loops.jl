@@ -19,7 +19,31 @@ using Random
 
 import Random.default_rng
 
-GC_LOCK = ReentrantLock()
+TOTAL_MEMORY = nothing
+
+"""
+Above what fraction of the total memory to enable GC in parallel loops. By default, 80%, that is, assume the machine is
+"mostly" dedicated to the computation. This is initialized from the `TLU_LIVE_BYTES_GC_THRESHOLD_FRACTION` environment
+variable. By default, or if set to zero, this is disabled and GC works normally.
+"""
+TLU_LIVE_BYTES_GC_THRESHOLD_FRACTION = nothing
+
+function __init__()::Nothing
+    global TOTAL_MEMORY
+    TOTAL_MEMORY = Sys.total_memory()  # NOLINT
+    live_bytes_gc_threshold_fraction = get(ENV, "TLU_LIVE_BYTES_GC_THRESHOLD_FRACTION", nothing)
+    if live_bytes_gc_threshold_fraction === nothing
+        TLU_LIVE_BYTES_GC_THRESHOLD_FRACTION = 0.0
+    else
+        global TLU_LIVE_BYTES_GC_THRESHOLD_FRACTION  # UNTESTED
+        TLU_LIVE_BYTES_GC_THRESHOLD_FRACTION = parse(Float64, live_bytes_gc_threshold_fraction)  # UNTESTED
+        @assert 0 <= TLU_LIVE_BYTES_GC_THRESHOLD_FRACTION < 1  # UNTESTED
+    end
+    if TLU_LIVE_BYTES_GC_THRESHOLD_FRACTION != 0.0
+        @info "Will only GC when using over: $(TLU_LIVE_BYTES_GC_THRESHOLD_FRACTION) of the memory in parallel loops."  # UNTESTED
+    end
+    return nothing
+end
 
 """
     parallel_loop_wo_rng(
@@ -136,7 +160,9 @@ function parallel_loop_wo_rng(  # NOJET
                 return nothing
             end
 
-            GC.enable(false)
+            if TLU_LIVE_BYTES_GC_THRESHOLD_FRACTION > 0
+                GC.enable(false)  # UNTESTED
+            end
             try
                 if policy == :greedy
                     @threads :greedy for index in indices
@@ -157,7 +183,9 @@ function parallel_loop_wo_rng(  # NOJET
                     @assert false
                 end
             finally
-                GC.enable(true)
+                if TLU_LIVE_BYTES_GC_THRESHOLD_FRACTION > 0
+                    GC.enable(true)  # UNTESTED
+                end
             end
         end
     end
@@ -299,31 +327,21 @@ function DebugProgress(n::Integer; kwargs...)::Maybe{Progress}  # UNTESTED
     end
 end
 
-TOTAL_MEMORY = nothing
-
-"""
-Above what fraction of the total memory to enable GC in parallel loops. By default, 80%, that is, assume the machine is
-"mostly" dedicated to the computation.
-"""
-LIVE_BYTES_GC_THRESHOLD_FRACTION = 0.8
-
-function __init__()::Nothing
-    global TOTAL_MEMORY
-    TOTAL_MEMORY = Sys.total_memory()
-    return nothing
-end
-
 """
     parallel_gc()::Nothing
 
 Enable GC inside a parallel loop if the memory pressure is high, that is, if the currently used memory is above
-[`LIVE_BYTES_GC_THRESHOLD_FRACTION`](@ref) of the total system memory. If the memory usage is less, disabled GC. This is
+[`TLU_LIVE_BYTES_GC_THRESHOLD_FRACTION`](@ref) of the total system memory. If the memory usage is less, disabled GC. This is
 invoked automatically at the start of each iteration. If the parallel code does so many allocations that it makes sense
 to sprinkle additional calls to this in the middle of it, then it is worthwhile to reconsider it. Using
 [`ParallelStorage`](@ref TanayLabUtilities.ParallelStorage) may help.
+
+This is a no-op unless [`TLU_LIVE_BYTES_GC_THRESHOLD_FRACTION`](@ref) is set to a zero value (the default).
 """
 @inline function parallel_gc()::Nothing
-    GC.enable(Base.gc_live_bytes() > TOTAL_MEMORY * LIVE_BYTES_GC_THRESHOLD_FRACTION)
+    if TLU_LIVE_BYTES_GC_THRESHOLD_FRACTION > 0
+        GC.enable(Base.gc_live_bytes() > TOTAL_MEMORY * TLU_LIVE_BYTES_GC_THRESHOLD_FRACTION)  # UNTESTED
+    end
     return nothing
 end
 
