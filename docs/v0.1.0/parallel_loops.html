@@ -248,6 +248,24 @@
 <code>:serial
 </code>, then the loop is not run in parallel (useful for debugging).
 </p>
+<div class="admonition is-info" id="Note-e3cb1fafd78e237b">
+<header class="admonition-header">Note
+<a class="admonition-anchor" href="#Note-e3cb1fafd78e237b" title="Permalink">
+</a>
+</header>
+<div class="admonition-body">
+<p>If the code runs in parallel, we disable the GC through it and invoke 
+<a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.parallel_gc">
+<code>parallel_gc
+</code>
+</a> at the start of each iteration. In general parallel code &quot;shouldn&#39;t&quot; perform &quot;many&quot; memory allocations. Use 
+<a href="parallel_storage.html#TanayLabUtilities.ParallelStorage">
+<code>ParallelStorage
+</code>
+</a> if large temporary data is needed.
+</p>
+</div>
+</div>
 <p>If this is nested (and the containing loop is parallel), 
 <code>policy
 </code> is ignored and the loop is executed serially. This allows functions to be parallel if invoked from the main thread, but become serial if invoked from inside an already parallel loop.
@@ -431,6 +449,32 @@ OK
 </article>
 <article>
 <details class="docstring" open="true">
+<summary id="TanayLabUtilities.ParallelLoops.parallel_gc">
+<a class="docstring-binding" href="#TanayLabUtilities.ParallelLoops.parallel_gc">
+<code>TanayLabUtilities.ParallelLoops.parallel_gc
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+</summary>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">parallel_gc()::Nothing
+</code>
+</pre>
+<p>Invoke GC inside a parallel loop if the memory pressure is high. This is invoked automatically at the start of each iteration. If the parallel code does so many allocations that it makes sense to sprinkle calls to this in the middle of it, then it is worthwhile to reconsider it. Using 
+<a href="parallel_storage.html#TanayLabUtilities.ParallelStorage">
+<code>ParallelStorage
+</code>
+</a> may help.
+</p>
+</div>
+</section>
+</details>
+</article>
+<article>
+<details class="docstring" open="true">
 <summary id="TanayLabUtilities.ParallelLoops.DebugProgress">
 <a class="docstring-binding" href="#TanayLabUtilities.ParallelLoops.DebugProgress">
 <code>TanayLabUtilities.ParallelLoops.DebugProgress
@@ -477,6 +521,12 @@ OK
 <li>
 <a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.DebugProgress">
 <code>TanayLabUtilities.ParallelLoops.DebugProgress
+</code>
+</a>
+</li>
+<li>
+<a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.parallel_gc">
+<code>TanayLabUtilities.ParallelLoops.parallel_gc
 </code>
 </a>
 </li>

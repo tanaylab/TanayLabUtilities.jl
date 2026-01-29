@@ -4,6 +4,8 @@
 TanayLabUtilities.ParallelLoops
 TanayLabUtilities.ParallelLoops.parallel_loop_wo_rng
 TanayLabUtilities.ParallelLoops.parallel_loop_with_rng
+TanayLabUtilities.ParallelLoops.parallel_gc
+TanayLabUtilities.ParallelLoops.LIVE_BYTES_GC_THRESHOLD
 TanayLabUtilities.ParallelLoops.DebugProgress
 ```
 

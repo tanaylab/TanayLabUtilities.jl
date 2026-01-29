@@ -320,7 +320,7 @@ function flame_timed(body::Function, name::AbstractString; iterations::Integer =
             )
         end
 
-        lock(FLAME_MEASUREMENTS_LOCK) do          # UNTESTED
+        lock(FLAME_MEASUREMENTS_LOCK) do                     # UNTESTED
             update!(
                 FLAME_MEASUREMENTS_DICT,
                 key,
@@ -658,9 +658,9 @@ function measurement_text(  # UNTESTED
 )::AbstractString
     texts = [name, ": "]
     if scale === nothing
-        push!(texts, string(samples))
+        push!(texts, delimited_number(samples))
     else
-        push!(texts, string(samples / scale))
+        push!(texts, delimited_number(samples / scale))
     end
     push!(texts, " ", units)
     if base !== nothing

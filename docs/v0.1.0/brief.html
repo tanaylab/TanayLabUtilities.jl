@@ -419,6 +419,48 @@ OK
 </section>
 </details>
 </article>
+<article>
+<details class="docstring" open="true">
+<summary id="TanayLabUtilities.Brief.delimited_number">
+<a class="docstring-binding" href="#TanayLabUtilities.Brief.delimited_number">
+<code>TanayLabUtilities.Brief.delimited_number
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+</summary>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">delimited_number(number::Number; decimal=&quot;.&quot;, delim=&quot;,&quot;)::AbstractString
+</code>
+</pre>
+<p>Convert a number to a string using a delimiter for every 3 digits. No, 
+<code>Format
+</code> doesn&#39;t do that - it doesn&#39;t add delimiters to the decimal fraction.
+</p>
+<pre>
+<code class="language-julia hljs">using Test
+
+println(delimited_number(123))
+println(delimited_number(1.0))
+println(delimited_number(1234567))
+println(delimited_number(1.2345678))
+println(delimited_number(1.234567e9))
+
+# output
+
+123
+1.0
+1,234,567
+1.234,567,8
+1.234,567e9
+</code>
+</pre>
+</div>
+</section>
+</details>
+</article>
 <h2 id="Index">
 <a class="docs-heading-anchor" href="#Index">Index
 </a>
@@ -443,6 +485,12 @@ OK
 <li>
 <a href="brief.html#TanayLabUtilities.Brief.brief">
 <code>TanayLabUtilities.Brief.brief
+</code>
+</a>
+</li>
+<li>
+<a href="brief.html#TanayLabUtilities.Brief.delimited_number">
+<code>TanayLabUtilities.Brief.delimited_number
 </code>
 </a>
 </li>

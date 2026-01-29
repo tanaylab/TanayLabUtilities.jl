@@ -3,10 +3,12 @@ Parallel loops.
 """
 module ParallelLoops
 
+export parallel_gc
 export parallel_loop_with_rng
 export parallel_loop_wo_rng
 export DebugProgress
 
+using ..Brief
 using ..Types
 using ..FlameTime
 
@@ -16,6 +18,8 @@ using ProgressMeter
 using Random
 
 import Random.default_rng
+
+GC_LOCK = ReentrantLock()
 
 """
     parallel_loop_wo_rng(
@@ -29,6 +33,12 @@ import Random.default_rng
 Run the `body` in parallel, passing it the iteration `index`. The `policy` is passed to `@threads` if it is one of (the
 default `:greedy`, `:dynamic`, or `:static`). If it is `:serial`, then the loop is not run in parallel (useful for
 debugging).
+
+!!! note
+
+    If the code runs in parallel, we disable the GC through it and invoke [`parallel_gc`](@ref) at the start of each
+    iteration. In general parallel code "shouldn't" perform "many" memory allocations. Use [`ParallelStorage`](@ref
+    TanayLabUtilities.ParallelStorage) if large temporary data is needed.
 
 If this is nested (and the containing loop is parallel), `policy` is ignored and the loop is executed serially. This
 allows functions to be parallel if invoked from the main thread, but become serial if invoked from inside an already
@@ -106,59 +116,49 @@ function parallel_loop_wo_rng(  # NOJET
                     next!(progress)  # UNTESTED
                 end
             end
-        elseif policy == :greedy
-            @threads :greedy for index in indices
-                index_private_storage = task_local_storage()
-                @assert index_private_storage !== base_private_storage
-                index_private_storage[:is_in_parallel] = true
-                index_flame_stack = [base_flame_stack]
-                index_private_storage[:flame_stack] = index_flame_stack
-
-                flame_timed(name) do
-                    body(index)
-                    if progress !== nothing
-                        next!(progress)  # NOJET # UNTESTED
-                    end
-                    return nothing
-                end
-            end
-
-        elseif policy == :static
-            @threads :static for index in indices
-                index_private_storage = task_local_storage()
-                @assert index_private_storage !== base_private_storage
-                index_private_storage[:is_in_parallel] = true
-                index_flame_stack = [base_flame_stack]
-                index_private_storage[:flame_stack] = index_flame_stack
-
-                flame_timed(name) do
-                    body(index)
-                    if progress !== nothing
-                        next!(progress)  # NOJET # UNTESTED
-                    end
-                    return nothing
-                end
-            end
-
-        elseif policy == :dynamic
-            @threads :dynamic for index in indices
-                index_private_storage = task_local_storage()
-                @assert index_private_storage !== base_private_storage
-                index_private_storage[:is_in_parallel] = true
-                index_flame_stack = [base_flame_stack]
-                index_private_storage[:flame_stack] = index_flame_stack
-
-                flame_timed(name) do
-                    body(index)
-                    if progress !== nothing
-                        next!(progress)  # NOJET # UNTESTED
-                    end
-                    return nothing
-                end
-            end
-
         else
-            @assert false
+            @inline function iteration_body(index::Integer)::Nothing
+                index_private_storage = task_local_storage()
+                @assert index_private_storage !== base_private_storage
+                index_private_storage[:is_in_parallel] = true
+                index_flame_stack = [base_flame_stack]
+                index_private_storage[:flame_stack] = index_flame_stack
+
+                flame_timed(name) do
+                    parallel_gc()
+                    body(index)
+                    if progress !== nothing
+                        next!(progress)  # NOJET # UNTESTED
+                    end
+                    return nothing
+                end
+
+                return nothing
+            end
+
+            GC.enable(false)
+            try
+                if policy == :greedy
+                    @threads :greedy for index in indices
+                        iteration_body(index)
+                    end
+
+                elseif policy == :static
+                    @threads :static for index in indices
+                        iteration_body(index)
+                    end
+
+                elseif policy == :dynamic
+                    @threads :dynamic for index in indices
+                        iteration_body(index)
+                    end
+
+                else
+                    @assert false
+                end
+            finally
+                GC.enable(true)
+            end
         end
     end
 
@@ -297,6 +297,34 @@ function DebugProgress(n::Integer; kwargs...)::Maybe{Progress}  # UNTESTED
     else
         return nothing
     end
+end
+
+TOTAL_MEMORY = nothing
+
+"""
+Above what fraction of the total memory to enable GC in parallel loops. By default, 80%, that is, assume the machine is
+"mostly" dedicated to the computation.
+"""
+LIVE_BYTES_GC_THRESHOLD_FRACTION = 0.8
+
+function __init__()::Nothing
+    global TOTAL_MEMORY
+    TOTAL_MEMORY = Sys.total_memory()
+    return nothing
+end
+
+"""
+    parallel_gc()::Nothing
+
+Enable GC inside a parallel loop if the memory pressure is high, that is, if the currently used memory is above
+[`LIVE_BYTES_GC_THRESHOLD_FRACTION`](@ref) of the total system memory. If the memory usage is less, disabled GC. This is
+invoked automatically at the start of each iteration. If the parallel code does so many allocations that it makes sense
+to sprinkle additional calls to this in the middle of it, then it is worthwhile to reconsider it. Using
+[`ParallelStorage`](@ref TanayLabUtilities.ParallelStorage) may help.
+"""
+@inline function parallel_gc()::Nothing
+    GC.enable(Base.gc_live_bytes() > TOTAL_MEMORY * LIVE_BYTES_GC_THRESHOLD_FRACTION)
+    return nothing
 end
 
 end

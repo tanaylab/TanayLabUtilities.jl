@@ -91,7 +91,10 @@ end
 
 function brief_array(array::AbstractArray, prefixes::Vector{String}; transposed::Bool)::String
     if issparse(array)
-        push!(prefixes, "Sparse $(nnz(array)) ($(percent(nnz(array), length(array)))) [$(SparseArrays.indtype(array))]")
+        push!(
+            prefixes,
+            "Sparse $(delimited_number(nnz(array))) ($(percent(nnz(array), length(array)))) [$(SparseArrays.indtype(array))]",
+        )
         return format_brief_array(array, prefixes; transposed)
     else
         push!(prefixes, string(nameof(typeof(array))))  # UNTESTED
@@ -116,7 +119,7 @@ function format_brief_array(vector::AbstractVector, prefixes::Vector{String}; tr
         type = "Str"
     end
 
-    return "$(length(vector)) x $(type) ($(join(prefixes, ", "))$(suffix)$(mask_suffix(vector)))"
+    return "$(delimited_number(length(vector))) x $(type) ($(join(prefixes, ", "))$(suffix)$(mask_suffix(vector)))"
 end
 
 function format_brief_array(matrix::AbstractMatrix, prefixes::Vector{String}; transposed::Bool)::String
@@ -148,7 +151,7 @@ function format_brief_array(matrix::AbstractMatrix, prefixes::Vector{String}; tr
     if transposed
         n_rows, n_columns = n_columns, n_rows
     end
-    return "$(n_rows) x $(n_columns) x $(eltype(matrix)) $(layout_suffix) ($(join(prefixes, ", "))$(suffix)$(mask_suffix(matrix)))"
+    return "$(delimited_number(n_rows)) x $(delimited_number(n_columns)) x $(eltype(matrix)) $(layout_suffix) ($(join(prefixes, ", "))$(suffix)$(mask_suffix(matrix)))"
 end
 
 function mask_suffix(::AbstractArray)::AbstractString

@@ -8,6 +8,7 @@ module Brief
 
 export MAX_BRIEF_STRING
 export brief
+export delimited_number
 export percent
 
 using Distributed
@@ -236,6 +237,61 @@ function percent(used::Real, out_of::Real)::AbstractString
     else
         int_percent = round(Int64, float_percent)
         return "$(int_percent)%"
+    end
+end
+
+const LEFT_REGEX = r"(?<=\d)(?=(?:\d{3})+(?!\d))"
+const RIGHT_REGEX = r"(\d{3})(?=\d)"
+
+"""
+    delimited_number(number::Number; decimal=".", delim=",")::AbstractString
+
+Convert a number to a string using a delimiter for every 3 digits. No, `Format` doesn't do that - it doesn't add
+delimiters to the decimal fraction.
+
+```jldoctest
+using Test
+
+println(delimited_number(123))
+println(delimited_number(1.0))
+println(delimited_number(1234567))
+println(delimited_number(1.2345678))
+println(delimited_number(1.234567e9))
+
+# output
+
+123
+1.0
+1,234,567
+1.234,567,8
+1.234,567e9
+```
+"""
+function delimited_number(number::Number; decimal = ".", delim = ",")::AbstractString
+    raw = string(number)
+    parts = split(raw, "e")
+    if length(parts) == 2
+        suffix = parts[2]
+        raw = parts[1]
+    else
+        suffix = nothing
+    end
+    parts = split(raw, ".")
+    left_part = parts[1]
+    left_part = replace(left_part, LEFT_REGEX => delim)
+    if length(parts) == 1
+        delimited = left_part
+    elseif length(parts) == 2
+        right_part = parts[2]
+        right_part = replace(right_part, RIGHT_REGEX => SubstitutionString("\\1" * delim))  # NOJET
+        delimited = left_part * decimal * right_part  # NOJET
+    else
+        @assert false
+    end
+    if suffix === nothing
+        return delimited  # NOJET
+    else
+        return delimited * "e" * suffix  # NOJET
     end
 end
 
