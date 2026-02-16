@@ -150,14 +150,14 @@ function Base.lock(
         @debug "WLOCKED $(UInt64(lock_id)) $(write_depth[1])$(what_suffix(what))) {{{"
     else
         read_key = Symbol((lock_id, false))
+        @debug "WLOCK $(UInt64(lock_id)) 1$(what_suffix(what)) {{{"
         if haskey(private_storage, read_key)
-            error("""
-                trying to obtain write lock for:$(what_suffix(what))
-                while holding read lock: $(UInt64(lock_id))
-                """)
+            error(chomp("""
+                        trying to obtain write lock for:$(what_suffix(what))
+                        while holding read lock: $(UInt64(lock_id))
+                        """))
         end
         private_storage[write_key] = [1]
-        @debug "WLOCK $(UInt64(lock_id)) 1$(what_suffix(what)) {{{"
         lock(read_write_lock.lock)
         @debug "WLOCKED $(UInt64(lock_id)) 1$(what_suffix(what))"
     end
@@ -219,8 +219,10 @@ function ConcurrentUtils.lock_read(  # NOLINT
         if !haskey(private_storage, write_key)
             @debug "RLOCK $(UInt64(lock_id)) 1$(what_suffix(what)) {{{"
             lock_read(read_write_lock.lock)
+            @debug "RLOCKED $(UInt64(lock_id)) 1$(what_suffix(what))"
+        else
+            @debug "RLOCKED $(UInt64(lock_id)) 1$(what_suffix(what)) {{{"
         end
-        @debug "RLOCKED $(UInt64(lock_id)) 1$(what_suffix(what))"
     end
 
     return nothing
