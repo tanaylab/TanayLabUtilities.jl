@@ -19,28 +19,31 @@ using Random
 
 import Random.default_rng
 
-TOTAL_MEMORY = nothing
+TOTAL_MEMORY = 0
 
 """
-Above what fraction of the total memory to enable GC in parallel loops. By default, 80%, that is, assume the machine is
-"mostly" dedicated to the computation. This is initialized from the `TLU_LIVE_BYTES_GC_THRESHOLD_FRACTION` environment
-variable. By default, or if set to zero, this is disabled and GC works normally.
+Above what fraction of the total memory to enable GC in parallel loops. If set to a non-zero value, assume the machine
+is "mostly" dedicated to the computation, and only trigger GC when working in parallel if (at the end of a parallel loop
+iteration) the used memory is at least this fraction of the total memory of the machine.
+
+This is initialized from the `TLU_LIVE_BYTES_GC_THRESHOLD_FRACTION` environment variable.
 """
-TLU_LIVE_BYTES_GC_THRESHOLD_FRACTION = nothing
+TLU_LIVE_BYTES_GC_THRESHOLD_FRACTION = 0.0
 
 function __init__()::Nothing
-    global TOTAL_MEMORY
-    TOTAL_MEMORY = Sys.total_memory()  # NOLINT
     live_bytes_gc_threshold_fraction = get(ENV, "TLU_LIVE_BYTES_GC_THRESHOLD_FRACTION", nothing)
+    global TLU_LIVE_BYTES_GC_THRESHOLD_FRACTION
     if live_bytes_gc_threshold_fraction === nothing
         TLU_LIVE_BYTES_GC_THRESHOLD_FRACTION = 0.0
     else
-        global TLU_LIVE_BYTES_GC_THRESHOLD_FRACTION  # UNTESTED
         TLU_LIVE_BYTES_GC_THRESHOLD_FRACTION = parse(Float64, live_bytes_gc_threshold_fraction)  # UNTESTED
         @assert 0 <= TLU_LIVE_BYTES_GC_THRESHOLD_FRACTION < 1  # UNTESTED
     end
     if TLU_LIVE_BYTES_GC_THRESHOLD_FRACTION != 0.0
-        @info "Will only GC when using over: $(TLU_LIVE_BYTES_GC_THRESHOLD_FRACTION) of the memory in parallel loops."  # UNTESTED
+        global TOTAL_MEMORY  # UNTESTED
+        TOTAL_MEMORY = Sys.total_memory()  # UNTESTED
+        @info "Will only GC when using over: $(TLU_LIVE_BYTES_GC_THRESHOLD_FRACTION)" *  # UNTESTED
+              " of the $(delimited_number(Int(round(TOTAL_MEMORY / 1e6))))MB memory in parallel loops."
     end
     return nothing
 end

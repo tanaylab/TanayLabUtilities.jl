@@ -250,17 +250,25 @@
 </code>
 </a> is zero, this ignores the cache and simply calls 
 <code>ispath
-</code>.
+</code>. If 
+<a href="cached_ispath.html#TanayLabUtilities.CachedIsPath.IS_PATH_CACHE_TIMEOUT_NS">
+<code>IS_PATH_CACHE_TIMEOUT_NS
+</code>
+</a> is negative, we always return the cached result.
 </p>
-<div class="admonition is-info" id="Note-6808cfee8e1ad376">
+<div class="admonition is-info" id="Note-678b54bbecd41e76">
 <header class="admonition-header">Note
-<a class="admonition-anchor" href="#Note-6808cfee8e1ad376" title="Permalink">
+<a class="admonition-anchor" href="#Note-678b54bbecd41e76" title="Permalink">
 </a>
 </header>
 <div class="admonition-body">
 <p>Do not pass this a path that ends with a 
 <code>/
-</code>, or the empty string. We actually cache the list of files in the directory, since this gives much faster results when checking for multiple files in the same directory.
+</code>, or the empty string. We actually cache the list of files in the directory, since this gives much faster results when checking for multiple files in the same directory. However this requires being more careful with 
+<a href="cached_ispath.html#TanayLabUtilities.CachedIsPath.empty_ispath_cache!">
+<code>empty_ispath_cache!
+</code>
+</a>.
 </p>
 </div>
 </div>
@@ -306,13 +314,25 @@
 <div>
 <p>How long to hold on to 
 <code>ispath
-</code> results before going back to the OS and asking for an updated result. By default, this is set to 1 second (10^9 ns). If this is zero then 
+</code> results before going back to the OS and asking for an updated result. By default, this is set to 10 seconds (10^10 ns). This is a compromise between the two extreme values:
+</p>
+<p>If this is zero then 
 <a href="cached_ispath.html#TanayLabUtilities.CachedIsPath.cached_ispath">
 <code>cached_ispath
 </code>
 </a> ignores the cache and simply calls 
 <code>ispath
-</code>.
+</code>. This is slow (especially when accessing network disks) but is &quot;safest&quot; as we will always return the correct answer.
+</p>
+<p>If this is negative than it we cache everything forever. This is fastest and works as long as the current process is the only one that modifies the file system, and that explicit 
+<a href="cached_ispath.html#TanayLabUtilities.CachedIsPath.empty_ispath_cache!">
+<code>empty_ispath_cache!
+</code>
+</a> directives are used to clear the relevant cache entries when the file system is modified.
+</p>
+<p>This can be controlled by setting the 
+<code>TLU_IS_PATH_CACHE_TIMEOUT_NS
+</code> environment variable.
 </p>
 </div>
 </section>

@@ -19,9 +19,18 @@ using ..Types
 
 """
 How long to hold on to `ispath` results before going back to the OS and asking for an updated result. By default, this
-is set to 1 second (10^9 ns). If this is zero then [`cached_ispath`](@ref) ignores the cache and simply calls `ispath`.
+is set to 10 seconds (10^10 ns). This is a compromise between the two extreme values:
+
+If this is zero then [`cached_ispath`](@ref) ignores the cache and simply calls `ispath`. This is slow (especially when
+accessing network disks) but is "safest" as we will always return the correct answer.
+
+If this is negative than it we cache everything forever. This is fastest and works as long as the current process is the
+only one that modifies the file system, and that explicit [`empty_ispath_cache!`](@ref) directives are used to clear the
+relevant cache entries when the file system is modified.
+
+This can be controlled by setting the `TLU_IS_PATH_CACHE_TIMEOUT_NS` environment variable.
 """
-IS_PATH_CACHE_TIMEOUT_NS = 1_000_000_000
+IS_PATH_CACHE_TIMEOUT_NS = 10_000_000_000
 
 IS_PATH_CACHE_LOCK = ReadWriteLock()
 
@@ -32,19 +41,30 @@ end
 
 IS_PATH_CACHE_DICT = Dict{Tuple{AbstractString, AbstractString}, IsPathCacheEntry}()
 
+function __init__()::Nothing
+    timeout = get(ENV, "TLU_IS_PATH_CACHE_TIMEOUT_NS", nothing)
+    if timeout !== nothing
+        global IS_PATH_CACHE_TIMEOUT_NS  # UNTESTED
+        IS_PATH_CACHE_TIMEOUT_NS = parse(Int64, timeout)  # NOLINT # UNTESTED
+    end
+    return nothing
+end
+
 """
     cached_ispath(path::AbstractString)::Bool
 
 Same as `ispath`, except that if less than [`IS_PATH_CACHE_TIMEOUT_NS`](@ref) has passed since the last time
 `cached_ispath` was called for the same path, we reuse the result. If [`IS_PATH_CACHE_TIMEOUT_NS`](@ref) is zero, this
-ignores the cache and simply calls `ispath`.
+ignores the cache and simply calls `ispath`. If [`IS_PATH_CACHE_TIMEOUT_NS`](@ref) is negative, we always return the
+cached result.
 
 !!! note
 
     Do not pass this a path that ends with a `/`, or the empty string. We actually cache the list of files in the
-    directory, since this gives much faster results when checking for multiple files in the same directory.
+    directory, since this gives much faster results when checking for multiple files in the same directory. However this
+    requires being more careful with [`empty_ispath_cache!`](@ref).
 """
-function cached_ispath(path::AbstractString)::Bool
+function cached_ispath(path::AbstractString)::Bool  # UNTESTED
     if IS_PATH_CACHE_TIMEOUT_NS <= 0
         return ispath(path)
     end
@@ -70,7 +90,8 @@ function cached_ispath(path::AbstractString)::Bool
                     cached = get(IS_PATH_CACHE_DICT, (cwd, dir_name), nothing)
 
                     now_ns = time_ns()
-                    if cached !== nothing && now_ns - cached.at_ns <= IS_PATH_CACHE_TIMEOUT_NS
+                    if cached !== nothing &&
+                       (IS_PATH_CACHE_TIMEOUT_NS < 0 || now_ns - cached.at_ns <= IS_PATH_CACHE_TIMEOUT_NS)
                         return file_name in cached.file_names
                     end
 
@@ -99,7 +120,7 @@ end
 Empty the `cached_ispath` cache. If a path is specified, only clears the cached entry for this path (and every other
 file in the same directory).
 """
-function empty_ispath_cache!(path::Maybe{AbstractString} = nothing)::Nothing
+function empty_ispath_cache!(path::Maybe{AbstractString} = nothing)::Nothing  # UNTESTED
     lock(IS_PATH_CACHE_LOCK.lock) do
         if path === nothing
             empty!(IS_PATH_CACHE_DICT)
