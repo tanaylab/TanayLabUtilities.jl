@@ -742,30 +742,26 @@ function relayout!(destination::AbstractMatrix, source::AbstractMatrix)::Abstrac
     @assert size(destination) == size(source)
     @assert major_axis(destination) == minor_axis(source)
     @assert issparse(destination) == issparse(source)
-    return named_relayout(destination, source)
+    return flame_timed("relayout") do
+        return named_relayout(destination, source)
+    end
 end
 
 function named_relayout(destination::AbstractMatrix, source::NamedMatrix)::NamedArray
-    @debug "relayout! destination: $(brief(destination)) source: $(brief(source)) {"
     @assert named_relayout(destination, parent(source)) === destination
     result = NamedArray(destination, source.dicts, source.dimnames)
-    @debug "relayout! result: $(brief(result)) }"
     return result
 end
 
 function named_relayout(destination::NamedArray, source::NamedMatrix)::NamedArray
-    @debug "relayout! destination: $(brief(destination)) source: $(brief(source)) {"
     @assert destination.dimnames == source.dimnames  # NOJET
     @assert destination.dicts == source.dicts
     @assert named_relayout(parent(destination), parent(source)) === parent(destination)
-    @debug "relayout! result: $(brief(destination)) }"
     return destination
 end
 
 function named_relayout(destination::NamedArray, source::AbstractMatrix)::AbstractMatrix
-    @debug "relayout! destination: $(brief(destination)) source: $(brief(source)) {"
     @assert named_relayout(parent(destination), source) === parent(destination)
-    @debug "relayout! result: $(brief(destination)) }"
     return destination
 end
 
@@ -778,7 +774,6 @@ function unnamed_relayout(
     destination::PermutedDimsArray{T, 2, P, IP, A},
     source::AbstractMatrix,
 )::AbstractMatrix where {T, P, IP, A}
-    @debug "relayout! destination: $(brief(destination)) source: $(brief(source)) {"
     if P == (Rows, Columns)
         @assert named_relayout(parent(destination), source) === parent(destination)
     elseif P == (Columns, Rows)
@@ -786,39 +781,30 @@ function unnamed_relayout(
     else
         @assert false
     end
-    @debug "relayout! result: $(brief(destination)) }"
     return destination
 end
 
 function unnamed_relayout(destination::Transpose, source::AbstractMatrix)::AbstractMatrix
-    @debug "relayout! destination: $(brief(destination)) source: $(brief(source)) {"
     @assert named_relayout(parent(destination), flip(source)) === parent(destination)
-    @debug "relayout! result: $(brief(destination)) }"
     return destination
 end
 
 function unnamed_relayout(destination::Adjoint, source::AbstractMatrix)::AbstractMatrix
-    @debug "relayout! destination: $(brief(destination)) source: $(brief(source)) {"
     @assert named_relayout(parent(destination), adjoint(source)) === parent(destination)
-    @debug "relayout! result: $(brief(destination)) }"
     return destination
 end
 
 function unnamed_relayout(destination::SparseMatrixCSC, source::AbstractMatrix)::SparseMatrixCSC
-    @debug "relayout! destination: $(brief(destination)) source: $(brief(source)) {"
     @assert size(destination) == size(source)
     @assert issparse(source)
     @assert LinearAlgebra.transpose!(destination, flip(mutable_array(source))) === destination  # NOJET
-    @debug "relayout! result: $(brief(destination)) }"
     return destination
 end
 
 function unnamed_relayout(destination::DenseMatrix, source::AbstractMatrix)::DenseMatrix
-    @debug "relayout! destination: $(brief(destination)) source: $(brief(source)) {"
     @assert size(destination) == size(source)
     @assert !issparse(source)
     @assert LinearAlgebra.transpose!(destination, flip(mutable_array(source))) === destination
-    @debug "relayout! result: $(brief(destination)) }"
     return destination
 end
 
@@ -941,8 +927,6 @@ end
 
 function flipped(matrix::AbstractMatrix)::AbstractMatrix
     return flame_timed("flipped") do
-        @debug "flipped $(brief(matrix)) {"
-
         axis = require_major_axis(matrix)
         local result  # UNTESTED
 
@@ -978,7 +962,6 @@ function flipped(matrix::AbstractMatrix)::AbstractMatrix
         @assert size(result, Rows) == size(matrix, Columns)
         @assert size(result, Columns) == size(matrix, Rows)
 
-        @debug "flipped $(brief(result)) }"
         return result
     end
 end

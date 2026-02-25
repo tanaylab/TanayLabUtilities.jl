@@ -14,23 +14,28 @@ export empty_ispath_cache!
 using Base.Threads
 using ConcurrentUtils
 
+using ..Brief
 using ..FlameTime
 using ..Types
 
 """
-How long to hold on to `ispath` results before going back to the OS and asking for an updated result. By default, this
-is set to 10 seconds (10^10 ns). This is a compromise between the two extreme values:
+How long to hold on to `ispath` results before going back to the OS and asking for an updated result.
+This can be controlled by setting the `TLU_IS_PATH_CACHE_TIMEOUT_NS` environment variable.
+
+By default, this is set to a negative value, meaning we cache everything forever. This is fastest and works as long as
+the code using [`cached_ispath`](@ref) also invokes [`empty_ispath_cache!`](@ref), for example the `Daf` file system
+`FilesDaf` format does this. If the code is designed to deal with external modifications to the file system, it should
+contain additional calls to [`cached_ispath`](@ref) or avoid using [`cached_ispath`](@ref) in the first place.
 
 If this is zero then [`cached_ispath`](@ref) ignores the cache and simply calls `ispath`. This is slow (especially when
-accessing network disks) but is "safest" as we will always return the correct answer.
+accessing network disks) but is "safest" as we will always return the correct answer regardless of anything. This is
+provided as a failsafe method for disabling the mechanism.
 
-If this is negative than it we cache everything forever. This is fastest and works as long as the current process is the
-only one that modifies the file system, and that explicit [`empty_ispath_cache!`](@ref) directives are used to clear the
-relevant cache entries when the file system is modified.
-
-This can be controlled by setting the `TLU_IS_PATH_CACHE_TIMEOUT_NS` environment variable.
+Otherwise this can be set to the number of nanoseconds to hold cache entries for. A low value (a few seconds) will
+significantly improve performance while still allowing multiple processes to (eventually) react to external changes
+to the file system. This is provided for completeness.
 """
-IS_PATH_CACHE_TIMEOUT_NS = 10_000_000_000
+IS_PATH_CACHE_TIMEOUT_NS = -1
 
 IS_PATH_CACHE_LOCK = ReadWriteLock()
 
@@ -45,7 +50,12 @@ function __init__()::Nothing
     timeout = get(ENV, "TLU_IS_PATH_CACHE_TIMEOUT_NS", nothing)
     if timeout !== nothing
         global IS_PATH_CACHE_TIMEOUT_NS  # UNTESTED
-        IS_PATH_CACHE_TIMEOUT_NS = parse(Int64, timeout)  # NOLINT # UNTESTED
+        IS_PATH_CACHE_TIMEOUT_NS = parse(Int64, timeout)  # UNTESTED
+    end
+    if IS_PATH_CACHE_TIMEOUT_NS > 0
+        @info "Will cache ispath data for $(delimited_number(IS_PATH_CACHE_TIMEOUT_NS)) nanoseconds" _group = :tlu_env  # UNTESTED
+    elseif IS_PATH_CACHE_TIMEOUT_NS < 0
+        @info "Will cache ispath data forever" _group = :tlu_env
     end
     return nothing
 end
@@ -65,7 +75,7 @@ cached result.
     requires being more careful with [`empty_ispath_cache!`](@ref).
 """
 function cached_ispath(path::AbstractString)::Bool  # UNTESTED
-    if IS_PATH_CACHE_TIMEOUT_NS <= 0
+    if IS_PATH_CACHE_TIMEOUT_NS == 0
         return ispath(path)
     end
 

@@ -43,7 +43,8 @@ function __init__()::Nothing
         global TOTAL_MEMORY  # UNTESTED
         TOTAL_MEMORY = Sys.total_memory()  # UNTESTED
         @info "Will only GC when using over: $(TLU_LIVE_BYTES_GC_THRESHOLD_FRACTION)" *  # UNTESTED
-              " of the $(delimited_number(Int(round(TOTAL_MEMORY / 1e6))))MB memory in parallel loops."
+              " of the $(delimited_number(Int(round(TOTAL_MEMORY / 1e6))))MB memory in parallel loops." _group =
+            :tlu_env
     end
     return nothing
 end
@@ -297,7 +298,7 @@ function parallel_loop_with_rng(  # NOJET
     return nothing
 end
 
-function is_debug_enabled_for_caller()  # UNTESTED
+function is_debug_enabled_for_caller(group::Maybe{Symbol} = nothing)  # UNTESTED
     logger = Logging.current_logger()
     if logger.min_level > Logging.Debug
         return false
@@ -313,7 +314,7 @@ function is_debug_enabled_for_caller()  # UNTESTED
             caller_module = caller_frame.linfo.def.module  # NOJET
         end
     end
-    return Logging.shouldlog(logger, Logging.Debug, caller_module, :debug, :check)
+    return Logging.shouldlog(logger, Logging.Debug, caller_module, group, :check)
 end
 
 """
@@ -322,8 +323,8 @@ end
 Same as `Progress` in `ProgressMeter`, but returns `nothing` if debug is not enabled for the modules calling
 `DebugProgress`.
 """
-function DebugProgress(n::Integer; kwargs...)::Maybe{Progress}  # UNTESTED
-    if is_debug_enabled_for_caller()
+function DebugProgress(n::Integer; group::Maybe{Symbol} = nothing, kwargs...)::Maybe{Progress}  # UNTESTED
+    if is_debug_enabled_for_caller(group)
         return Progress(n; kwargs...)
     else
         return nothing

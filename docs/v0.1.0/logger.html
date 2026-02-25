@@ -294,11 +294,19 @@
 <code class="language-julia hljs">@logged function something(...)
     return ...
 end
+
+@logged(group) function something(...)
+    return ...
+end
 </code>
 </pre>
 <p>Automatically log (in 
 <code>Debug
-</code> level) every invocation to the function. This will also log the values of the arguments. Emits a second log entry when the function returns, with the result (if any).
+</code> level) every invocation to the function. This will also log the values of the arguments. Emits a second log entry when the function returns, with the result (if any). If 
+<code>group
+</code> is specified, the log messages will be under that 
+<code>_group
+</code>. Otherwise the log messages are generated under the invoking module&#39;s name.
 </p>
 <pre>
 <code class="language-julia hljs">@logged function bar()::Nothing

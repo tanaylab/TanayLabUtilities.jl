@@ -61,8 +61,13 @@ end
         return ...
     end
 
+    @logged(group) function something(...)
+        return ...
+    end
+
 Automatically log (in `Debug` level) every invocation to the function. This will also log the values of the arguments.
-Emits a second log entry when the function returns, with the result (if any).
+Emits a second log entry when the function returns, with the result (if any). If `group` is specified, the log messages
+will be under that `_group`. Otherwise the log messages are generated under the invoking module's name.
 
 ```jldoctest
 @logged function bar()::Nothing
@@ -92,9 +97,17 @@ Debug : bar return }
 Debug : foo return: 3 }
 ```
 """
+macro logged(group, definition)
+    return do_logged(group, __source__, __module__, definition)
+end
+
 macro logged(definition)
+    return do_logged(nothing, __source__, __module__, definition)
+end
+
+function do_logged(debug_group, _source_, _module_, definition)
     while definition.head === :macrocall
-        definition = macroexpand(__module__, definition)
+        definition = macroexpand(_module_, definition)  # UNTESTED
     end
 
     inner_definition = ExprTools.splitdef(definition)
@@ -102,12 +115,12 @@ macro logged(definition)
 
     function_name = get(inner_definition, :name, nothing)
     if function_name === nothing
-        error("@logged requires a named function")
+        error("@logged requires a named function")  # UNTESTED
     end
     @assert function_name isa Symbol
-    function_module = __module__
-    function_file = string(__source__.file)
-    function_line = __source__.line
+    function_module = _module_
+    function_file = string(_source_.file)
+    function_line = _source_.line
     full_name = "$(function_module).$(function_name)"
 
     has_result = get(inner_definition, :rtype, :Any) != :Nothing
@@ -115,9 +128,10 @@ macro logged(definition)
     inner_definition[:name] = Symbol(function_name, :_logged)
     function_name = string(function_name)
     if startswith(full_name, "TanayLabUtilities.") || contains(full_name, ".TanayLabUtilities.")
-        outer_definition[:body] = Expr(
+        outer_definition[:body] = Expr(  # UNTESTED
             :call,
             :(GenericLogging.logged_wrapper(
+                $debug_group,
                 $function_module,
                 $function_file,
                 $function_line,
@@ -134,6 +148,7 @@ macro logged(definition)
         outer_definition[:body] = Expr(
             :call,
             :(TanayLabUtilities.Logger.logged_wrapper(
+                $debug_group,
                 $function_module,
                 $function_file,
                 $function_line,
@@ -160,6 +175,7 @@ function parse_arg(arg::Expr)::AbstractString  # UNTESTED
 end
 
 function logged_wrapper(
+    _group::Maybe{Symbol},
     _module::Module,
     _file::AbstractString,
     _line::Integer,
@@ -170,20 +186,21 @@ function logged_wrapper(
     inner_function,
 )
     return (args...; kwargs...) -> (
-        @debug "$(full_name) {" _module = _module _file = _file _line = _line;
+        @debug "$(full_name) {" _module = _module _file = _file _line = _line _group = _group;
         for (arg_name, arg_value) in zip(arg_names, args)
-            @debug "- $(arg_name): $(brief(arg_value))" _module = _module _file = _file _line = _line
+            @debug "- $(arg_name): $(brief(arg_value))" _module = _module _file = _file _line = _line _group = _group
         end;
         for (arg_name, arg_value) in kwargs
-            @debug "- $(arg_name): $(brief(arg_value))" _module = _module _file = _file _line = _line
+            @debug "- $(arg_name): $(brief(arg_value))" _module = _module _file = _file _line = _line _group = _group
         end;
         result = flame_timed(function_name) do
             return inner_function(args...; kwargs...)
         end;
         if has_result
-            @debug "$(full_name) return: $(brief(result)) }" _module = _module _file = _file _line = _line
+            @debug "$(full_name) return: $(brief(result)) }" _module = _module _file = _file _line = _line _group =
+                _group
         else
-            @debug "$(full_name) return }" _module = _module _file = _file _line = _line
+            @debug "$(full_name) return }" _module = _module _file = _file _line = _line _group = _group
         end;
         result
     )  # flaky tested

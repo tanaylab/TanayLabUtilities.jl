@@ -69,7 +69,7 @@ function __init__()::Nothing
         else
             FLAME_PREFIX = Base.basename(FLAME_PREFIX)  # UNTESTED
         end
-        @info "Will append flameview measurements into: $(path) under: $(FLAME_PREFIX)"  # UNTESTED
+        @info "Will append flameview measurements into: $(path) under: $(FLAME_PREFIX)" _group = :tlu_env  # UNTESTED
         atexit(__end__)  # UNTESTED # NOJET
     end
     return nothing

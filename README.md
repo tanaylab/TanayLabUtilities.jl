@@ -13,14 +13,26 @@ The following environment variables affect the code's behavior:
 
 `TLU_FLAME_MEASUREMENTS_FILE` - if set, then coarse flame graph measurements will be appended to the specified file.
 
-`TLU_IS_PATH_CACHE_TIMEOUT_NS` - if set, overrides the 10-second timeout for refreshing the cached entries of which
-files do/not exist in a directory. Set to 0 to completely disable caching or to a negative value (-1) when all relevant
-file system modifications are done by the program itself (and the code clears the cache when such modifications are
-done).
+`TLU_IS_PATH_CACHE_TIMEOUT_NS` - if set, disables or specifies a timeout for refreshing the cached entries of which
+files do/not exist in directories of interest. The default is a negative value (cache indefinitely, which "should" be
+fastest and safe). Set to 0 to completely disable caching or to the number of nanoseconds to cache entries for.
 
 `TLU_LIVE_BYTES_GC_THRESHOLD_FRACTION` - if set, then parallel loops will disable garbage collection as long as the
 total memory used by the program is less than this fraction of the machine's total memory. Don't use it unless you know
 what you are doing.
+
+If any of the above is set to a value that triggers the behavior, an `@info` log message is generated under the
+`tlu_env` group.
+
+## Debug Logging
+
+Two modules generate debug messages:
+
+`ExtendedReadWriteLock` - will generate log messages about read-write locking. This will generate a lot of messages
+(since read locks are ubiquitous). This is very rarely useful but when it is needed it is a lifesaver.
+
+`GlobalWeakCache` - will generate messages for every access of the global weak cache. This shouldn't be a lot of data.
+Useful for debugging whether global objects (e.g. open `Daf` repositories) are actually cached and reused.
 
 ## Installation
 
@@ -28,7 +40,7 @@ Just `Pkg.add("TanayLabUtilities")`, like installing any other Julia package.
 
 ## License (MIT)
 
-Copyright © 2025 Weizmann Institute of Science
+Copyright © 2025, 2026 Weizmann Institute of Science
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
 documentation files (the "Software"), to deal in the Software without restriction, including without limitation the
