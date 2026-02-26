@@ -1,5 +1,257 @@
+
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Downsample · TanayLabUtilities.jl v0.1.0</title><meta name="title" content="Downsample · TanayLabUtilities.jl v0.1.0"/><meta property="og:title" content="Downsample · TanayLabUtilities.jl v0.1.0"/><meta property="twitter:title" content="Downsample · TanayLabUtilities.jl v0.1.0"/><meta name="description" content="Documentation for TanayLabUtilities.jl v0.1.0."/><meta property="og:description" content="Documentation for TanayLabUtilities.jl v0.1.0."/><meta property="twitter:description" content="Documentation for TanayLabUtilities.jl v0.1.0."/><script data-outdated-warner src="assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="assets/documenter.js"></script><script src="search_index.js"></script><script src="siteinfo.js"></script><script src="../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="index.html">TanayLabUtilities.jl v0.1.0</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="index.html">TanayLabUtilities</a></li><li><a class="tocitem" href="types.html">Types</a></li><li><a class="tocitem" href="brief.html">Brief</a></li><li><a class="tocitem" href="logger.html">Logger</a></li><li><a class="tocitem" href="flame_time.html">Flame Time</a></li><li><a class="tocitem" href="parallel_loops.html">Parallel Loops</a></li><li><a class="tocitem" href="parallel_distances.html">Parallel Distances</a></li><li><a class="tocitem" href="parallel_storage.html">Parallel Storage</a></li><li><a class="tocitem" href="mostly_read_write_locks.html">Mostly-Read Write Locks</a></li><li><a class="tocitem" href="extended_read_write_locks.html">Extended Read-Write Locks</a></li><li><a class="tocitem" href="unique_names.html">Unique Names</a></li><li><a class="tocitem" href="documentation.html">Documentation</a></li><li><a class="tocitem" href="handlers.html">Handlers</a></li><li><a class="tocitem" href="read_only_arrays.html">Read-Only Arrays</a></li><li class="is-active"><a class="tocitem" href="downsample.html">Downsample</a><ul class="internal"><li><a class="tocitem" href="#Index"><span>Index</span></a></li></ul></li><li><a class="tocitem" href="cross_validations.html">Cross Validations</a></li><li><a class="tocitem" href="global_weak_cache.html">Global Weak Cache</a></li><li><a class="tocitem" href="kmeans.html">K-Means</a></li><li><a class="tocitem" href="cached_ispath.html">Cached IsPath</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href="downsample.html">Downsample</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href="downsample.html">Downsample</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/tanaylab/TanayLabUtilities.jl/blob/main{path}?plain=1#L{line}" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Downsample"><a class="docs-heading-anchor" href="#Downsample">Downsample</a><a id="Downsample-1"></a><a class="docs-heading-anchor-permalink" href="#Downsample" title="Permalink"></a></h1><article><details class="docstring" open="true"><summary id="TanayLabUtilities.Downsample"><a class="docstring-binding" href="#TanayLabUtilities.Downsample"><code>TanayLabUtilities.Downsample</code></a> — <span class="docstring-category">Module</span></summary><section><div><p>Downsampling of data. The idea is that you have a vector containing a total of some (large) <code>K</code> counts of samples with values <code>1..N</code> drawn from a multinomial distribution (with different probabilities for getting each of the <code>1..N</code> values). Generate a vector with a total of some (smaller) <code>k</code> samples. This is typically done to a set of vectors, typically to all columns of a matrix (each with its own <code>K(j)</code>), to get a set of vectors with the same <code>k</code>.</p><p>This is useful for meaningfully comparing the vectors (for example, computing correlations between them). Without downsampling, distance measures between such vectors are biases by the sampling depth <code>K</code>. For example, correlations with deeper (higher total samples) vectors will tend to be higher.</p><p>Downsampling discards data so we&#39;d like the target <code>k</code> to be as large as possible. Typically this isn&#39;t the minimal <code>K(j)</code> to avoid a few shallow sampled vectors from ruining the quality of the results; we accept that a small fraction of the vectors will keep their original <code>K(j)</code> samples when this is less than the chosen <code>k</code>.</p></div></section></details></article><article><details class="docstring" open="true"><summary id="TanayLabUtilities.Downsample.downsample"><a class="docstring-binding" href="#TanayLabUtilities.Downsample.downsample"><code>TanayLabUtilities.Downsample.downsample</code></a> — <span class="docstring-category">Function</span></summary><section><div><pre><code class="language-julia hljs">downsample(
+
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Downsample · TanayLabUtilities.jl v0.1.0
+</title>
+<meta name="title" content="Downsample · TanayLabUtilities.jl v0.1.0"/>
+<meta property="og:title" content="Downsample · TanayLabUtilities.jl v0.1.0"/>
+<meta property="twitter:title" content="Downsample · TanayLabUtilities.jl v0.1.0"/>
+<meta name="description" content="Documentation for TanayLabUtilities.jl v0.1.0."/>
+<meta property="og:description" content="Documentation for TanayLabUtilities.jl v0.1.0."/>
+<meta property="twitter:description" content="Documentation for TanayLabUtilities.jl v0.1.0."/>
+<script data-outdated-warner src="assets/warner.js">
+</script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/>
+<script>documenterBaseURL="."
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="assets/documenter.js">
+</script>
+<script src="search_index.js">
+</script>
+<script src="siteinfo.js">
+</script>
+<script src="../versions.js">
+</script>
+<link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/>
+<link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/>
+<link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/>
+<link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/>
+<link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/>
+<link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/>
+<script src="assets/themeswap.js">
+</script>
+</head>
+<body>
+<div id="documenter">
+<nav class="docs-sidebar">
+<div class="docs-package-name">
+<span class="docs-autofit">
+<a href="index.html">TanayLabUtilities.jl v0.1.0
+</a>
+</span>
+</div>
+<button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)
+</button>
+<ul class="docs-menu">
+<li>
+<a class="tocitem" href="index.html">TanayLabUtilities
+</a>
+</li>
+<li>
+<a class="tocitem" href="types.html">Types
+</a>
+</li>
+<li>
+<a class="tocitem" href="brief.html">Brief
+</a>
+</li>
+<li>
+<a class="tocitem" href="logger.html">Logger
+</a>
+</li>
+<li>
+<a class="tocitem" href="flame_time.html">Flame Time
+</a>
+</li>
+<li>
+<a class="tocitem" href="parallel_loops.html">Parallel Loops
+</a>
+</li>
+<li>
+<a class="tocitem" href="parallel_distances.html">Parallel Distances
+</a>
+</li>
+<li>
+<a class="tocitem" href="parallel_storage.html">Parallel Storage
+</a>
+</li>
+<li>
+<a class="tocitem" href="mostly_read_write_locks.html">Mostly-Read Write Locks
+</a>
+</li>
+<li>
+<a class="tocitem" href="extended_read_write_locks.html">Extended Read-Write Locks
+</a>
+</li>
+<li>
+<a class="tocitem" href="unique_names.html">Unique Names
+</a>
+</li>
+<li>
+<a class="tocitem" href="documentation.html">Documentation
+</a>
+</li>
+<li>
+<a class="tocitem" href="handlers.html">Handlers
+</a>
+</li>
+<li>
+<a class="tocitem" href="read_only_arrays.html">Read-Only Arrays
+</a>
+</li>
+<li class="is-active">
+<a class="tocitem" href="downsample.html">Downsample
+</a>
+<ul class="internal">
+<li>
+<a class="tocitem" href="#Index">
+<span>Index
+</span>
+</a>
+</li>
+</ul>
+</li>
+<li>
+<a class="tocitem" href="zero_correlation.html">Zero Correlation
+</a>
+</li>
+<li>
+<a class="tocitem" href="cross_validations.html">Cross Validations
+</a>
+</li>
+<li>
+<a class="tocitem" href="global_weak_cache.html">Global Weak Cache
+</a>
+</li>
+<li>
+<a class="tocitem" href="kmeans.html">K-Means
+</a>
+</li>
+<li>
+<a class="tocitem" href="cached_ispath.html">Cached IsPath
+</a>
+</li>
+</ul>
+<div class="docs-version-selector field has-addons">
+<div class="control">
+<span class="docs-label button is-static is-size-7">Version
+</span>
+</div>
+<div class="docs-selector control is-expanded">
+<div class="select is-fullwidth is-size-7">
+<select id="documenter-version-selector">
+</select>
+</div>
+</div>
+</div>
+</nav>
+<div class="docs-main">
+<header class="docs-navbar">
+<a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#">
+</a>
+<nav class="breadcrumb">
+<ul class="is-hidden-mobile">
+<li class="is-active">
+<a href="downsample.html">Downsample
+</a>
+</li>
+</ul>
+<ul class="is-hidden-tablet">
+<li class="is-active">
+<a href="downsample.html">Downsample
+</a>
+</li>
+</ul>
+</nav>
+<div class="docs-right">
+<a class="docs-navbar-link" href="https://github.com/tanaylab/TanayLabUtilities.jl/blob/main{path}?plain=1#L{line}" title="View the repository on GitHub">
+<span class="docs-icon fa-brands">
+</span>
+<span class="docs-label is-hidden-touch">GitHub
+</span>
+</a>
+<a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings">
+</a>
+<a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings">
+</a>
+</div>
+</header>
+<article class="content" id="documenter-page">
+<h1 id="Downsample">
+<a class="docs-heading-anchor" href="#Downsample">Downsample
+</a>
+<a id="Downsample-1">
+</a>
+<a class="docs-heading-anchor-permalink" href="#Downsample" title="Permalink">
+</a>
+</h1>
+<article>
+<details class="docstring" open="true">
+<summary id="TanayLabUtilities.Downsample">
+<a class="docstring-binding" href="#TanayLabUtilities.Downsample">
+<code>TanayLabUtilities.Downsample
+</code>
+</a> — 
+<span class="docstring-category">Module
+</span>
+</summary>
+<section>
+<div>
+<p>Downsampling of data. The idea is that you have a vector containing a total of some (large) 
+<code>K
+</code> counts of samples with values 
+<code>1..N
+</code> drawn from a multinomial distribution (with different probabilities for getting each of the 
+<code>1..N
+</code> values). Generate a vector with a total of some (smaller) 
+<code>k
+</code> samples. This is typically done to a set of vectors, typically to all columns of a matrix (each with its own 
+<code>K(j)
+</code>), to get a set of vectors with the same 
+<code>k
+</code>.
+</p>
+<p>This is useful for meaningfully comparing the vectors (for example, computing correlations between them). Without downsampling, distance measures between such vectors are biases by the sampling depth 
+<code>K
+</code>. For example, correlations with deeper (higher total samples) vectors will tend to be higher.
+</p>
+<p>Downsampling discards data so we&#39;d like the target 
+<code>k
+</code> to be as large as possible. Typically this isn&#39;t the minimal 
+<code>K(j)
+</code> to avoid a few shallow sampled vectors from ruining the quality of the results; we accept that a small fraction of the vectors will keep their original 
+<code>K(j)
+</code> samples when this is less than the chosen 
+<code>k
+</code>.
+</p>
+</div>
+</section>
+</details>
+</article>
+<article>
+<details class="docstring" open="true">
+<summary id="TanayLabUtilities.Downsample.downsample">
+<a class="docstring-binding" href="#TanayLabUtilities.Downsample.downsample">
+<code>TanayLabUtilities.Downsample.downsample
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+</summary>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">downsample(
     vector::AbstractVector{&lt;:Integer},
     samples::Integer;
     rng::AbstractRNG = default_rng(),
@@ -12,7 +264,39 @@ downsample(
     dims::Integer,
     rng::AbstractRNG = default_rng(),
     output::Maybe{AbstractMatrix} = nothing,
-)::AbstractMatrix</code></pre><p>Given a <code>vector</code> of integer non-negative data values, return a new vector such that the sum of entries in it is <code>samples</code>. Think of the original vector as containing a number of marbles in each entry. We randomly pick <code>samples</code> marbles from this vector; each time we pick a marble we take it out of the original vector and move it to the same position in the result.</p><p>If the sum of the entries of a vector is less than <code>samples</code>, it is copied to the output. If <code>output</code> is not specified, it is allocated automatically using the same element type as the input.</p><p>When downsampling a <code>matrix</code>, then <code>dims</code> must be specified to be <code>1</code>/<code>Rows</code> to separately downsample each row, or <code>2</code>/<code>Columns</code> to separately downsample each column.</p><pre><code class="language-julia hljs">using Test
+)::AbstractMatrix
+</code>
+</pre>
+<p>Given a 
+<code>vector
+</code> of integer non-negative data values, return a new vector such that the sum of entries in it is 
+<code>samples
+</code>. Think of the original vector as containing a number of marbles in each entry. We randomly pick 
+<code>samples
+</code> marbles from this vector; each time we pick a marble we take it out of the original vector and move it to the same position in the result.
+</p>
+<p>If the sum of the entries of a vector is less than 
+<code>samples
+</code>, it is copied to the output. If 
+<code>output
+</code> is not specified, it is allocated automatically using the same element type as the input.
+</p>
+<p>When downsampling a 
+<code>matrix
+</code>, then 
+<code>dims
+</code> must be specified to be 
+<code>1
+</code>/
+<code>Rows
+</code> to separately downsample each row, or 
+<code>2
+</code>/
+<code>Columns
+</code> to separately downsample each column.
+</p>
+<pre>
+<code class="language-julia hljs">using Test
 
 # Columns
 
@@ -44,13 +328,159 @@ println(&quot;OK&quot;)
 
 # output
 
-OK</code></pre></div></section></details></article><article><details class="docstring" open="true"><summary id="TanayLabUtilities.Downsample.downsamples"><a class="docstring-binding" href="#TanayLabUtilities.Downsample.downsamples"><code>TanayLabUtilities.Downsample.downsamples</code></a> — <span class="docstring-category">Function</span></summary><section><div><pre><code class="language-julia hljs">downsamples(
+OK
+</code>
+</pre>
+</div>
+</section>
+</details>
+</article>
+<article>
+<details class="docstring" open="true">
+<summary id="TanayLabUtilities.Downsample.downsamples">
+<a class="docstring-binding" href="#TanayLabUtilities.Downsample.downsamples">
+<code>TanayLabUtilities.Downsample.downsamples
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+</summary>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">downsamples(
     samples_per_vector::AbstractVector{&lt;:Integer};
     min_downsamples::Integer = ```750```,
     min_downsamples_quantile::AbstractFloat = ```0.05```,
     max_downsamples_quantile::AbstractFloat = ```0.5```,
-)::Integer</code></pre><p>When downsampling multiple vectors (the amount of data in each available in <code>samples_per_vector</code>), we need to pick a &quot;reasonable&quot; number of samples to downsample to. We have conflicting requirements, so this is a compromise. First, we want most vectors to have at least the target number of samples, so we start with the <code>min_downsamples_quantile</code> of the <code>samples_per_vector</code>. Second, we also want to have at least <code>min_downsamples</code> to ensure we don&#39;t throw away too much data even if many vectors are sparse, so we increase the target to this value. Finally, we don&#39;t want a target which is too big for too many vectors, so so we reduce the result to the <code>max_downsamples_quantile</code> of the <code>samples_per_vector</code>.</p><div class="admonition is-info" id="Note-4de2cd10dbbc06d0"><header class="admonition-header">Note<a class="admonition-anchor" href="#Note-4de2cd10dbbc06d0" title="Permalink"></a></header><div class="admonition-body"><p>The defaults (especially <code>min_downsamples</code>) were chosen to fit our needs (downsampling UMIs of sc-RNA-seq data). You will need to tweak them when using this for other purposes.</p></div></div><pre><code class="language-julia hljs">downsamples([100, 500, 1000])
+)::Integer
+</code>
+</pre>
+<p>When downsampling multiple vectors (the amount of data in each available in 
+<code>samples_per_vector
+</code>), we need to pick a &quot;reasonable&quot; number of samples to downsample to. We have conflicting requirements, so this is a compromise. First, we want most vectors to have at least the target number of samples, so we start with the 
+<code>min_downsamples_quantile
+</code> of the 
+<code>samples_per_vector
+</code>. Second, we also want to have at least 
+<code>min_downsamples
+</code> to ensure we don&#39;t throw away too much data even if many vectors are sparse, so we increase the target to this value. Finally, we don&#39;t want a target which is too big for too many vectors, so so we reduce the result to the 
+<code>max_downsamples_quantile
+</code> of the 
+<code>samples_per_vector
+</code>.
+</p>
+<div class="admonition is-info" id="Note-4de2cd10dbbc06d0">
+<header class="admonition-header">Note
+<a class="admonition-anchor" href="#Note-4de2cd10dbbc06d0" title="Permalink">
+</a>
+</header>
+<div class="admonition-body">
+<p>The defaults (especially 
+<code>min_downsamples
+</code>) were chosen to fit our needs (downsampling UMIs of sc-RNA-seq data). You will need to tweak them when using this for other purposes.
+</p>
+</div>
+</div>
+<pre>
+<code class="language-julia hljs">downsamples([100, 500, 1000])
 
 # output
 
-500</code></pre></div></section></details></article><h2 id="Index"><a class="docs-heading-anchor" href="#Index">Index</a><a id="Index-1"></a><a class="docs-heading-anchor-permalink" href="#Index" title="Permalink"></a></h2><ul><li><a href="downsample.html#TanayLabUtilities.Downsample"><code>TanayLabUtilities.Downsample</code></a></li><li><a href="downsample.html#TanayLabUtilities.Downsample.downsample"><code>TanayLabUtilities.Downsample.downsample</code></a></li><li><a href="downsample.html#TanayLabUtilities.Downsample.downsamples"><code>TanayLabUtilities.Downsample.downsamples</code></a></li></ul></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="read_only_arrays.html">« Read-Only Arrays</a><a class="docs-footer-nextpage" href="cross_validations.html">Cross Validations »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.16.1 on <span class="colophon-date" title="Thursday 26 February 2026 11:38">Thursday 26 February 2026</span>. Using Julia version 1.11.8.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+500
+</code>
+</pre>
+</div>
+</section>
+</details>
+</article>
+<h2 id="Index">
+<a class="docs-heading-anchor" href="#Index">Index
+</a>
+<a id="Index-1">
+</a>
+<a class="docs-heading-anchor-permalink" href="#Index" title="Permalink">
+</a>
+</h2>
+<ul>
+<li>
+<a href="downsample.html#TanayLabUtilities.Downsample">
+<code>TanayLabUtilities.Downsample
+</code>
+</a>
+</li>
+<li>
+<a href="downsample.html#TanayLabUtilities.Downsample.downsample">
+<code>TanayLabUtilities.Downsample.downsample
+</code>
+</a>
+</li>
+<li>
+<a href="downsample.html#TanayLabUtilities.Downsample.downsamples">
+<code>TanayLabUtilities.Downsample.downsamples
+</code>
+</a>
+</li>
+</ul>
+</article>
+<nav class="docs-footer">
+<a class="docs-footer-prevpage" href="read_only_arrays.html">« Read-Only Arrays
+</a>
+<a class="docs-footer-nextpage" href="zero_correlation.html">Zero Correlation »
+</a>
+<div class="flexbox-break">
+</div>
+<p class="footer-message">Powered by 
+<a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl
+</a> and the 
+<a href="https://julialang.org/">Julia Programming Language
+</a>.
+</p>
+</nav>
+</div>
+<div class="modal" id="documenter-settings">
+<div class="modal-background">
+</div>
+<div class="modal-card">
+<header class="modal-card-head">
+<p class="modal-card-title">Settings
+</p>
+<button class="delete">
+</button>
+</header>
+<section class="modal-card-body">
+<p>
+<label class="label">Theme
+</label>
+<div class="select">
+<select id="documenter-themepicker">
+<option value="auto">Automatic (OS)
+</option>
+<option value="documenter-light">documenter-light
+</option>
+<option value="documenter-dark">documenter-dark
+</option>
+<option value="catppuccin-latte">catppuccin-latte
+</option>
+<option value="catppuccin-frappe">catppuccin-frappe
+</option>
+<option value="catppuccin-macchiato">catppuccin-macchiato
+</option>
+<option value="catppuccin-mocha">catppuccin-mocha
+</option>
+</select>
+</div>
+</p>
+<hr/>
+<p>This document was generated with 
+<a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl
+</a> version 1.16.1. Using Julia version 1.11.8.
+</p>
+</section>
+<footer class="modal-card-foot">
+</footer>
+</div>
+</div>
+</div>
+</body>
+</html>

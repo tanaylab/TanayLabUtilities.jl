@@ -76,4 +76,7 @@ include("extended_read_write_locks.jl")
 include("downsample.jl")
 @reexport using .Downsample
 
+include("zero_correlation.jl")
+@reexport using .ZeroCorrelation
+
 end  # module

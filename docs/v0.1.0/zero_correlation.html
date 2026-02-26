@@ -5,11 +5,11 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Documentation · TanayLabUtilities.jl v0.1.0
+<title>Zero Correlation · TanayLabUtilities.jl v0.1.0
 </title>
-<meta name="title" content="Documentation · TanayLabUtilities.jl v0.1.0"/>
-<meta property="og:title" content="Documentation · TanayLabUtilities.jl v0.1.0"/>
-<meta property="twitter:title" content="Documentation · TanayLabUtilities.jl v0.1.0"/>
+<meta name="title" content="Zero Correlation · TanayLabUtilities.jl v0.1.0"/>
+<meta property="og:title" content="Zero Correlation · TanayLabUtilities.jl v0.1.0"/>
+<meta property="twitter:title" content="Zero Correlation · TanayLabUtilities.jl v0.1.0"/>
 <meta name="description" content="Documentation for TanayLabUtilities.jl v0.1.0."/>
 <meta property="og:description" content="Documentation for TanayLabUtilities.jl v0.1.0."/>
 <meta property="twitter:description" content="Documentation for TanayLabUtilities.jl v0.1.0."/>
@@ -96,17 +96,9 @@
 <a class="tocitem" href="unique_names.html">Unique Names
 </a>
 </li>
-<li class="is-active">
+<li>
 <a class="tocitem" href="documentation.html">Documentation
 </a>
-<ul class="internal">
-<li>
-<a class="tocitem" href="#Index">
-<span>Index
-</span>
-</a>
-</li>
-</ul>
 </li>
 <li>
 <a class="tocitem" href="handlers.html">Handlers
@@ -120,9 +112,17 @@
 <a class="tocitem" href="downsample.html">Downsample
 </a>
 </li>
-<li>
+<li class="is-active">
 <a class="tocitem" href="zero_correlation.html">Zero Correlation
 </a>
+<ul class="internal">
+<li>
+<a class="tocitem" href="#Index">
+<span>Index
+</span>
+</a>
+</li>
+</ul>
 </li>
 <li>
 <a class="tocitem" href="cross_validations.html">Cross Validations
@@ -161,13 +161,13 @@
 <nav class="breadcrumb">
 <ul class="is-hidden-mobile">
 <li class="is-active">
-<a href="documentation.html">Documentation
+<a href="zero_correlation.html">Zero Correlation
 </a>
 </li>
 </ul>
 <ul class="is-hidden-tablet">
 <li class="is-active">
-<a href="documentation.html">Documentation
+<a href="zero_correlation.html">Zero Correlation
 </a>
 </li>
 </ul>
@@ -186,19 +186,19 @@
 </div>
 </header>
 <article class="content" id="documenter-page">
-<h1 id="Documentation">
-<a class="docs-heading-anchor" href="#Documentation">Documentation
+<h1 id="Zero-Correlation">
+<a class="docs-heading-anchor" href="#Zero-Correlation">Zero Correlation
 </a>
-<a id="Documentation-1">
+<a id="Zero-Correlation-1">
 </a>
-<a class="docs-heading-anchor-permalink" href="#Documentation" title="Permalink">
+<a class="docs-heading-anchor-permalink" href="#Zero-Correlation" title="Permalink">
 </a>
 </h1>
 <article>
 <details class="docstring" open="true">
-<summary id="TanayLabUtilities.Documentation">
-<a class="docstring-binding" href="#TanayLabUtilities.Documentation">
-<code>TanayLabUtilities.Documentation
+<summary id="TanayLabUtilities.ZeroCorrelation">
+<a class="docstring-binding" href="#TanayLabUtilities.ZeroCorrelation">
+<code>TanayLabUtilities.ZeroCorrelation
 </code>
 </a> — 
 <span class="docstring-category">Module
@@ -206,7 +206,9 @@
 </summary>
 <section>
 <div>
-<p>Enhanced documentation for functions. This allows using the default values of function parameters as the basis for default values of other function parameters.
+<p>A version of 
+<code>cor
+</code> that returns 0.0 instead of NaN for undefined correlations.
 </p>
 </div>
 </section>
@@ -214,111 +216,9 @@
 </article>
 <article>
 <details class="docstring" open="true">
-<summary id="TanayLabUtilities.Documentation.@documented">
-<a class="docstring-binding" href="#TanayLabUtilities.Documentation.@documented">
-<code>TanayLabUtilities.Documentation.@documented
-</code>
-</a> — 
-<span class="docstring-category">Macro
-</span>
-</summary>
-<section>
-<div>
-<pre>
-<code class="language-julia hljs">@documented function something(...)
-    return ...
-end
-</code>
-</pre>
-<p>Enhance the documentation of a function. This stashes the default value of named arguments. This allows expanding 
-<a href="documentation.html#TanayLabUtilities.Documentation.DEFAULT">
-<code>DEFAULT
-</code>
-</a> in the documentation string, which is especially useful if these defaults are computed, read from global constants, copied from other functions via 
-<a href="documentation.html#TanayLabUtilities.Documentation.function_default">
-<code>function_default
-</code>
-</a>, etc.
-</p>
-<pre>
-<code class="language-julia hljs">&quot;Foo, default x: $(DEFAULT.x), default y: $(DEFAULT.y).&quot;
-@documented function foo(x::Integer = 1; y::Integer = 2)::Integer
-    return x + y
-end
-
-@assert foo() == 3
-@assert foo(2) == 4
-println(repr(&quot;text/markdown&quot;, @doc foo))
-
-# output
-
-Foo, default x: `1`, default y: `2`.
-</code>
-</pre>
-<pre>
-<code class="language-julia hljs">&quot;Foo, default x: $(DEFAULT.x).&quot;
-@documented function foo()::Integer
-    return 1
-end
-
-println(repr(&quot;text/markdown&quot;, @doc foo))
-
-# output
-
-ERROR: no parameter (with default): x
-exists for the function: foo
-</code>
-</pre>
-<pre>
-<code class="language-julia hljs">&quot;Foo, default x: $(DEFAULT.x), default y: $(DEFAULT.y).&quot;
-function foo(x::Integer = 1; y::Integer = 2)::Integer
-    return x + y
-end
-
-println(repr(&quot;text/markdown&quot;, @doc foo))
-
-# output
-
-ERROR: not a @documented function: foo
-</code>
-</pre>
-</div>
-</section>
-</details>
-</article>
-<article>
-<details class="docstring" open="true">
-<summary id="TanayLabUtilities.Documentation.DEFAULT">
-<a class="docstring-binding" href="#TanayLabUtilities.Documentation.DEFAULT">
-<code>TanayLabUtilities.Documentation.DEFAULT
-</code>
-</a> — 
-<span class="docstring-category">Constant
-</span>
-</summary>
-<section>
-<div>
-<p>When using 
-<a href="documentation.html#TanayLabUtilities.Documentation.@documented">
-<code>@documented
-</code>
-</a>, then 
-<code>$(DEFAULT.x)
-</code> will be expanded with the default value of the parameter 
-<code>x
-</code>. It is good practice to contain a description of the effects of each parameter somewhere in the documentation, and it is polite to also provide its default value. This can be done in either the signature line or in the text, or both. Using 
-<code>DEFAULT
-</code> ensures that the correct value is used in the documentation.
-</p>
-</div>
-</section>
-</details>
-</article>
-<article>
-<details class="docstring" open="true">
-<summary id="TanayLabUtilities.Documentation.function_default">
-<a class="docstring-binding" href="#TanayLabUtilities.Documentation.function_default">
-<code>TanayLabUtilities.Documentation.function_default
+<summary id="TanayLabUtilities.ZeroCorrelation.zero_cor_between_matrix_columns">
+<a class="docstring-binding" href="#TanayLabUtilities.ZeroCorrelation.zero_cor_between_matrix_columns">
+<code>TanayLabUtilities.ZeroCorrelation.zero_cor_between_matrix_columns
 </code>
 </a> — 
 <span class="docstring-category">Function
@@ -327,40 +227,28 @@ ERROR: not a @documented function: foo
 <section>
 <div>
 <pre>
-<code class="language-julia hljs">function_default(func::Function, parameter::Symbol)::Contract
+<code class="language-julia hljs">zero_cor_between_matrix_columns(
+    matrix::AbstractMatrix,
+)::AbstractMatrix
 </code>
 </pre>
-<p>Access the default of a parameter of a function annotated by 
-<a href="documentation.html#TanayLabUtilities.Documentation.@documented">
-<code>@documented
-</code>
-</a>.
+<p>Same as 
+<code>cor
+</code>, except that undefined cases return 0.0 instead of NaN. In addition, unlike 
+<code>cor
+</code>, this doesn&#39;t set entries to one when correlating matrices and a constant vector is correlated with itself. It properly sets all correlations with such vectors to zero, even with themselves.
 </p>
 <pre>
-<code class="language-julia hljs">@documented function foo(x::Integer = 1)::Nothing
-    return nothing
-end
-
-println(function_default(foo, :x))
-println(function_default(foo, :y))
+<code class="language-julia hljs">m = [1 2 3 4; 1 3 2 5];
+zero_cor_between_matrix_columns(m)
 
 # output
 
-1
-ERROR: no parameter (with default): y
-exists for the function: foo
-</code>
-</pre>
-<pre>
-<code class="language-julia hljs">function foo(x::Integer = 1)::Nothing
-    return nothing
-end
-
-function_default(foo, :x)
-
-# output
-
-ERROR: not a @documented function: foo
+4×4 Matrix{Float64}:
+ 0.0   0.0   0.0   0.0
+ 0.0   1.0  -1.0   1.0
+ 0.0  -1.0   1.0  -1.0
+ 0.0   1.0  -1.0   1.0
 </code>
 </pre>
 </div>
@@ -369,22 +257,121 @@ ERROR: not a @documented function: foo
 </article>
 <article>
 <details class="docstring" open="true">
-<summary id="TanayLabUtilities.Documentation.@source_location">
-<a class="docstring-binding" href="#TanayLabUtilities.Documentation.@source_location">
-<code>TanayLabUtilities.Documentation.@source_location
+<summary id="TanayLabUtilities.ZeroCorrelation.zero_cor_between_matrices_columns">
+<a class="docstring-binding" href="#TanayLabUtilities.ZeroCorrelation.zero_cor_between_matrices_columns">
+<code>TanayLabUtilities.ZeroCorrelation.zero_cor_between_matrices_columns
 </code>
 </a> — 
-<span class="docstring-category">Macro
+<span class="docstring-category">Function
 </span>
 </summary>
 <section>
 <div>
 <pre>
-<code class="language-julia hljs">path, line = @source_location()
+<code class="language-julia hljs">zero_cor_between_matrices_columns(
+    left_matrix::AbstractMatrix,
+    right_matrix::AbstractMatrix
+)::AbstractMatrix
 </code>
 </pre>
-<p>Return the path to the current source file and the current source line number.
+<p>Same as 
+<code>cor
+</code>, except that undefined cases return 0.0 instead of NaN. In addition, unlike 
+<code>cor
+</code>, this doesn&#39;t set entries to one when correlating matrices and a constant vector is correlated with itself. It properly sets all correlations with such vectors to zero, even with themselves.
 </p>
+</div>
+</section>
+</details>
+</article>
+<article>
+<details class="docstring" open="true">
+<summary id="TanayLabUtilities.ZeroCorrelation.zero_cor_between_vector_and_matrix_columns">
+<a class="docstring-binding" href="#TanayLabUtilities.ZeroCorrelation.zero_cor_between_vector_and_matrix_columns">
+<code>TanayLabUtilities.ZeroCorrelation.zero_cor_between_vector_and_matrix_columns
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+</summary>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">zero_cor_between_vector_and_matrix_columns(left_vector::AbstractVector, right_matrix::AbstractMatrix)::AbstractVector
+</code>
+</pre>
+<p>Similar to 
+<code>cor
+</code>, except that undefined cases return 0.0 instead of NaN, and returns a vector.
+</p>
+<pre>
+<code class="language-julia hljs">using StatsBase
+
+println(cor.(Ref([1.0, 1.0]), eachcol([1.0 2.0; 2.0 1.0])))
+println(cor.(Ref([1.0, 2.0]), eachcol([1.0 2.0; 2.0 1.0])))
+
+# output
+
+[NaN, NaN]
+[1.0, -1.0]
+</code>
+</pre>
+<pre>
+<code class="language-julia hljs">println(zero_cor_between_vector_and_matrix_columns([1.0, 1.0], [1.0 2.0; 2.0 1.0]))
+println(zero_cor_between_vector_and_matrix_columns([1.0, 2.0], [1.0 2.0; 2.0 1.0]))
+
+# output
+
+[0.0, 0.0]
+[1.0, -1.0]
+</code>
+</pre>
+</div>
+</section>
+</details>
+</article>
+<article>
+<details class="docstring" open="true">
+<summary id="TanayLabUtilities.ZeroCorrelation.zero_cor_between_vectors">
+<a class="docstring-binding" href="#TanayLabUtilities.ZeroCorrelation.zero_cor_between_vectors">
+<code>TanayLabUtilities.ZeroCorrelation.zero_cor_between_vectors
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+</summary>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">zero_cor_between_vectors(left_vector::AbstractVector, right_vector::AbstractVector)::AbstractFloat
+</code>
+</pre>
+<p>Same as 
+<code>cor
+</code>, except that undefined cases return 0.0 instead of NaN.
+</p>
+<pre>
+<code class="language-julia hljs">using StatsBase
+
+println(cor([1.0, 1.0], [1.0, 2.0]))
+println(cor([1.0, 2.0], [1.0, 2.0]))
+
+# output
+
+NaN
+1.0
+</code>
+</pre>
+<pre>
+<code class="language-julia hljs">println(zero_cor_between_vectors([1.0, 1.0], [1.0, 2.0]))
+println(zero_cor_between_vectors([1.0, 2.0], [1.0, 2.0]))
+
+# output
+
+0.0
+1.0
+</code>
+</pre>
 </div>
 </section>
 </details>
@@ -399,41 +386,41 @@ ERROR: not a @documented function: foo
 </h2>
 <ul>
 <li>
-<a href="documentation.html#TanayLabUtilities.Documentation">
-<code>TanayLabUtilities.Documentation
+<a href="zero_correlation.html#TanayLabUtilities.ZeroCorrelation">
+<code>TanayLabUtilities.ZeroCorrelation
 </code>
 </a>
 </li>
 <li>
-<a href="documentation.html#TanayLabUtilities.Documentation.DEFAULT">
-<code>TanayLabUtilities.Documentation.DEFAULT
+<a href="zero_correlation.html#TanayLabUtilities.ZeroCorrelation.zero_cor_between_matrices_columns">
+<code>TanayLabUtilities.ZeroCorrelation.zero_cor_between_matrices_columns
 </code>
 </a>
 </li>
 <li>
-<a href="documentation.html#TanayLabUtilities.Documentation.function_default">
-<code>TanayLabUtilities.Documentation.function_default
+<a href="zero_correlation.html#TanayLabUtilities.ZeroCorrelation.zero_cor_between_matrix_columns">
+<code>TanayLabUtilities.ZeroCorrelation.zero_cor_between_matrix_columns
 </code>
 </a>
 </li>
 <li>
-<a href="documentation.html#TanayLabUtilities.Documentation.@documented">
-<code>TanayLabUtilities.Documentation.@documented
+<a href="zero_correlation.html#TanayLabUtilities.ZeroCorrelation.zero_cor_between_vector_and_matrix_columns">
+<code>TanayLabUtilities.ZeroCorrelation.zero_cor_between_vector_and_matrix_columns
 </code>
 </a>
 </li>
 <li>
-<a href="documentation.html#TanayLabUtilities.Documentation.@source_location">
-<code>TanayLabUtilities.Documentation.@source_location
+<a href="zero_correlation.html#TanayLabUtilities.ZeroCorrelation.zero_cor_between_vectors">
+<code>TanayLabUtilities.ZeroCorrelation.zero_cor_between_vectors
 </code>
 </a>
 </li>
 </ul>
 </article>
 <nav class="docs-footer">
-<a class="docs-footer-prevpage" href="unique_names.html">« Unique Names
+<a class="docs-footer-prevpage" href="downsample.html">« Downsample
 </a>
-<a class="docs-footer-nextpage" href="handlers.html">Handlers »
+<a class="docs-footer-nextpage" href="cross_validations.html">Cross Validations »
 </a>
 <div class="flexbox-break">
 </div>
