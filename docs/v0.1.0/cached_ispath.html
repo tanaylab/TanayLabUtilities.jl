@@ -206,20 +206,10 @@
 </summary>
 <section>
 <div>
-<p>Wrap 
-<code>ispath
-</code> with a cache such that repeated calls do not go to the OS. This greatly speeds up operations when working with NFS data.
+<p>Speed up 
+<code>stat
+</code> calls, avoiding going to the OS. This greatly speeds up operations when working with NFS data. It assumes that all relevant filesystem modification operations are done through the API here. External modifications can be supported by specifying a timeout, so that the actual filesystem will be queried eventually for fresh results.
 </p>
-<div class="admonition is-info" id="Note-c65ad2f7d6d3617d">
-<header class="admonition-header">Note
-<a class="admonition-anchor" href="#Note-c65ad2f7d6d3617d" title="Permalink">
-</a>
-</header>
-<div class="admonition-body">
-<p>The code here is thread-safe.
-</p>
-</div>
-</div>
 </div>
 </section>
 </details>
@@ -243,48 +233,32 @@
 <p>Same as 
 <code>ispath
 </code>, except that if less than 
-<a href="cached_ispath.html#TanayLabUtilities.CachedIsPath.IS_PATH_CACHE_TIMEOUT_NS">
-<code>IS_PATH_CACHE_TIMEOUT_NS
+<a href="cached_ispath.html#TanayLabUtilities.CachedIsPath.IS_PATH_CACHE_TIMEOUT">
+<code>IS_PATH_CACHE_TIMEOUT
 </code>
 </a> has passed since the last time 
 <code>cached_ispath
 </code> was called for the same path, we reuse the result. If 
-<a href="cached_ispath.html#TanayLabUtilities.CachedIsPath.IS_PATH_CACHE_TIMEOUT_NS">
-<code>IS_PATH_CACHE_TIMEOUT_NS
+<a href="cached_ispath.html#TanayLabUtilities.CachedIsPath.IS_PATH_CACHE_TIMEOUT">
+<code>IS_PATH_CACHE_TIMEOUT
 </code>
 </a> is zero, this ignores the cache and simply calls 
 <code>ispath
 </code>. If 
-<a href="cached_ispath.html#TanayLabUtilities.CachedIsPath.IS_PATH_CACHE_TIMEOUT_NS">
-<code>IS_PATH_CACHE_TIMEOUT_NS
+<a href="cached_ispath.html#TanayLabUtilities.CachedIsPath.IS_PATH_CACHE_TIMEOUT">
+<code>IS_PATH_CACHE_TIMEOUT
 </code>
 </a> is negative, we always return the cached result.
 </p>
-<div class="admonition is-info" id="Note-678b54bbecd41e76">
-<header class="admonition-header">Note
-<a class="admonition-anchor" href="#Note-678b54bbecd41e76" title="Permalink">
-</a>
-</header>
-<div class="admonition-body">
-<p>Do not pass this a path that ends with a 
-<code>/
-</code>, or the empty string. We actually cache the list of files in the directory, since this gives much faster results when checking for multiple files in the same directory. However this requires being more careful with 
-<a href="cached_ispath.html#TanayLabUtilities.CachedIsPath.empty_ispath_cache!">
-<code>empty_ispath_cache!
-</code>
-</a>.
-</p>
-</div>
-</div>
 </div>
 </section>
 </details>
 </article>
 <article>
 <details class="docstring" open="true">
-<summary id="TanayLabUtilities.CachedIsPath.empty_ispath_cache!">
-<a class="docstring-binding" href="#TanayLabUtilities.CachedIsPath.empty_ispath_cache!">
-<code>TanayLabUtilities.CachedIsPath.empty_ispath_cache!
+<summary id="TanayLabUtilities.CachedIsPath.report_modified!">
+<a class="docstring-binding" href="#TanayLabUtilities.CachedIsPath.report_modified!">
+<code>TanayLabUtilities.CachedIsPath.report_modified!
 </code>
 </a> — 
 <span class="docstring-category">Function
@@ -293,12 +267,10 @@
 <section>
 <div>
 <pre>
-<code class="language-julia hljs">empty_ispath_cache!(path::Maybe{AbstractString} = nothing)::Nothing
+<code class="language-julia hljs">report_modified!(path::AbstractString)::Nothing
 </code>
 </pre>
-<p>Empty the 
-<code>cached_ispath
-</code> cache. If a path is specified, only clears the cached entry for this path (and every other file in the same directory).
+<p>Report that the specified file or directory was modified in some way, so delete all relevant cached data. This includes the list of files in the containing directory; if a directory is modified, all the cached data data for all its sub-directories is deleted as well.
 </p>
 </div>
 </section>
@@ -306,9 +278,9 @@
 </article>
 <article>
 <details class="docstring" open="true">
-<summary id="TanayLabUtilities.CachedIsPath.IS_PATH_CACHE_TIMEOUT_NS">
-<a class="docstring-binding" href="#TanayLabUtilities.CachedIsPath.IS_PATH_CACHE_TIMEOUT_NS">
-<code>TanayLabUtilities.CachedIsPath.IS_PATH_CACHE_TIMEOUT_NS
+<summary id="TanayLabUtilities.CachedIsPath.IS_PATH_CACHE_TIMEOUT">
+<a class="docstring-binding" href="#TanayLabUtilities.CachedIsPath.IS_PATH_CACHE_TIMEOUT">
+<code>TanayLabUtilities.CachedIsPath.IS_PATH_CACHE_TIMEOUT
 </code>
 </a> — 
 <span class="docstring-category">Constant
@@ -319,7 +291,7 @@
 <p>How long to hold on to 
 <code>ispath
 </code> results before going back to the OS and asking for an updated result. This can be controlled by setting the 
-<code>TLU_IS_PATH_CACHE_TIMEOUT_NS
+<code>TLU_IS_PATH_CACHE_TIMEOUT
 </code> environment variable.
 </p>
 <p>By default, this is set to a negative value, meaning we cache everything forever. This is fastest and works as long as the code using 
@@ -327,22 +299,14 @@
 <code>cached_ispath
 </code>
 </a> also invokes 
-<a href="cached_ispath.html#TanayLabUtilities.CachedIsPath.empty_ispath_cache!">
-<code>empty_ispath_cache!
-</code>
-</a>, for example the 
+<a href="cached_ispath.html#TanayLabUtilities.CachedIsPath.report_modified!">`report_modified!
+</a> (for example, the 
 <code>Daf
 </code> file system 
 <code>FilesDaf
-</code> format does this. If the code is designed to deal with external modifications to the file system, it should contain additional calls to 
-<a href="cached_ispath.html#TanayLabUtilities.CachedIsPath.cached_ispath">
-<code>cached_ispath
-</code>
-</a> or avoid using 
-<a href="cached_ispath.html#TanayLabUtilities.CachedIsPath.cached_ispath">
-<code>cached_ispath
-</code>
-</a> in the first place.
+</code> format does this). If the code is designed to deal with external modifications to the file system, it should contain additional calls to 
+<a href="cached_ispath.html#TanayLabUtilities.CachedIsPath.report_modified!">`report_modified!
+</a> to force refreshing the cache.
 </p>
 <p>If this is zero then 
 <a href="cached_ispath.html#TanayLabUtilities.CachedIsPath.cached_ispath">
@@ -352,7 +316,7 @@
 <code>ispath
 </code>. This is slow (especially when accessing network disks) but is &quot;safest&quot; as we will always return the correct answer regardless of anything. This is provided as a failsafe method for disabling the mechanism.
 </p>
-<p>Otherwise this can be set to the number of nanoseconds to hold cache entries for. A low value (a few seconds) will significantly improve performance while still allowing multiple processes to (eventually) react to external changes to the file system. This is provided for completeness.
+<p>Otherwise this can be set to the number of seconds to hold cache entries for. A low value (a few seconds) will significantly improve performance while still allowing multiple processes to (eventually) react to external changes to the file system. This is provided for completeness.
 </p>
 </div>
 </section>
@@ -374,8 +338,8 @@
 </a>
 </li>
 <li>
-<a href="cached_ispath.html#TanayLabUtilities.CachedIsPath.IS_PATH_CACHE_TIMEOUT_NS">
-<code>TanayLabUtilities.CachedIsPath.IS_PATH_CACHE_TIMEOUT_NS
+<a href="cached_ispath.html#TanayLabUtilities.CachedIsPath.IS_PATH_CACHE_TIMEOUT">
+<code>TanayLabUtilities.CachedIsPath.IS_PATH_CACHE_TIMEOUT
 </code>
 </a>
 </li>
@@ -386,8 +350,8 @@
 </a>
 </li>
 <li>
-<a href="cached_ispath.html#TanayLabUtilities.CachedIsPath.empty_ispath_cache!">
-<code>TanayLabUtilities.CachedIsPath.empty_ispath_cache!
+<a href="cached_ispath.html#TanayLabUtilities.CachedIsPath.report_modified!">
+<code>TanayLabUtilities.CachedIsPath.report_modified!
 </code>
 </a>
 </li>

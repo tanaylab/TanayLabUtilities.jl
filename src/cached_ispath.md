@@ -3,8 +3,8 @@
 ```@docs
 TanayLabUtilities.CachedIsPath
 TanayLabUtilities.CachedIsPath.cached_ispath
-TanayLabUtilities.CachedIsPath.empty_ispath_cache!
-TanayLabUtilities.CachedIsPath.IS_PATH_CACHE_TIMEOUT_NS
+TanayLabUtilities.CachedIsPath.report_modified!
+TanayLabUtilities.CachedIsPath.IS_PATH_CACHE_TIMEOUT
 ```
 
 ## Index

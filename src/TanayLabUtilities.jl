@@ -58,9 +58,6 @@ include("global_weak_cache.jl")
 include("kmeans.jl")
 @reexport using .KMeans
 
-include("cached_ispath.jl")
-@reexport using .CachedIsPath
-
 include("parallel_loops.jl")
 @reexport using .ParallelLoops
 
@@ -69,6 +66,9 @@ include("parallel_distances.jl")
 
 include("mostly_read_write_locks.jl")
 @reexport using .MostlyReadWriteLocks
+
+include("cached_ispath.jl")
+@reexport using .CachedIsPath
 
 include("extended_read_write_locks.jl")
 @reexport using .ExtendedReadWriteLocks

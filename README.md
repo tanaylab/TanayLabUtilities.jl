@@ -34,6 +34,10 @@ Two modules generate debug messages:
 `GlobalWeakCache` - will generate messages for every access of the global weak cache. This shouldn't be a lot of data.
 Useful for debugging whether global objects (e.g. open `Daf` repositories) are actually cached and reused.
 
+`CachedIsPath` - will generate messages for every operation of the `cached_ispath`. This will generate a lot of messages
+(since `Daf` files format uses the file system as a database of sorts). Useful for debugging whether the cache is
+properly cleared when file operations are done.
+
 ## Installation
 
 Just `Pkg.add("TanayLabUtilities")`, like installing any other Julia package.
