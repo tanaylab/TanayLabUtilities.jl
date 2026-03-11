@@ -78,7 +78,8 @@ of the elapsed time of the top-level loops, to identify what actually matters, a
 breakdown of the computations in each loop. It is sadly impossible to include threaded tasks in the same flamegraph in a
 meaningful way (at least not without extending the flamegraph format and visualization).
 
-If `progress` is specified, it is updated for each iteration.
+If `progress` is specified, it is updated for each iteration. If `progress_chunk` is specified, then `indices` must be a
+range `1:n`, and we throttle calls to the progress bar update to one every `progress_chunk`.
 
 !!! note
 
@@ -113,8 +114,14 @@ function parallel_loop_wo_rng(  # NOJET
     name::AbstractString = ".loop",
     policy::Symbol = :greedy,
     progress::Maybe{Progress} = nothing,  # NOLINT
+    progress_chunk::Maybe{Integer} = nothing,
 )::Nothing
     @assert policy in (:greedy, :static, :dynamic, :serial)
+
+    if progress_chunk !== nothing
+        @assert indices[1] == 1  # UNTESTED
+        @assert indices[end] == length(indices)  # UNTESTED
+    end
 
     base_private_storage = task_local_storage()
     base_is_in_parallel = get(base_private_storage, :is_in_parallel, false)
@@ -141,7 +148,13 @@ function parallel_loop_wo_rng(  # NOJET
             for index in indices
                 body(index)
                 if progress !== nothing
-                    next!(progress)  # UNTESTED
+                    if progress_chunk === nothing  # UNTESTED
+                        next!(progress)  # UNTESTED
+                    else
+                        if index % progress_chunk == 0  # UNTESTED
+                            next!(progress; step = progress_chunk)  # UNTESTED
+                        end
+                    end
                 end
             end
         else
@@ -156,7 +169,13 @@ function parallel_loop_wo_rng(  # NOJET
                     parallel_gc()
                     body(index)
                     if progress !== nothing
-                        next!(progress)  # NOJET # UNTESTED
+                        if progress_chunk === nothing  # UNTESTED
+                            next!(progress)  # NOJET # UNTESTED
+                        else
+                            if index % progress_chunk == 0  # UNTESTED
+                                next!(progress; step = progress_chunk)  # UNTESTED
+                            end
+                        end
                     end
                     return nothing
                 end
@@ -192,6 +211,10 @@ function parallel_loop_wo_rng(  # NOJET
                 end
             end
         end
+    end
+
+    if progress !== nothing && progress_chunk !== nothing && length(indices) % progress_chunk > 0
+        next!(progress; step = length(indices) % progress_chunk)  # UNTESTED
     end
 
     return nothing

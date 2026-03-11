@@ -69,6 +69,7 @@ makedocs(;
         "global_weak_cache.md",
         "kmeans.md",
         "cached_ispath.md",
+        "old_linux_mmap.md",
     ],
 )
 

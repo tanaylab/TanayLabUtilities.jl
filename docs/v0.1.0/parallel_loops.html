@@ -140,6 +140,10 @@
 <a class="tocitem" href="cached_ispath.html">Cached IsPath
 </a>
 </li>
+<li>
+<a class="tocitem" href="old_linux_mmap.html">Old Linux Mmap
+</a>
+</li>
 </ul>
 <div class="docs-version-selector field has-addons">
 <div class="control">
@@ -284,7 +288,15 @@
 </p>
 <p>If 
 <code>progress
-</code> is specified, it is updated for each iteration.
+</code> is specified, it is updated for each iteration. If 
+<code>progress_chunk
+</code> is specified, then 
+<code>indices
+</code> must be a range 
+<code>1:n
+</code>, and we throttle calls to the progress bar update to one every 
+<code>progress_chunk
+</code>.
 </p>
 <div class="admonition is-info" id="Note-e37bb17db76583e4">
 <header class="admonition-header">Note
@@ -637,7 +649,7 @@ OK
 <hr/>
 <p>This document was generated with 
 <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl
-</a> version 1.16.1. Using Julia version 1.11.8.
+</a> version 1.17.0. Using Julia version 1.11.5.
 </p>
 </section>
 <footer class="modal-card-foot">

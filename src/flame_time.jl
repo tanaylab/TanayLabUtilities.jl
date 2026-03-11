@@ -92,6 +92,8 @@ function __end__()::Nothing
                 print(file, " $(measurement.iterations)")
                 print(file, " $(measurement.elapsed_ns)")
                 print(file, " $(measurement.gc_ns)")
+                print(file, " $(measurement.gc_full_sweeps)")
+                print(file, " $(measurement.gc_pauses)")
                 print(file, " $(measurement.user_cpu_us)")
                 print(file, " $(measurement.system_cpu_us)")
                 print(file, " $(measurement.soft_page_faults)")
@@ -131,6 +133,8 @@ mutable struct SerialMeasurement
     iterations::Int64
     elapsed_ns::Int64
     gc_ns::Int64
+    gc_full_sweeps::Int64
+    gc_pauses::Int64
     user_cpu_us::Int64
     system_cpu_us::Int64
     soft_page_faults::Int64
@@ -147,6 +151,8 @@ function Base.copy(measurement::SerialMeasurement)::SerialMeasurement  # UNTESTE
         measurement.iterations,
         measurement.elapsed_ns,
         measurement.gc_ns,
+        measurement.gc_full_sweeps,
+        measurement.gc_pauses,
         measurement.user_cpu_us,
         measurement.system_cpu_us,
         measurement.soft_page_faults,
@@ -167,6 +173,8 @@ function combine_measurements(  # UNTESTED
         left_measurement.iterations + right_measurement.iterations,
         left_measurement.elapsed_ns + right_measurement.elapsed_ns,
         left_measurement.gc_ns + right_measurement.gc_ns,
+        left_measurement.gc_full_sweeps + right_measurement.gc_full_sweeps,
+        left_measurement.gc_pauses + right_measurement.gc_pauses,
         left_measurement.user_cpu_us + right_measurement.user_cpu_us,
         left_measurement.system_cpu_us + right_measurement.system_cpu_us,
         left_measurement.soft_page_faults + right_measurement.soft_page_faults,
@@ -270,7 +278,10 @@ function flame_timed(body::Function, name::AbstractString; iterations::Integer =
 
     start_elapsed_ns = time_ns()  # UNTESTED
     if !start_is_in_parallel  # UNTESTED
-        start_gc_ns = Base.gc_num().total_time  # UNTESTED
+        gc_num = Base.gc_num()  # UNTESTED
+        start_gc_ns = gc_num.total_time  # UNTESTED
+        start_gc_full_sweeps = gc_num.full_sweep  # UNTESTED
+        start_gc_pauses = gc_num.pause  # UNTESTED
         start_rusage = get_rusage()  # UNTESTED
         start_system_cpu_us = start_rusage.ru_stime[1] * 1000000 + start_rusage.ru_stime[2]  # UNTESTED
         start_user_cpu_us = start_rusage.ru_utime[1] * 1000000 + start_rusage.ru_utime[2]  # UNTESTED
@@ -295,6 +306,8 @@ function flame_timed(body::Function, name::AbstractString; iterations::Integer =
             new_measurement = ParallelMeasurement(1, iterations, elapsed_ns, 0)  # UNTESTED
         else
             gc_ns = Base.gc_num().total_time - start_gc_ns  # UNTESTED
+            gc_full_sweeps = Base.gc_num().full_sweep - start_gc_full_sweeps  # UNTESTED
+            gc_pauses = Base.gc_num().pause - start_gc_pauses  # UNTESTED
             end_rusage = get_rusage()  # UNTESTED
             system_cpu_us = end_rusage.ru_stime[1] * 1000000 + end_rusage.ru_stime[2] - start_system_cpu_us  # UNTESTED
             user_cpu_us = end_rusage.ru_utime[1] * 1000000 + end_rusage.ru_utime[2] - start_user_cpu_us  # UNTESTED
@@ -309,6 +322,8 @@ function flame_timed(body::Function, name::AbstractString; iterations::Integer =
                 iterations,
                 elapsed_ns,
                 gc_ns,
+                gc_full_sweeps,
+                gc_pauses,
                 user_cpu_us,
                 system_cpu_us,
                 soft_page_faults,
@@ -387,24 +402,28 @@ function finalize_flameview(;  # UNTESTED
             elapsed_ns = parse(Int64, fields[5])
             new_measurement = ParallelMeasurement(invocations, iterations, elapsed_ns, 0)
         else
-            @assert length(fields) == 14
+            @assert length(fields) == 16
             invocations = parse(Int64, fields[3])
             iterations = parse(Int64, fields[4])
             elapsed_ns = parse(Int64, fields[5])
             gc_ns = parse(Int64, fields[6])
-            user_cpu_us = parse(Int64, fields[7])
-            system_cpu_us = parse(Int64, fields[8])
-            soft_page_faults = parse(Int64, fields[9])
-            hard_page_faults = parse(Int64, fields[10])
-            read_blocks = parse(Int64, fields[11])
-            write_blocks = parse(Int64, fields[12])
-            voluntary_context_switches = parse(Int64, fields[13])
-            involuntary_context_switches = parse(Int64, fields[14])
+            gc_full_sweeps = parse(Int64, fields[7])
+            gc_pauses = parse(Int64, fields[7])
+            user_cpu_us = parse(Int64, fields[9])
+            system_cpu_us = parse(Int64, fields[10])
+            soft_page_faults = parse(Int64, fields[11])
+            hard_page_faults = parse(Int64, fields[12])
+            read_blocks = parse(Int64, fields[13])
+            write_blocks = parse(Int64, fields[14])
+            voluntary_context_switches = parse(Int64, fields[15])
+            involuntary_context_switches = parse(Int64, fields[16])
             new_measurement = SerialMeasurement(
                 invocations,
                 iterations,
                 elapsed_ns,
                 gc_ns,
+                gc_full_sweeps,
+                gc_pauses,
                 user_cpu_us,
                 system_cpu_us,
                 soft_page_faults,
@@ -479,6 +498,8 @@ function finalize_flameview(;  # UNTESTED
                     @assert measurement isa SerialMeasurement
                     parent_measurement.elapsed_ns -= measurement.elapsed_ns
                     parent_measurement.gc_ns -= measurement.gc_ns
+                    parent_measurement.gc_full_sweeps -= measurement.gc_full_sweeps
+                    parent_measurement.gc_pauses -= measurement.gc_pauses
                     parent_measurement.user_cpu_us -= measurement.user_cpu_us
                     parent_measurement.system_cpu_us -= measurement.system_cpu_us
                     parent_measurement.soft_page_faults -= measurement.soft_page_faults
@@ -506,7 +527,7 @@ function finalize_flameview(;  # UNTESTED
         for reversed_stack in reversed_sorted_reversed_stacks
             self_measurement = reversed_self_measurements_dict[reversed_stack]
             if self_measurement isa SerialMeasurement
-                empty_measurement = SerialMeasurement(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+                empty_measurement = SerialMeasurement(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
             else
                 empty_measurement = ParallelMeasurement(0, 0, 0, 0)
             end
@@ -572,22 +593,6 @@ function finalize_flameview(;  # UNTESTED
                     ) *
                     "&#10;" *
                     measurement_text(
-                        "GC";
-                        samples = folded_measurement.gc_ns,
-                        scale = 1e9,
-                        units = "seconds",
-                        base = folded_measurement.elapsed_ns,
-                    ) *
-                    "&#10;CPU:&#10;" *
-                    measurement_text(
-                        "- Total";
-                        samples = (folded_measurement.user_cpu_us + folded_measurement.system_cpu_us) * 1000,
-                        scale = 1e9,
-                        units = "seconds",
-                        base = folded_measurement.elapsed_ns,
-                    ) *
-                    "&#10;" *
-                    measurement_text(
                         "- User";
                         samples = folded_measurement.user_cpu_us * 1000,
                         scale = 1e9,
@@ -598,6 +603,31 @@ function finalize_flameview(;  # UNTESTED
                     measurement_text(
                         "- System";
                         samples = folded_measurement.system_cpu_us * 1000,
+                        scale = 1e9,
+                        units = "seconds",
+                        base = folded_measurement.elapsed_ns,
+                    ) *
+                    "&#10;Garbage collection:&#10;" *
+                    "&#10;" *
+                    measurement_text(
+                        "- GC time";
+                        samples = folded_measurement.gc_ns,
+                        scale = 1e9,
+                        units = "seconds",
+                        base = folded_measurement.elapsed_ns,
+                    ) *
+                    "&#10;" *
+                    measurement_text(
+                        "- GC sweeps";
+                        samples = folded_measurement.gc_full_sweeps,
+                        units = "full sweeps",
+                    ) *
+                    "&#10;" *
+                    measurement_text("- GC pauses"; samples = folded_measurement.gc_pauses, units = "pauses") *
+                    "&#10;CPU:&#10;" *
+                    measurement_text(
+                        "- Total";
+                        samples = (folded_measurement.user_cpu_us + folded_measurement.system_cpu_us) * 1000,
                         scale = 1e9,
                         units = "seconds",
                         base = folded_measurement.elapsed_ns,

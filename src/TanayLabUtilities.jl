@@ -79,4 +79,7 @@ include("downsample.jl")
 include("zero_correlation.jl")
 @reexport using .ZeroCorrelation
 
+include("old_linux_mmap.jl")
+@reexport using .OldLinuxMmap
+
 end  # module
