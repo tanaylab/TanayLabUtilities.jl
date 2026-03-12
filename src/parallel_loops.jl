@@ -3,7 +3,6 @@ Parallel loops.
 """
 module ParallelLoops
 
-export parallel_gc
 export parallel_loop_with_rng
 export parallel_loop_wo_rng
 export DebugProgress
@@ -22,34 +21,6 @@ import Random.default_rng
 TOTAL_MEMORY = 0
 
 """
-Above what fraction of the total memory to enable GC in parallel loops. If set to a non-zero value, assume the machine
-is "mostly" dedicated to the computation, and only trigger GC when working in parallel if (at the end of a parallel loop
-iteration) the used memory is at least this fraction of the total memory of the machine.
-
-This is initialized from the `TLU_LIVE_BYTES_GC_THRESHOLD_FRACTION` environment variable.
-"""
-TLU_LIVE_BYTES_GC_THRESHOLD_FRACTION = 0.0
-
-function __init__()::Nothing
-    live_bytes_gc_threshold_fraction = get(ENV, "TLU_LIVE_BYTES_GC_THRESHOLD_FRACTION", nothing)
-    global TLU_LIVE_BYTES_GC_THRESHOLD_FRACTION
-    if live_bytes_gc_threshold_fraction === nothing
-        TLU_LIVE_BYTES_GC_THRESHOLD_FRACTION = 0.0
-    else
-        TLU_LIVE_BYTES_GC_THRESHOLD_FRACTION = parse(Float64, live_bytes_gc_threshold_fraction)  # UNTESTED
-        @assert 0 <= TLU_LIVE_BYTES_GC_THRESHOLD_FRACTION < 1  # UNTESTED
-    end
-    if TLU_LIVE_BYTES_GC_THRESHOLD_FRACTION != 0.0
-        global TOTAL_MEMORY  # UNTESTED
-        TOTAL_MEMORY = Sys.total_memory()  # UNTESTED
-        @info "Will only GC when using over: $(TLU_LIVE_BYTES_GC_THRESHOLD_FRACTION)" *  # UNTESTED
-              " of the $(delimited_number(Int(round(TOTAL_MEMORY / 1e6))))MB memory in parallel loops." _group =
-            :tlu_env
-    end
-    return nothing
-end
-
-"""
     parallel_loop_wo_rng(
         body::Function,
         indices::AbstractVector{<:Integer};
@@ -61,12 +32,6 @@ end
 Run the `body` in parallel, passing it the iteration `index`. The `policy` is passed to `@threads` if it is one of (the
 default `:greedy`, `:dynamic`, or `:static`). If it is `:serial`, then the loop is not run in parallel (useful for
 debugging).
-
-!!! note
-
-    If the code runs in parallel, we disable the GC through it and invoke [`parallel_gc`](@ref) at the start of each
-    iteration. In general parallel code "shouldn't" perform "many" memory allocations. Use [`ParallelStorage`](@ref
-    TanayLabUtilities.ParallelStorage) if large temporary data is needed.
 
 If this is nested (and the containing loop is parallel), `policy` is ignored and the loop is executed serially. This
 allows functions to be parallel if invoked from the main thread, but become serial if invoked from inside an already
@@ -144,49 +109,49 @@ function parallel_loop_wo_rng(  # NOJET
     end
 
     flame_timed(name; iterations = policy == :serial ? length(indices) : -length(indices)) do
-        if policy == :serial
-            for index in indices
-                body(index)
-                if progress !== nothing
-                    if progress_chunk === nothing  # UNTESTED
-                        next!(progress)  # UNTESTED
-                    else
-                        if index % progress_chunk == 0  # UNTESTED
-                            next!(progress; step = progress_chunk)  # UNTESTED
-                        end
-                    end
-                end
+        try
+            if progress !== nothing
+                disable_logging(Logging.Debug)  # UNTESTED
             end
-        else
-            @inline function iteration_body(index::Integer)::Nothing
-                index_private_storage = task_local_storage()
-                @assert index_private_storage !== base_private_storage
-                index_private_storage[:is_in_parallel] = true
-                index_flame_stack = [base_flame_stack]
-                index_private_storage[:flame_stack] = index_flame_stack
 
-                flame_timed(name) do
-                    parallel_gc()
+            if policy == :serial
+                for index in indices
                     body(index)
                     if progress !== nothing
                         if progress_chunk === nothing  # UNTESTED
-                            next!(progress)  # NOJET # UNTESTED
+                            next!(progress)  # UNTESTED
                         else
                             if index % progress_chunk == 0  # UNTESTED
                                 next!(progress; step = progress_chunk)  # UNTESTED
                             end
                         end
                     end
+                end
+            else
+                @inline function iteration_body(index::Integer)::Nothing
+                    index_private_storage = task_local_storage()
+                    @assert index_private_storage !== base_private_storage
+                    index_private_storage[:is_in_parallel] = true
+                    index_flame_stack = [base_flame_stack]
+                    index_private_storage[:flame_stack] = index_flame_stack
+
+                    flame_timed(name) do
+                        body(index)
+                        if progress !== nothing
+                            if progress_chunk === nothing  # UNTESTED
+                                next!(progress)  # NOJET # UNTESTED
+                            else
+                                if index % progress_chunk == 0  # UNTESTED
+                                    next!(progress; step = progress_chunk)  # UNTESTED
+                                end
+                            end
+                        end
+                        return nothing
+                    end
+
                     return nothing
                 end
 
-                return nothing
-            end
-
-            if TLU_LIVE_BYTES_GC_THRESHOLD_FRACTION > 0
-                GC.enable(false)  # UNTESTED
-            end
-            try
                 if policy == :greedy
                     @threads :greedy for index in indices
                         iteration_body(index)
@@ -205,10 +170,11 @@ function parallel_loop_wo_rng(  # NOJET
                 else
                     @assert false
                 end
-            finally
-                if TLU_LIVE_BYTES_GC_THRESHOLD_FRACTION > 0
-                    GC.enable(true)  # UNTESTED
-                end
+            end
+
+        finally
+            if progress !== nothing
+                disable_logging(Logging.BelowMinLevel)  # UNTESTED
             end
         end
     end
@@ -352,24 +318,6 @@ function DebugProgress(n::Integer; group::Maybe{Symbol} = nothing, kwargs...)::M
     else
         return nothing
     end
-end
-
-"""
-    parallel_gc()::Nothing
-
-Enable GC inside a parallel loop if the memory pressure is high, that is, if the currently used memory is above
-[`TLU_LIVE_BYTES_GC_THRESHOLD_FRACTION`](@ref) of the total system memory. If the memory usage is less, disabled GC. This is
-invoked automatically at the start of each iteration. If the parallel code does so many allocations that it makes sense
-to sprinkle additional calls to this in the middle of it, then it is worthwhile to reconsider it. Using
-[`ParallelStorage`](@ref TanayLabUtilities.ParallelStorage) may help.
-
-This is a no-op unless [`TLU_LIVE_BYTES_GC_THRESHOLD_FRACTION`](@ref) is set to a zero value (the default).
-"""
-@inline function parallel_gc()::Nothing
-    if TLU_LIVE_BYTES_GC_THRESHOLD_FRACTION > 0
-        GC.enable(Base.gc_live_bytes() > TOTAL_MEMORY * TLU_LIVE_BYTES_GC_THRESHOLD_FRACTION)  # UNTESTED
-    end
-    return nothing
 end
 
 end

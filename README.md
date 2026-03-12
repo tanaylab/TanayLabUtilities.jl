@@ -17,10 +17,6 @@ The following environment variables affect the code's behavior:
 files do/not exist in directories of interest. The default is a negative value (cache indefinitely, which "should" be
 fastest and safe). Set to 0 to completely disable caching or to the number of nanoseconds to cache entries for.
 
-`TLU_LIVE_BYTES_GC_THRESHOLD_FRACTION` - if set, then parallel loops will disable garbage collection as long as the
-total memory used by the program is less than this fraction of the machine's total memory. Don't use it unless you know
-what you are doing.
-
 If any of the above is set to a value that triggers the behavior, an `@info` log message is generated under the
 `tlu_env` group.
 
