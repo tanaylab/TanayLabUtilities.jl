@@ -82,4 +82,7 @@ include("zero_correlation.jl")
 include("old_linux_mmap.jl")
 @reexport using .OldLinuxMmap
 
+include("bits_loops.jl")
+@reexport using .BitsLoops
+
 end  # module

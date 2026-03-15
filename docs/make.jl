@@ -55,6 +55,7 @@ makedocs(;
         "kmeans.md",
         "cached_ispath.md",
         "old_linux_mmap.md",
+        "bits_loops.md",
     ],
 )
 
