@@ -112,6 +112,7 @@ function parallel_loop_wo_rng(  # NOJET
         try
             if progress !== nothing
                 disable_logging(Logging.Debug)  # UNTESTED
+                update!(progress, 0)  # NOJET # UNTESTED
             end
 
             if policy == :serial
