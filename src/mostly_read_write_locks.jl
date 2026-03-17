@@ -8,7 +8,7 @@ export MostlyReadWriteLock
 using Base.Threads
 using ConcurrentUtils
 
-import Base.AbstractLock
+import Base.AbstractLock  # NOLINT
 
 using ..FlameTime
 using ..Types

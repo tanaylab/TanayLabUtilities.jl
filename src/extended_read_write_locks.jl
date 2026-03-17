@@ -112,7 +112,7 @@ using ConcurrentUtils
 
 using ..Types
 
-import Base.AbstractLock
+import Base.AbstractLock  # NOLINT
 
 using ..MostlyReadWriteLocks
 
