@@ -222,6 +222,139 @@
 </article>
 <article>
 <details class="docstring" open="true">
+<summary id="TanayLabUtilities.KMeans.KMeansBuffers">
+<a class="docstring-binding" href="#TanayLabUtilities.KMeans.KMeansBuffers">
+<code>TanayLabUtilities.KMeans.KMeansBuffers
+</code>
+</a> — 
+<span class="docstring-category">Type
+</span>
+</summary>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">KMeansBuffers{T}(; n_dims::Integer, max_k::Integer, n_points::Integer)::KMeansBuffers where {T&lt;: AbstractFloat}
+KMeansBuffers(buffers::KMeansBuffers{T}; n_dims::Integer, k::Integer, n_points::Integer) where {T &lt;: AbstractFloat}
+</code>
+</pre>
+<p>Pre-allocate buffers for allocation-free K-Means computation. Create a smaller view sharing the storage with 
+<code>KMeansBuffers(buffers; n_dims, k, n_points)
+</code>.
+</p>
+</div>
+</section>
+</details>
+</article>
+<article>
+<details class="docstring" open="true">
+<summary id="TanayLabUtilities.KMeans.KmeansResultView">
+<a class="docstring-binding" href="#TanayLabUtilities.KMeans.KmeansResultView">
+<code>TanayLabUtilities.KMeans.KmeansResultView
+</code>
+</a> — 
+<span class="docstring-category">Type
+</span>
+</summary>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">KmeansResultView
+</code>
+</pre>
+<p>A view into 
+<code>KMeansBuffers
+</code> that provides the same accessor interface as 
+<code>Clustering.KmeansResult
+</code> (
+<code>assignments
+</code>, 
+<code>counts
+</code>, 
+<code>wcounts
+</code>, 
+<code>nclusters
+</code>, 
+<code>totalcost
+</code>) without allocating.
+</p>
+</div>
+</section>
+</details>
+</article>
+<article>
+<details class="docstring" open="true">
+<summary id="TanayLabUtilities.KMeans.kmeans_in_buffers">
+<a class="docstring-binding" href="#TanayLabUtilities.KMeans.kmeans_in_buffers">
+<code>TanayLabUtilities.KMeans.kmeans_in_buffers
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+</summary>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">kmeans_in_buffers(
+    X::AbstractMatrix{&lt;:Real},
+    k::Integer;
+    buffers::Maybe{KMeansBuffers} = ```nothing```,
+    maxiter::Integer = ```100```,
+    tol::Real = ```1.0e-6```,
+    distance::SemiMetric = ```Distances.SqEuclidean```,
+    rng::AbstractRNG = default_rng(),
+)::Union{KmeansResult, KmeansResultView}
+</code>
+</pre>
+<p>Same as 
+<code>kmeans
+</code>, but if 
+<code>buffers
+</code> are specified, run allocation-free code. Seeding is restricted to 
+<code>:kmpp
+</code>. Implementation is otherwise identical to `Clustering.kmeans.
+</p>
+</div>
+</section>
+</details>
+</article>
+<article>
+<details class="docstring" open="true">
+<summary id="TanayLabUtilities.KMeans.kmeans_in_buffers!">
+<a class="docstring-binding" href="#TanayLabUtilities.KMeans.kmeans_in_buffers!">
+<code>TanayLabUtilities.KMeans.kmeans_in_buffers!
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+</summary>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">kmeans_in_buffers!(
+    X::AbstractMatrix{&lt;:Real},
+    centers::AbstractMatrix{&lt;:AbstractFloat};
+    buffers::Maybe{KMeansBuffers} = ```nothing```,
+    maxiter::Integer = ```100```,
+    tol::Real = ```1.0e-6```,
+    distance::SemiMetric = ```Distances.SqEuclidean```,
+    rng::AbstractRNG = default_rng(),
+)::Union{KmeansResult, KmeansResultView}
+</code>
+</pre>
+<p>Same as 
+<code>kmeans!
+</code>, but if 
+<code>buffers
+</code> are specified, run allocation-free code. Seeding is restricted to 
+<code>:kmpp
+</code>. Implementation is otherwise identical to `Clustering.kmeans!.
+</p>
+</div>
+</section>
+</details>
+</article>
+<article>
+<details class="docstring" open="true">
 <summary id="TanayLabUtilities.KMeans.kmeans_in_rounds">
 <a class="docstring-binding" href="#TanayLabUtilities.KMeans.kmeans_in_rounds">
 <code>TanayLabUtilities.KMeans.kmeans_in_rounds
@@ -237,9 +370,10 @@
     values_of_points::AbstractMatrix{&lt;:AbstractFloat},
     k::Integer;
     centers::Maybe{AbstractMatrix{&lt;:AbstractFloat}} = ```nothing```,
+    buffers::Maybe{Tuple{KMeansBuffers, KMeansBuffers}} = ```nothing```,
     rounds::Integer = ```10```,
     rng::AbstractRNG = default_rng(),
-)::KmeansResult
+)::Union{KmeansResult, KmeansResultView}
 </code>
 </pre>
 <p>Run 
@@ -247,6 +381,22 @@
 </code> multiple times with different random seeds (using 
 <code>rng
 </code>) and return the best results. This is needed because K-Means is a heuristic and tends to occasionally get stuck in a local minimum.
+</p>
+<p>If 
+<code>buffers
+</code> are specified, runs allocation-free using 
+<a href="kmeans.html#TanayLabUtilities.KMeans.kmeans_in_buffers">
+<code>kmeans_in_buffers
+</code>
+</a> / 
+<a href="kmeans.html#TanayLabUtilities.KMeans.kmeans_in_buffers!">
+<code>kmeans_in_buffers!
+</code>
+</a>. Otherwise (the default), falls back to using 
+<code>Clustering.kmeans
+</code> / 
+<code>Clustering.kmeans!
+</code>.
 </p>
 </div>
 </section>
@@ -264,6 +414,30 @@
 <li>
 <a href="kmeans.html#TanayLabUtilities.KMeans">
 <code>TanayLabUtilities.KMeans
+</code>
+</a>
+</li>
+<li>
+<a href="kmeans.html#TanayLabUtilities.KMeans.KMeansBuffers">
+<code>TanayLabUtilities.KMeans.KMeansBuffers
+</code>
+</a>
+</li>
+<li>
+<a href="kmeans.html#TanayLabUtilities.KMeans.KmeansResultView">
+<code>TanayLabUtilities.KMeans.KmeansResultView
+</code>
+</a>
+</li>
+<li>
+<a href="kmeans.html#TanayLabUtilities.KMeans.kmeans_in_buffers">
+<code>TanayLabUtilities.KMeans.kmeans_in_buffers
+</code>
+</a>
+</li>
+<li>
+<a href="kmeans.html#TanayLabUtilities.KMeans.kmeans_in_buffers!">
+<code>TanayLabUtilities.KMeans.kmeans_in_buffers!
 </code>
 </a>
 </li>
