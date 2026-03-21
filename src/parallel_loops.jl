@@ -12,6 +12,7 @@ using ..Types
 using ..FlameTime
 
 using Base.Threads
+using LinearAlgebra
 using Logging
 using ProgressMeter
 using Random
@@ -155,23 +156,29 @@ function parallel_loop_wo_rng(  # NOJET
                     return nothing
                 end
 
-                if policy == :greedy
-                    @threads :greedy for index in indices
-                        iteration_body(index)
-                    end
+                saved_blas_threads = BLAS.get_num_threads()
+                BLAS.set_num_threads(1)
+                try
+                    if policy == :greedy
+                        @threads :greedy for index in indices
+                            iteration_body(index)
+                        end
 
-                elseif policy == :static
-                    @threads :static for index in indices
-                        iteration_body(index)
-                    end
+                    elseif policy == :static
+                        @threads :static for index in indices
+                            iteration_body(index)
+                        end
 
-                elseif policy == :dynamic
-                    @threads :dynamic for index in indices
-                        iteration_body(index)
-                    end
+                    elseif policy == :dynamic
+                        @threads :dynamic for index in indices
+                            iteration_body(index)
+                        end
 
-                else
-                    @assert false
+                    else
+                        @assert false
+                    end
+                finally
+                    BLAS.set_num_threads(saved_blas_threads)
                 end
             end
 
