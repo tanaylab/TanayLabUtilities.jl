@@ -93,7 +93,7 @@ function Base.trylock(lock::MostlyReadWriteLock)::Bool  # UNTESTED
     return true
 end
 
-function Base.lock(action::Function, lock::MostlyReadWriteLock)::Any  # UNTESTED
+function Base.lock(action::Function, lock::MostlyReadWriteLock)::Any
     Base.lock(lock)  # NOLINT
     try
         return action()
@@ -122,7 +122,7 @@ function ConcurrentUtils.lock_read(lock::MostlyReadWriteLock)::Nothing
     return nothing
 end
 
-function ConcurrentUtils.lock_read(action::Function, lock::MostlyReadWriteLock)::Any  # UNTESTED
+function ConcurrentUtils.lock_read(action::Function, lock::MostlyReadWriteLock)::Any
     lock_read(lock)
     try
         return action()

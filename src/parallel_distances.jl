@@ -87,8 +87,8 @@ function parallel_pairwise(
             policy,
             progress,
         ) do Y_column_index
-            @views Y_column = Y[:, Y_column_index]
-            result[:, Y_column_index] = colwise(distance, X, Y_column)
+            @views Y_column_view = Y[:, Y_column_index]
+            result[:, Y_column_index] = colwise(distance, X, Y_column_view)
             return nothing
         end
     end
@@ -124,10 +124,10 @@ function parallel_pairwise(
             policy,
             progress,
         ) do column_index
-            @views column = X[:, column_index]
-            @views columns = X[:, column_index:n_columns]
+            @views column_view = X[:, column_index]
+            @views columns_view = X[:, column_index:n_columns]
             result[column_index, column_index:n_columns] =
-                result[column_index:n_columns, column_index] = colwise(distance, column, columns)
+                result[column_index:n_columns, column_index] = colwise(distance, column_view, columns_view)
             return nothing
         end
     end
@@ -195,9 +195,9 @@ function parallel_colwise(  # FLAKY TESTED
             policy,
             progress,
         ) do column_index
-            @views X_column = X[:, column_index]
-            @views Y_column = Y[:, column_index]
-            result[column_index] = evaluate(distance, X_column, Y_column)
+            @views X_column_view = X[:, column_index]
+            @views Y_column_view = Y[:, column_index]
+            result[column_index] = evaluate(distance, X_column_view, Y_column_view)
             return nothing
         end
         return result
