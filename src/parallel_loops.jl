@@ -309,6 +309,9 @@ function parallel_loop_with_rng(  # NOJET
 end
 
 function is_debug_enabled_for_caller(group::Maybe{Symbol} = nothing)  # UNTESTED
+    if get(ENV, "JULIA_DEBUG", "") == ""
+        return false
+    end
     logger = Logging.current_logger()
     if logger.min_level <= Logging.Debug
         return true
