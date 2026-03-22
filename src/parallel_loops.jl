@@ -3,9 +3,10 @@ Parallel loops.
 """
 module ParallelLoops
 
+export DebugProgress
+export is_in_parallel_loop
 export parallel_loop_with_rng
 export parallel_loop_wo_rng
-export DebugProgress
 
 using ..Brief
 using ..Types
@@ -20,6 +21,16 @@ using Random
 import Random.default_rng
 
 TOTAL_MEMORY = 0
+
+"""
+    is_in_parallel_loop()::Bool
+
+Return whether we are inside a [`parallel_loop_wo_rng`](@ref) or [`parallel_loop_with_rng`](@ref).
+"""
+function is_in_parallel_loop()::Bool  # UNTESTED
+    base_private_storage = task_local_storage()
+    return get(base_private_storage, :is_in_parallel, false)
+end
 
 """
     parallel_loop_wo_rng(
@@ -90,7 +101,7 @@ function parallel_loop_wo_rng(  # NOJET
     end
 
     base_private_storage = task_local_storage()
-    base_is_in_parallel = get(base_private_storage, :is_in_parallel, false)
+    base_is_in_parallel_loop = get(base_private_storage, :is_in_parallel_loop, false)
     base_flame_stack = FlameTime.get_flame_stack(base_private_storage)
     if base_flame_stack !== nothing
         if startswith(name, ".")  # UNTESTED
@@ -102,7 +113,7 @@ function parallel_loop_wo_rng(  # NOJET
         name = name[2:end]
     end
 
-    if base_is_in_parallel
+    if base_is_in_parallel_loop
         progress = nothing  # UNTESTED
         if policy != :serial  # UNTESTED
             policy = :serial  # UNTESTED
@@ -135,7 +146,7 @@ function parallel_loop_wo_rng(  # NOJET
                 @inline function iteration_body(index::Integer)::Nothing
                     index_private_storage = task_local_storage()
                     @assert index_private_storage !== base_private_storage
-                    index_private_storage[:is_in_parallel] = true
+                    index_private_storage[:is_in_parallel_loop] = true
                     index_flame_stack = [base_flame_stack]
                     index_private_storage[:flame_stack] = index_flame_stack
 
