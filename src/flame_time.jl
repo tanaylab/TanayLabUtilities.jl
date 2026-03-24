@@ -267,7 +267,7 @@ function flame_timed(body::Function, name::AbstractString; iterations::Integer =
     end
 
     start_private_storage = task_local_storage()  # UNTESTED
-    start_is_in_parallel = get(start_private_storage, :is_in_parallel, false)  # UNTESTED
+    start_is_in_parallel = get(start_private_storage, :is_in_parallel_loop, false)  # UNTESTED
     start_flame_stack = get_flame_stack(start_private_storage)  # UNTESTED
     @assert start_flame_stack !== nothing  # UNTESTED
 
@@ -408,7 +408,7 @@ function finalize_flameview(;  # UNTESTED
             elapsed_ns = parse(Int64, fields[5])
             gc_ns = parse(Int64, fields[6])
             gc_full_sweeps = parse(Int64, fields[7])
-            gc_pauses = parse(Int64, fields[7])
+            gc_pauses = parse(Int64, fields[8])
             user_cpu_us = parse(Int64, fields[9])
             system_cpu_us = parse(Int64, fields[10])
             soft_page_faults = parse(Int64, fields[11])

@@ -214,7 +214,7 @@
 </g>
 </g>
 <!-- Documentation&#45;&gt;MatrixLayouts -->
-<g id="edge10" class="edge">
+<g id="edge11" class="edge">
 <title>Documentation&#45;&gt;MatrixLayouts</title>
 <path fill="none" stroke="#000000" d="M393.054,-164.9197C411.7212,-156.219 439.4828,-143.2792 460.6047,-133.4343"/>
 <polygon fill="#000000" stroke="#000000" points="462.2004,-136.5521 469.7856,-129.155 459.2431,-130.2074 462.2004,-136.5521"/>
@@ -301,7 +301,7 @@
 </g>
 </g>
 <!-- Handlers&#45;&gt;MatrixLayouts -->
-<g id="edge11" class="edge">
+<g id="edge10" class="edge">
 <title>Handlers&#45;&gt;MatrixLayouts</title>
 <path fill="none" stroke="#000000" d="M573.0813,-164.9197C557.6893,-156.4541 535.001,-143.9755 517.2984,-134.2391"/>
 <polygon fill="#000000" stroke="#000000" points="518.5035,-130.9075 508.0546,-129.155 515.13,-137.041 518.5035,-130.9075"/>

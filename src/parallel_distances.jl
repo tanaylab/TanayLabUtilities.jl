@@ -21,6 +21,7 @@ using ..Types
         dims::Integer,
         policy::Symbol = :greedy,
         progress::Maybe{Progress} = nothing
+        progress_chunk::Maybe{Integer} = nothing,
     )::AbstractMatrix
 
 A parallel version of `pairwise`. This will use [`parallel_loop_wo_rng`](@ref) over the columns of `Y`, with the
@@ -63,10 +64,11 @@ function parallel_pairwise(
     dims::Integer,
     policy::Symbol = :greedy,
     progress::Maybe{Progress} = nothing,
+    progress_chunk::Maybe{Integer} = nothing,
 )::AbstractMatrix
     @assert dims in (1, 2)
     if dims == 1
-        return flipped(parallel_pairwise(distance, flipped(X), flipped(Y); dims = 2, policy, progress))  # UNTESTED
+        return flipped(parallel_pairwise(distance, flipped(X), flipped(Y); dims = 2, policy, progress, progress_chunk))  # UNTESTED
     end
 
     @assert policy in (:serial, :greedy, :dynamic, :static)
@@ -102,6 +104,7 @@ function parallel_pairwise(
     dims::Integer,
     policy::Symbol = :greedy,
     progress::Maybe{Progress} = nothing,
+    progress_chunk::Maybe{Integer} = nothing,
 )::AbstractMatrix
     @assert dims in (1, 2)
     if dims == 1
@@ -123,6 +126,7 @@ function parallel_pairwise(
             name = "pairwise." * string(nameof(typeof(distance))),
             policy,
             progress,
+            progress_chunk,
         ) do column_index
             @views column_view = X[:, column_index]
             @views columns_view = X[:, column_index:n_columns]

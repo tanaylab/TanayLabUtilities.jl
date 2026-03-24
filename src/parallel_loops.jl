@@ -29,7 +29,7 @@ Return whether we are inside a [`parallel_loop_wo_rng`](@ref) or [`parallel_loop
 """
 function is_in_parallel_loop()::Bool  # UNTESTED
     base_private_storage = task_local_storage()
-    return get(base_private_storage, :is_in_parallel, false)
+    return get(base_private_storage, :is_in_parallel_loop, false)
 end
 
 """
