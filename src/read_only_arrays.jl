@@ -50,74 +50,74 @@ An immutable view of an `array`, using `SparseArrays.ReadOnly`. If the array is 
 # Base
 
 base = [0 1 2; 3 4 0]
-@assert !is_read_only_array(base)
+@assert !is_read_only_array(base);
 
 read_only = read_only_array(base)
-@assert is_read_only_array(read_only)
-@assert read_only_array(read_only) === read_only
+@assert is_read_only_array(read_only);
+@assert read_only_array(read_only) === read_only;
 
 # Named
 
 using NamedArrays
 
 named = NamedArray(base)
-@assert !is_read_only_array(named)
+@assert !is_read_only_array(named);
 
 named_read_only = read_only_array(named)
-@assert named_read_only isa NamedArray
-@assert is_read_only_array(named_read_only)
-@assert read_only_array(named_read_only) === named_read_only
+@assert named_read_only isa NamedArray;
+@assert is_read_only_array(named_read_only);
+@assert read_only_array(named_read_only) === named_read_only;
 
 # Permuted
 
 permuted = PermutedDimsArray(base, (2, 1))
-@assert !is_read_only_array(permuted)
+@assert !is_read_only_array(permuted);
 
 permuted_read_only = read_only_array(permuted)
-@assert permuted_read_only isa PermutedDimsArray
-@assert is_read_only_array(permuted_read_only)
-@assert read_only_array(permuted_read_only) === permuted_read_only
+@assert permuted_read_only isa PermutedDimsArray;
+@assert is_read_only_array(permuted_read_only);
+@assert read_only_array(permuted_read_only) === permuted_read_only;
 
 unpermuted = PermutedDimsArray(base, (1, 2))
-@assert !is_read_only_array(unpermuted)
+@assert !is_read_only_array(unpermuted);
 
 unpermuted_read_only = read_only_array(unpermuted)
-@assert unpermuted_read_only isa PermutedDimsArray
-@assert is_read_only_array(unpermuted_read_only)
-@assert read_only_array(unpermuted_read_only) === unpermuted_read_only
+@assert unpermuted_read_only isa PermutedDimsArray;
+@assert is_read_only_array(unpermuted_read_only);
+@assert read_only_array(unpermuted_read_only) === unpermuted_read_only;
 
 # LinearAlgebra
 
 using LinearAlgebra
 
 transposed = transpose(base)
-@assert !is_read_only_array(transposed)
+@assert !is_read_only_array(transposed);
 
 transposed_read_only = read_only_array(transposed)
-@assert transposed_read_only isa Transpose
-@assert is_read_only_array(transposed_read_only)
-@assert read_only_array(transposed_read_only) === transposed_read_only
+@assert transposed_read_only isa Transpose;
+@assert is_read_only_array(transposed_read_only);
+@assert read_only_array(transposed_read_only) === transposed_read_only;
 
 adjointed = adjoint(base)
-@assert !is_read_only_array(adjointed)
+@assert !is_read_only_array(adjointed);
 
 adjointed_read_only = read_only_array(adjointed)
-@assert adjointed_read_only isa Adjoint
-@assert is_read_only_array(adjointed_read_only)
-@assert read_only_array(adjointed_read_only) === adjointed_read_only
+@assert adjointed_read_only isa Adjoint;
+@assert is_read_only_array(adjointed_read_only);
+@assert read_only_array(adjointed_read_only) === adjointed_read_only;
 
 # Sparse
 
 using SparseArrays
 
 sparse = SparseMatrixCSC(base)
-@assert !is_read_only_array(sparse)
+@assert !is_read_only_array(sparse);
 
 sparse_read_only = read_only_array(sparse)
-@assert issparse(sparse_read_only)
-@assert is_read_only_array(sparse_read_only)
-@assert is_read_only_array(sparse_read_only)
-@assert read_only_array(sparse_read_only) === sparse_read_only
+@assert issparse(sparse_read_only);
+@assert is_read_only_array(sparse_read_only);
+@assert is_read_only_array(sparse_read_only);
+@assert read_only_array(sparse_read_only) === sparse_read_only;
 
 # output
 ```
@@ -192,49 +192,49 @@ as-is.
 ```jldoctest
 base = [0 1 2; 3 4 0]
 
-@assert mutable_array(base) === base
+@assert mutable_array(base) === base;
 
 read_only = read_only_array(base)
-@assert mutable_array(read_only) === base
+@assert mutable_array(read_only) === base;
 
 # Named
 
 using NamedArrays
 
 named = NamedArray(base)
-@assert !is_read_only_array(named)
+@assert !is_read_only_array(named);
 
-@assert mutable_array(named) === named
-@assert mutable_array(read_only_array(named)).array === named.array
+@assert mutable_array(named) === named;
+@assert mutable_array(read_only_array(named)).array === named.array;
 
 # Permuted
 
 permuted = PermutedDimsArray(base, (2, 1))
 
-@assert mutable_array(permuted) === permuted
-@assert mutable_array(read_only_array(permuted)) === permuted
+@assert mutable_array(permuted) === permuted;
+@assert mutable_array(read_only_array(permuted)) === permuted;
 
 unpermuted = PermutedDimsArray(base, (1, 2))
-@assert !is_read_only_array(unpermuted)
+@assert !is_read_only_array(unpermuted);
 
-@assert mutable_array(unpermuted) === unpermuted
-@assert mutable_array(read_only_array(unpermuted)) === unpermuted
+@assert mutable_array(unpermuted) === unpermuted;
+@assert mutable_array(read_only_array(unpermuted)) === unpermuted;
 
 # LinearAlgebra
 
 using LinearAlgebra
 
 transposed = transpose(base)
-@assert !is_read_only_array(transposed)
+@assert !is_read_only_array(transposed);
 
-@assert mutable_array(transposed) === transposed
-@assert mutable_array(read_only_array(transposed)) === transposed
+@assert mutable_array(transposed) === transposed;
+@assert mutable_array(read_only_array(transposed)) === transposed;
 
 adjointed = adjoint(base)
-@assert !is_read_only_array(adjointed)
+@assert !is_read_only_array(adjointed);
 
-@assert mutable_array(adjointed) === adjointed
-@assert mutable_array(read_only_array(adjointed)) === adjointed
+@assert mutable_array(adjointed) === adjointed;
+@assert mutable_array(read_only_array(adjointed)) === adjointed;
 
 # Sparse
 
@@ -242,8 +242,8 @@ using SparseArrays
 
 sparse = SparseMatrixCSC(base)
 
-@assert mutable_array(sparse) === sparse
-@assert mutable_array(read_only_array(sparse)) === sparse
+@assert mutable_array(sparse) === sparse;
+@assert mutable_array(read_only_array(sparse)) === sparse;
 
 # output
 ```

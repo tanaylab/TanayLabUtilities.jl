@@ -20,60 +20,55 @@ Provide a brief description of a `value`. This is basically `summary` but modifi
 vectors and matrices) to give "better" results.
 
 ```jldoctest
-using Test
-
-@test brief(1.0) == "1.0"
-@test brief(true) == "true"
-@test brief(:foo) == ":foo"
-@test brief(nothing) == "nothing"
-@test brief(missing) == "missing"
-@test brief(undef) == "undef"
-@test brief(("foo", :bar)) == "(\\"foo\\", :bar)"
-@test brief("foo" => :bar) == "\\"foo\\" => :bar"
-@test brief("foo") == "\\"foo\\""
-@test brief("foo "^10) == "\\"foo foo foo foo ...\\" (40)"
-@test brief([true, false]) == "2 x Bool (Dense; 1 (50%) true)"
-@test brief(Int64) == "Int64"
-@test brief(String) == "Str"
-@test brief(AbstractString) == "Str"
+@assert brief(1.0) == "1.0"
+@assert brief(true) == "true"
+@assert brief(:foo) == ":foo"
+@assert brief(nothing) == "nothing"
+@assert brief(missing) == "missing"
+@assert brief(undef) == "undef"
+@assert brief(("foo", :bar)) == "(\\"foo\\", :bar)"
+@assert brief("foo" => :bar) == "\\"foo\\" => :bar"
+@assert brief("foo") == "\\"foo\\""
+@assert brief("foo "^10) == "\\"foo foo foo foo ...\\" (40)"
+@assert brief([true, false]) == "2 x Bool (Dense; 1 (50%) true)"
+@assert brief(Int64) == "Int64"
+@assert brief(String) == "Str"
+@assert brief(AbstractString) == "Str"
 
 @enum Foo Bar Baz
-@test brief(Bar) == "Foo::Bar"
+@assert brief(Bar) == "Foo::Bar"
 
 struct Vaz end
-@test brief(Vaz()) == summary(Vaz())
+@assert brief(Vaz()) == summary(Vaz())
 
-@test brief(Set([1])) == "1 x Int64 (Set)"
+@assert brief(Set([1])) == "1 x Int64 (Set)"
 
-@test brief(rand(5)) == "5 x Float64 (Dense)"
-@test brief(rand(3, 4)) == "3 x 4 x Float64 in Columns (Dense)"
+@assert brief(rand(5)) == "5 x Float64 (Dense)"
+@assert brief(rand(3, 4)) == "3 x 4 x Float64 in Columns (Dense)"
 
-@test brief(read_only_array(rand(5))) == "5 x Float64 (ReadOnly, Dense)"
-@test brief(PermutedDimsArray(rand(3, 4), (2, 1))) == "4 x 3 x Float64 in Rows (Permute, Dense)"
-@test brief(PermutedDimsArray(rand(3, 4), (1, 2))) == "3 x 4 x Float64 in Columns (!Permute, Dense)"
+@assert brief(read_only_array(rand(5))) == "5 x Float64 (ReadOnly, Dense)"
+@assert brief(PermutedDimsArray(rand(3, 4), (2, 1))) == "4 x 3 x Float64 in Rows (Permute, Dense)"
+@assert brief(PermutedDimsArray(rand(3, 4), (1, 2))) == "3 x 4 x Float64 in Columns (!Permute, Dense)"
 
 using SparseArrays
 
-@test brief(SparseVector([0.0, 1.0])) == "2 x Float64 (Sparse 1 (50%) [Int64])"
-@test brief(SparseMatrixCSC([0.0 1.0 2.0; 3.0 4.0 0.0])) == "2 x 3 x Float64 in Columns (Sparse 4 (67%) [Int64])"
+@assert brief(SparseVector([0.0, 1.0])) == "2 x Float64 (Sparse 1 (50%) [Int64])"
+@assert brief(SparseMatrixCSC([0.0 1.0 2.0; 3.0 4.0 0.0])) == "2 x 3 x Float64 in Columns (Sparse 4 (67%) [Int64])"
 
 using NamedArrays
 
-@test brief(NamedArray(rand(2))) == "2 x Float64 (Named, Dense)"
-@test brief(NamedArray(SparseVector([0.0, 1.0]))) == "2 x Float64 (Named, Sparse 1 (50%) [Int64])"
+@assert brief(NamedArray(rand(2))) == "2 x Float64 (Named, Dense)"
+@assert brief(NamedArray(SparseVector([0.0, 1.0]))) == "2 x Float64 (Named, Sparse 1 (50%) [Int64])"
 
 using LinearAlgebra
 
-@test brief(transpose(rand(2))) == "2 x Float64 (Transpose, Dense)"
-@test brief(adjoint(rand(2))) == "2 x Float64 (Adjoint, Dense)"
+@assert brief(transpose(rand(2))) == "2 x Float64 (Transpose, Dense)"
+@assert brief(adjoint(rand(2))) == "2 x Float64 (Adjoint, Dense)"
 
-@test brief(Dict(["a" => 1])) == "1 x Str => Int64 (Dict)"
-
-println("OK")
+@assert brief(Dict(["a" => 1])) == "1 x Str => Int64 (Dict)"
 
 # output
 
-OK
 ```
 """
 function brief(value::Any)::AbstractString
@@ -250,8 +245,6 @@ Convert a number to a string using a delimiter for every 3 digits. No, `Format` 
 delimiters to the decimal fraction.
 
 ```jldoctest
-using Test
-
 println(delimited_number(123))
 println(delimited_number(1.0))
 println(delimited_number(1234567))

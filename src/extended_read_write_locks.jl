@@ -23,26 +23,26 @@ using ConcurrentUtils
 
 read_write_lock = ExtendedReadWriteLock()
 
-@assert !has_write_lock(read_write_lock)
-@assert !has_read_lock(read_write_lock)
+@assert !has_write_lock(read_write_lock);
+@assert !has_read_lock(read_write_lock);
 
 lock_write(read_write_lock; what = "top_write") do
-    @assert has_write_lock(read_write_lock)
-    @assert has_read_lock(read_write_lock)
+    @assert has_write_lock(read_write_lock);
+    @assert has_read_lock(read_write_lock);
 
     lock_write(read_write_lock; what = "nested_write") do
-        @assert has_write_lock(read_write_lock)
-        @assert has_read_lock(read_write_lock)
+        @assert has_write_lock(read_write_lock);
+        @assert has_read_lock(read_write_lock);
     end
 
     lock_read(read_write_lock; what = "nested_read") do
-        @assert has_write_lock(read_write_lock)
-        @assert has_read_lock(read_write_lock)
+        @assert has_write_lock(read_write_lock);
+        @assert has_read_lock(read_write_lock);
     end
 end
 
-@assert !has_write_lock(read_write_lock)
-@assert !has_read_lock(read_write_lock)
+@assert !has_write_lock(read_write_lock);
+@assert !has_read_lock(read_write_lock);
 
 # output
 
@@ -54,21 +54,21 @@ using ConcurrentUtils
 
 read_write_lock = ExtendedReadWriteLock()
 
-@assert !has_write_lock(read_write_lock)
-@assert !has_read_lock(read_write_lock)
+@assert !has_write_lock(read_write_lock);
+@assert !has_read_lock(read_write_lock);
 
 lock_read(read_write_lock; what = () -> "top_read") do
-    @assert !has_write_lock(read_write_lock)
-    @assert has_read_lock(read_write_lock)
+    @assert !has_write_lock(read_write_lock);
+    @assert has_read_lock(read_write_lock);
 
     lock_read(read_write_lock; what = () -> "nested_read") do
-        @assert !has_write_lock(read_write_lock)
-        @assert has_read_lock(read_write_lock)
+        @assert !has_write_lock(read_write_lock);
+        @assert has_read_lock(read_write_lock);
     end
 end
 
-@assert !has_write_lock(read_write_lock)
-@assert !has_read_lock(read_write_lock)
+@assert !has_write_lock(read_write_lock);
+@assert !has_read_lock(read_write_lock);
 
 # output
 

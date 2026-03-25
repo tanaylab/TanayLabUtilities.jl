@@ -37,7 +37,7 @@ mutable struct ExampleStorage
 end
 
 function TanayLabUtilities.reset_reusable_storage!(storage::ExampleStorage)::Nothing
-    @assert !storage.is_clean
+    @assert !storage.is_clean;
     storage.is_clean = true
     return nothing
 end
@@ -50,28 +50,28 @@ first = nothing
 second = nothing
 
 with_reusable(reusable_storage) do storage_1
-    @assert storage_1.is_clean
+    @assert storage_1.is_clean;
     storage_1.is_clean = false
     global first
     first = storage_1
 
     with_reusable(reusable_storage) do storage_2
-        @assert storage_2.is_clean
+        @assert storage_2.is_clean;
         storage_2.is_clean = false
         global second
         second = storage_2
-        @assert second !== first
+        @assert second !== first;
     end
 
     with_reusable(reusable_storage) do storage_3
-        @assert storage_3.is_clean
+        @assert storage_3.is_clean;
         storage_3.is_clean = false
-        @assert storage_3 === second
+        @assert storage_3 === second;
     end
 end
 
-@assert !first.is_clean
-@assert !second.is_clean
+@assert !first.is_clean;
+@assert !second.is_clean;
 
 # output
 

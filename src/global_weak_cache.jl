@@ -32,33 +32,28 @@ the cache).
     Use absolute paths to ensure correct results.
 
 ```jldoctest
-using Test
-
 first = get_through_global_weak_cache("fake path", :test) do _
     return [1]
 end
-@test first == [1]
-@test first === get_through_global_weak_cache("fake path", :test) do _
-    @assert false
+@assert first == [1]
+@assert first === get_through_global_weak_cache("fake path", :test) do _
+    @assert false;
 end
 
 second = get_through_global_weak_cache("fake path", :test; purge = true) do _
     return [2]
 end
-@assert second == [2]
+@assert second == [2];
 
 first = second = nothing
 gc()
 third = get_through_global_weak_cache("fake path", :test) do _
     return [3]
 end
-@assert third == [3]
-
-println("OK")
+@assert third == [3];
 
 # output
 
-OK
 """
 function get_through_global_weak_cache(getter::Function, path::AbstractString, key::Any; purge::Bool = false)::Any
     return lock(GLOBAL_LOCK) do

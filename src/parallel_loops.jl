@@ -29,7 +29,7 @@ Return whether we are inside a [`parallel_loop_wo_rng`](@ref) or [`parallel_loop
 """
 function is_in_parallel_loop()::Bool  # UNTESTED
     base_private_storage = task_local_storage()
-    return get(base_private_storage, :is_in_parallel_loop, false)
+    return haskey(base_private_storage, :is_in_parallel_loop)
 end
 
 """
@@ -64,7 +64,6 @@ range `1:n`, and we throttle calls to the progress bar update to one every `prog
     random number generation is needed.
 
 ```jldoctest
-using Test
 using Random
 
 size = 10
@@ -75,14 +74,11 @@ for policy in (:serial, :greedy, :dynamic, :static)
         results[index] = index
         return nothing
     end
-    @test results == collect(1:size)
+    @assert results == collect(1:size)
 end
-
-println("OK")
 
 # output
 
-OK
 ```
 """
 function parallel_loop_wo_rng(  # NOJET
@@ -101,7 +97,6 @@ function parallel_loop_wo_rng(  # NOJET
     end
 
     base_private_storage = task_local_storage()
-    base_is_in_parallel_loop = get(base_private_storage, :is_in_parallel_loop, false)
     base_flame_stack = FlameTime.get_flame_stack(base_private_storage)
     if base_flame_stack !== nothing
         if startswith(name, ".")  # UNTESTED
@@ -113,10 +108,14 @@ function parallel_loop_wo_rng(  # NOJET
         name = name[2:end]
     end
 
-    if base_is_in_parallel_loop
-        progress = nothing  # UNTESTED
-        if policy != :serial  # UNTESTED
-            policy = :serial  # UNTESTED
+    if nthreads() == 1
+        policy = :serial  # UNTESTED
+    else
+        if haskey(base_private_storage, :is_in_parallel_loop)
+            progress = nothing  # UNTESTED
+            if policy != :serial  # UNTESTED
+                policy = :serial  # UNTESTED
+            end
         end
     end
 
@@ -245,7 +244,6 @@ If `progress` is specified, it is updated for each iteration.
     The implementation here will give the same results regardless of the thread scheduling policy. Sigh.
 
 ```jldoctest
-using Test
 using Random
 
 size = 10
@@ -255,28 +253,25 @@ function collect_rng(rng::AbstractRNG)::Vector{Float64}
     parallel_loop_with_rng(1:size; rng) do index, rng
         results[index] = rand(rng)
     end
-    @test results[1] != results[2]
+    @assert results[1] != results[2]
     return results
 end
 
-@test collect_rng(MersenneTwister(1)) == collect_rng(MersenneTwister(1))
+@assert collect_rng(MersenneTwister(1)) == collect_rng(MersenneTwister(1))
 
 function collect_default_rng()::Vector{Float64}
     results = zeros(Float64, size)
     parallel_loop_with_rng(1:size; seed = 123456, policy = :dynamic) do index, _
         results[index] = rand()
     end
-    @test results[1] != results[2]
+    @assert results[1] != results[2]
     return results
 end
 
-@test collect_default_rng() == collect_default_rng()
-
-println("OK")
+@assert collect_default_rng() == collect_default_rng()
 
 # output
 
-OK
 ```
 """
 function parallel_loop_with_rng(  # NOJET

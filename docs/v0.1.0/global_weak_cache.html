@@ -276,37 +276,31 @@
 </p>
 </div>
 </div>
-<p>```jldoctest using Test
-</p>
-<p>first = get
+<p>```jldoctest first = get
 <em>through
 </em>global
 <em>weak
-</em>cache(&quot;fake path&quot;, :test) do _     return [1] end @test first == [1] @test first === get
+</em>cache(&quot;fake path&quot;, :test) do _     return [1] end @assert first == [1] @assert first === get
 <em>through
 </em>global
 <em>weak
-</em>cache(&quot;fake path&quot;, :test) do _     @assert false end
+</em>cache(&quot;fake path&quot;, :test) do _     @assert false; end
 </p>
 <p>second = get
 <em>through
 </em>global
 <em>weak
-</em>cache(&quot;fake path&quot;, :test; purge = true) do _     return [2] end @assert second == [2]
+</em>cache(&quot;fake path&quot;, :test; purge = true) do _     return [2] end @assert second == [2];
 </p>
 <p>first = second = nothing gc() third = get
 <em>through
 </em>global
 <em>weak
-</em>cache(&quot;fake path&quot;, :test) do _     return [3] end @assert third == [3]
-</p>
-<p>println(&quot;OK&quot;)
+</em>cache(&quot;fake path&quot;, :test) do _     return [3] end @assert third == [3];
 </p>
 <p>
 <strong>output
 </strong>
-</p>
-<p>OK
 </p>
 </div>
 </section>
@@ -386,7 +380,7 @@
 <hr/>
 <p>This document was generated with 
 <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl
-</a> version 1.17.0. Using Julia version 1.11.5.
+</a> version 1.17.0. Using Julia version 1.11.8.
 </p>
 </section>
 <footer class="modal-card-foot">

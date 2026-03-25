@@ -79,8 +79,8 @@ end
     return positional + named
 end
 
-using Logging
 using Test
+using Logging
 logger = TestLogger(; min_level = Logging.Debug)
 with_logger(logger) do
     return foo(1; named = 2)

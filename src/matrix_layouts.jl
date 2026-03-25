@@ -101,54 +101,49 @@ Return the index of the major axis of a matrix, that is, the axis one should kee
 accessing the matrix elements. If the matrix doesn't support any efficient access axis, returns `nothing`.
 
 ```jldoctest
-using Test
-
 base = [0 1 2; 3 4 0]
 
-@test major_axis(base) == Columns
+@assert major_axis(base) == Columns
 
 # Slice
 
-@test major_axis(@view base[:, [1, 3, 2]]) == Columns
+@assert major_axis(@view base[:, [1, 3, 2]]) == Columns
 
 # Named
 
 using NamedArrays
 
-@test major_axis(NamedArray(base)) == Columns
+@assert major_axis(NamedArray(base)) == Columns
 
 # Permuted
 
 permuted = PermutedDimsArray(base, (2, 1))
-@test major_axis(permuted) == Rows
+@assert major_axis(permuted) == Rows
 
-@test flip(permuted) === base
+@assert flip(permuted) === base
 
 unpermuted = PermutedDimsArray(base, (1, 2))
-@test major_axis(unpermuted) == Columns
+@assert major_axis(unpermuted) == Columns
 
 # LinearAlgebra
 
 transposed = transpose(base)
-@test major_axis(transposed) == Rows
+@assert major_axis(transposed) == Rows
 
-@test flip(transposed) === base
+@assert flip(transposed) === base
 
 adjointed = adjoint(base)
-@test major_axis(adjointed) == Rows
+@assert major_axis(adjointed) == Rows
 
 # Sparse
 
 using SparseArrays
 
 sparse = SparseMatrixCSC(base)
-@test major_axis(sparse) == Columns
-
-println("OK")
+@assert major_axis(sparse) == Columns
 
 # output
 
-OK
 ```
 """
 function major_axis(matrix::Union{NamedMatrix, ReadOnlyArray})::Maybe{Int8}
@@ -203,18 +198,13 @@ end
 Similar to [`major_axis`](@ref) but will `error` if the matrix isn't in either row-major or column-major layout.
 
 ```jldoctest
-using Test
-
 base = [0 1 2; 3 4 0]
 
-@test require_major_axis(base) == Columns
-@test require_major_axis(@view base[:, [1, 3, 2]]) == Columns
-
-println("OK")
+@assert require_major_axis(base) == Columns
+@assert require_major_axis(@view base[:, [1, 3, 2]]) == Columns
 
 # output
 
-OK
 ```
 """
 function require_major_axis(matrix::AbstractMatrix)::Int8
@@ -232,56 +222,51 @@ Return the index of the minor axis of a matrix, that is, the axis one should **v
 accessing the matrix elements. If the matrix doesn't support any efficient access axis, returns `nothing`.
 
 ```jldoctest
-using Test
-
 base = [0 1 2; 3 4 0]
 
-@test minor_axis(base) == Rows
+@assert minor_axis(base) == Rows
 
 # Slice
 
-@test minor_axis(@view base[:, [1, 3, 2]]) == Rows
+@assert minor_axis(@view base[:, [1, 3, 2]]) == Rows
 
 # Named
 
 using NamedArrays
 
-@test minor_axis(NamedArray(base)) == Rows
+@assert minor_axis(NamedArray(base)) == Rows
 
 # Permuted
 
 permuted = PermutedDimsArray(base, (2, 1))
-@test minor_axis(permuted) == Columns
+@assert minor_axis(permuted) == Columns
 
-@test flip(permuted) === base
+@assert flip(permuted) === base
 
 unpermuted = PermutedDimsArray(base, (1, 2))
-@test minor_axis(unpermuted) == Rows
+@assert minor_axis(unpermuted) == Rows
 
 # LinearAlgebra
 
 transposed = transpose(base)
-@test minor_axis(transposed) == Columns
+@assert minor_axis(transposed) == Columns
 
-@test flip(transposed) === base
+@assert flip(transposed) === base
 
 adjointed = adjoint(base)
-@test minor_axis(adjointed) == Columns
+@assert minor_axis(adjointed) == Columns
 
-@test flip(adjointed) === base
+@assert flip(adjointed) === base
 
 # Sparse
 
 using SparseArrays
 
 sparse = SparseMatrixCSC(base)
-@test minor_axis(sparse) == Rows
-
-println("OK")
+@assert minor_axis(sparse) == Rows
 
 # output
 
-OK
 ```
 """
 function minor_axis(matrix::AbstractMatrix)::Maybe{Int8}
@@ -294,19 +279,14 @@ end
 Similar to [`minor_axis`](@ref) but will `error` if the matrix isn't in either row-major or column-major layout.
 
 ```jldoctest
-using Test
-
 base = [0 1 2; 3 4 0]
 
-@test require_minor_axis(base) == Rows
+@assert require_minor_axis(base) == Rows
 
-@test require_minor_axis(@view base[:, [1, 3, 2]]) == Rows
-
-println("OK")
+@assert require_minor_axis(@view base[:, [1, 3, 2]]) == Rows
 
 # output
 
-OK
 ```
 """
 function require_minor_axis(matrix::AbstractMatrix)::Int8
@@ -320,11 +300,9 @@ Return the other `matrix` `axis` (that is, convert between [`Rows`](@ref) and [`
 returns `nothing`.
 
 ```jldoctest
-using Test
-
-@test other_axis(nothing) === nothing
-@test other_axis(Rows) == Columns
-@test other_axis(Columns) == Rows
+@assert other_axis(nothing) === nothing
+@assert other_axis(Rows) == Columns
+@assert other_axis(Columns) == Rows
 
 other_axis(3)
 
@@ -652,18 +630,16 @@ non-sparse `source`, with compatible storage sizes).
     more operations are done on the data in the loop.
 
 ```jldoctest
-using Test
-
 using LinearAlgebra
 
 source = rand(3, 4)
 destination = flip(rand(4, 3))
 
 result = relayout!(destination, source)
-@test result === destination
-@test brief(source) == "3 x 4 x Float64 in Columns (Dense)"
-@test brief(result) == "3 x 4 x Float64 in Rows (Transpose, Dense)"
-@test result == source
+@assert result === destination
+@assert brief(source) == "3 x 4 x Float64 in Columns (Dense)"
+@assert brief(result) == "3 x 4 x Float64 in Rows (Transpose, Dense)"
+@assert result == source
 
 # Named
 
@@ -672,52 +648,52 @@ using NamedArrays
 named_source = NamedArray(rand(3, 4))
 destination = flip(rand(4, 3))
 result = relayout!(destination, named_source)
-@test parent(result) === destination
-@test brief(named_source) == "3 x 4 x Float64 in Columns (Named, Dense)"
-@test brief(result) == "3 x 4 x Float64 in Rows (Named, Transpose, Dense)"
-@test result == named_source
+@assert parent(result) === destination
+@assert brief(named_source) == "3 x 4 x Float64 in Columns (Named, Dense)"
+@assert brief(result) == "3 x 4 x Float64 in Rows (Named, Transpose, Dense)"
+@assert result == named_source
 
 source = rand(3, 4)
 named_destination = NamedArray(flip(rand(4, 3)))
 result = relayout!(named_destination, source)
-@test result === named_destination
-@test brief(source) == "3 x 4 x Float64 in Columns (Dense)"
-@test brief(result) == "3 x 4 x Float64 in Rows (Named, Transpose, Dense)"
-@test result == source
+@assert result === named_destination
+@assert brief(source) == "3 x 4 x Float64 in Columns (Dense)"
+@assert brief(result) == "3 x 4 x Float64 in Rows (Named, Transpose, Dense)"
+@assert result == source
 
 source = rand(3, 4)
 named_destination = Transpose(NamedArray(rand(4, 3)))
 result = relayout!(named_destination, source)
-@test result === named_destination
-@test brief(source) == "3 x 4 x Float64 in Columns (Dense)"
-@test brief(result) == "3 x 4 x Float64 in Rows (Transpose, Named, Dense)"
-@test result == source
+@assert result === named_destination
+@assert brief(source) == "3 x 4 x Float64 in Columns (Dense)"
+@assert brief(result) == "3 x 4 x Float64 in Rows (Transpose, Named, Dense)"
+@assert result == source
 
 named_source = NamedArray(rand(3, 4))
 named_destination = NamedArray(flip(rand(4, 3)))
 result = relayout!(named_destination, named_source)
-@test result === named_destination
-@test brief(named_source) == "3 x 4 x Float64 in Columns (Named, Dense)"
-@test brief(result) == "3 x 4 x Float64 in Rows (Named, Transpose, Dense)"
-@test result == named_source
+@assert result === named_destination
+@assert brief(named_source) == "3 x 4 x Float64 in Columns (Named, Dense)"
+@assert brief(result) == "3 x 4 x Float64 in Rows (Named, Transpose, Dense)"
+@assert result == named_source
 
 # Permuted
 
 source = rand(3, 4)
 destination = PermutedDimsArray(rand(4, 3), (2,1))
 result = relayout!(destination, source)
-@test result === destination
-@test brief(source) == "3 x 4 x Float64 in Columns (Dense)"
-@test brief(result) == "3 x 4 x Float64 in Rows (Permute, Dense)"
-@test result == source
+@assert result === destination
+@assert brief(source) == "3 x 4 x Float64 in Columns (Dense)"
+@assert brief(result) == "3 x 4 x Float64 in Rows (Permute, Dense)"
+@assert result == source
 
 source = rand(3, 4)
 destination = PermutedDimsArray(adjoint(rand(4, 3)), (1,2))
 result = relayout!(destination, source)
-@test result === destination
-@test brief(source) == "3 x 4 x Float64 in Columns (Dense)"
-@test brief(result) == "3 x 4 x Float64 in Rows (!Permute, Adjoint, Dense)"
-@test result == source
+@assert result === destination
+@assert brief(source) == "3 x 4 x Float64 in Columns (Dense)"
+@assert brief(result) == "3 x 4 x Float64 in Rows (!Permute, Adjoint, Dense)"
+@assert result == source
 
 # Sparse
 
@@ -726,16 +702,13 @@ using SparseArrays
 source = SparseMatrixCSC([0.0 1.0 2.0; 3.0 4.0 0.0])
 destination = flip(SparseMatrixCSC([30.0 0.0; 0.0 40.0; 20.0 10.0]))
 result = relayout!(destination, source)
-@test result === destination
-@test brief(source) == "2 x 3 x Float64 in Columns (Sparse 4 (67%) [Int64])"
-@test brief(result) == "2 x 3 x Float64 in Rows (Transpose, Sparse 4 (67%) [Int64])"
-@test result == source
-
-println("OK")
+@assert result === destination
+@assert brief(source) == "2 x 3 x Float64 in Columns (Sparse 4 (67%) [Int64])"
+@assert brief(result) == "2 x 3 x Float64 in Rows (Transpose, Sparse 4 (67%) [Int64])"
+@assert result == source
 
 # output
 
-OK
 ```
 """
 function relayout!(destination::AbstractMatrix, source::AbstractMatrix)::AbstractMatrix
@@ -824,8 +797,8 @@ Same as [`relayout!`](@ref) but allocates the destination matrix for you. Is equ
 
 ```jldoctest
 base = rand(3, 4)
-@assert relayout(base) == base
-@assert major_axis(relayout(base)) == minor_axis(base)
+@assert relayout(base) == base;
+@assert major_axis(relayout(base)) == minor_axis(base);
 
 # output
 ```
@@ -841,79 +814,74 @@ Return a transpose of a matrix, but instead of simply using a zero-copy wrapper,
 [`relayout!`](@ref).
 
 ```jldoctest
-using Test
-
 # Dense
 
 base = rand(3, 4)
-@test flipped(base) == flip(base)
-@test brief(base) == "3 x 4 x Float64 in Columns (Dense)"
-@test brief(flip(base)) == "4 x 3 x Float64 in Rows (Transpose, Dense)"
-@test brief(flipped(base)) == "4 x 3 x Float64 in Columns (Dense)"
+@assert flipped(base) == flip(base)
+@assert brief(base) == "3 x 4 x Float64 in Columns (Dense)"
+@assert brief(flip(base)) == "4 x 3 x Float64 in Rows (Transpose, Dense)"
+@assert brief(flipped(base)) == "4 x 3 x Float64 in Columns (Dense)"
 
 # Named
 
 using NamedArrays
 
 base = NamedArray(rand(3, 4))
-@test flipped(base) == flip(base)
-@test brief(base) == "3 x 4 x Float64 in Columns (Named, Dense)"
-@test brief(flip(base)) == "4 x 3 x Float64 in Rows (Named, Transpose, Dense)"
-@test brief(flipped(base)) == "4 x 3 x Float64 in Columns (Named, Dense)"
+@assert flipped(base) == flip(base)
+@assert brief(base) == "3 x 4 x Float64 in Columns (Named, Dense)"
+@assert brief(flip(base)) == "4 x 3 x Float64 in Rows (Named, Transpose, Dense)"
+@assert brief(flipped(base)) == "4 x 3 x Float64 in Columns (Named, Dense)"
 
 # Permuted
 
 base = PermutedDimsArray(rand(3, 4), (2,1))
-@test flipped(base) == flip(base)
-@test brief(base) == "4 x 3 x Float64 in Rows (Permute, Dense)"
-@test brief(flip(base)) == "3 x 4 x Float64 in Columns (Dense)"
-@test brief(flipped(base)) == "3 x 4 x Float64 in Rows (Transpose, Dense)"
+@assert flipped(base) == flip(base)
+@assert brief(base) == "4 x 3 x Float64 in Rows (Permute, Dense)"
+@assert brief(flip(base)) == "3 x 4 x Float64 in Columns (Dense)"
+@assert brief(flipped(base)) == "3 x 4 x Float64 in Rows (Transpose, Dense)"
 
 base = PermutedDimsArray(rand(3, 4), (1,2))
-@test flipped(base) == flip(base)
-@test brief(base) == "3 x 4 x Float64 in Columns (!Permute, Dense)"
-@test brief(flip(base)) == "4 x 3 x Float64 in Rows (Transpose, Dense)"
-@test brief(flipped(base)) == "4 x 3 x Float64 in Columns (Dense)"
+@assert flipped(base) == flip(base)
+@assert brief(base) == "3 x 4 x Float64 in Columns (!Permute, Dense)"
+@assert brief(flip(base)) == "4 x 3 x Float64 in Rows (Transpose, Dense)"
+@assert brief(flipped(base)) == "4 x 3 x Float64 in Columns (Dense)"
 
 # LinearAlgebra
 
 using LinearAlgebra
 
 base = transpose(rand(3, 4))
-@test flipped(base) == transpose(base)
-@test brief(base) == "4 x 3 x Float64 in Rows (Transpose, Dense)"
-@test brief(transpose(base)) == "3 x 4 x Float64 in Columns (Dense)"
-@test brief(flipped(base)) == "3 x 4 x Float64 in Rows (Transpose, Dense)"
+@assert flipped(base) == transpose(base)
+@assert brief(base) == "4 x 3 x Float64 in Rows (Transpose, Dense)"
+@assert brief(transpose(base)) == "3 x 4 x Float64 in Columns (Dense)"
+@assert brief(flipped(base)) == "3 x 4 x Float64 in Rows (Transpose, Dense)"
 
 base = adjoint(rand(3, 4))
-@test flipped(base) == transpose(base)
-@test brief(base) == "4 x 3 x Float64 in Rows (Adjoint, Dense)"
-@test brief(flip(base)) == "3 x 4 x Float64 in Columns (Dense)"
-@test brief(flipped(base)) == "3 x 4 x Float64 in Rows (Transpose, Dense)"
+@assert flipped(base) == transpose(base)
+@assert brief(base) == "4 x 3 x Float64 in Rows (Adjoint, Dense)"
+@assert brief(flip(base)) == "3 x 4 x Float64 in Columns (Dense)"
+@assert brief(flipped(base)) == "3 x 4 x Float64 in Rows (Transpose, Dense)"
 
 # ReadOnly
 
 base = read_only_array(rand(3, 4))
-@test flipped(base) == transpose(base)
-@test brief(base) == "3 x 4 x Float64 in Columns (ReadOnly, Dense)"
-@test brief(flip(base)) == "4 x 3 x Float64 in Rows (ReadOnly, Transpose, Dense)"
-@test brief(flipped(base)) == "4 x 3 x Float64 in Columns (Dense)"
+@assert flipped(base) == transpose(base)
+@assert brief(base) == "3 x 4 x Float64 in Columns (ReadOnly, Dense)"
+@assert brief(flip(base)) == "4 x 3 x Float64 in Rows (ReadOnly, Transpose, Dense)"
+@assert brief(flipped(base)) == "4 x 3 x Float64 in Columns (Dense)"
 
 # Sparse
 
 using SparseArrays
 
 base = SparseMatrixCSC([0.0 1.0 2.0; 3.0 4.0 0.0])
-@test flipped(base) == flip(base)
-@test brief(base) == "2 x 3 x Float64 in Columns (Sparse 4 (67%) [Int64])"
-@test brief(flip(base)) == "3 x 2 x Float64 in Rows (Transpose, Sparse 4 (67%) [Int64])"
-@test brief(flipped(base)) == "3 x 2 x Float64 in Columns (Sparse 4 (67%) [Int64])"
-
-println("OK")
+@assert flipped(base) == flip(base)
+@assert brief(base) == "2 x 3 x Float64 in Columns (Sparse 4 (67%) [Int64])"
+@assert brief(flip(base)) == "3 x 2 x Float64 in Rows (Transpose, Sparse 4 (67%) [Int64])"
+@assert brief(flipped(base)) == "3 x 2 x Float64 in Columns (Sparse 4 (67%) [Int64])"
 
 # output
 
-OK
 ```
 """
 function flipped(matrix::NamedMatrix)::NamedArray

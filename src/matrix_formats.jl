@@ -24,14 +24,16 @@ export colptr
 export copy_array
 export dense_mask_vector
 export densify
+export embed_dense_matrix_in_sparse_matrix
+export embed_sparse_matrix_in_sparse_matrix
 export indtype_for_size
 export nzind
 export nzval
 export rowval
 export similar_array
+export sparse_mask_vector
 export sparse_matrix_csc
 export sparse_vector
-export sparse_mask_vector
 export sparsify
 
 using ..Brief
@@ -192,162 +194,152 @@ Create a copy of an array. This differs from `Base.copy` in the following:
   - You can override the `eltype` of the array (and/or the `indtype`, if it is sparse).
 
 ```jldoctest
-using Test
-
 base = [0 1 2; 3 4 0]
 
 # Dense
 
-@test brief(base) == "2 x 3 x Int64 in Columns (Dense)"
-@test brief(copy_array(base)) == "2 x 3 x Int64 in Columns (Dense)"
-@test copy_array(base) == base
-@test copy_array(base) !== base
+@assert brief(base) == "2 x 3 x Int64 in Columns (Dense)"
+@assert brief(copy_array(base)) == "2 x 3 x Int64 in Columns (Dense)"
+@assert copy_array(base) == base
+@assert copy_array(base) !== base
 
-@test copy_array(base; eltype = Int32) == base
-@test brief(copy_array(base; eltype = Int32)) == "2 x 3 x Int32 in Columns (Dense)"
+@assert copy_array(base; eltype = Int32) == base
+@assert brief(copy_array(base; eltype = Int32)) == "2 x 3 x Int32 in Columns (Dense)"
 
 # Sparse
 
 using SparseArrays
 
 sparse = SparseMatrixCSC(base)
-@test copy_array(sparse) == sparse
-@test copy_array(sparse) !== sparse
-@test brief(sparse) == "2 x 3 x Int64 in Columns (Sparse 4 (67%) [Int64])"
-@test brief(copy_array(sparse)) == "2 x 3 x Int64 in Columns (Sparse 4 (67%) [Int64])"
+@assert copy_array(sparse) == sparse
+@assert copy_array(sparse) !== sparse
+@assert brief(sparse) == "2 x 3 x Int64 in Columns (Sparse 4 (67%) [Int64])"
+@assert brief(copy_array(sparse)) == "2 x 3 x Int64 in Columns (Sparse 4 (67%) [Int64])"
 
-@test copy_array(sparse; eltype = Int32) == sparse
-@test brief(copy_array(sparse; eltype = Int32)) == "2 x 3 x Int32 in Columns (Sparse 4 (67%) [Int64])"
+@assert copy_array(sparse; eltype = Int32) == sparse
+@assert brief(copy_array(sparse; eltype = Int32)) == "2 x 3 x Int32 in Columns (Sparse 4 (67%) [Int64])"
 
-@test copy_array(sparse; indtype = Int8) == sparse
-@test brief(copy_array(sparse; indtype = Int8)) == "2 x 3 x Int64 in Columns (Sparse 4 (67%) [Int8])"
+@assert copy_array(sparse; indtype = Int8) == sparse
+@assert brief(copy_array(sparse; indtype = Int8)) == "2 x 3 x Int64 in Columns (Sparse 4 (67%) [Int8])"
 
 # ReadOnly
 
 read_only = read_only_array(base)
-@test brief(read_only) == "2 x 3 x Int64 in Columns (ReadOnly, Dense)"
-@test brief(copy_array(read_only)) == "2 x 3 x Int64 in Columns (Dense)"
-@test copy_array(read_only) == read_only
-@test copy_array(read_only) !== base
+@assert brief(read_only) == "2 x 3 x Int64 in Columns (ReadOnly, Dense)"
+@assert brief(copy_array(read_only)) == "2 x 3 x Int64 in Columns (Dense)"
+@assert copy_array(read_only) == read_only
+@assert copy_array(read_only) !== base
 
 # Named
 
 using NamedArrays
 
 named = NamedArray(base)
-@test brief(named) == "2 x 3 x Int64 in Columns (Named, Dense)"
-@test brief(copy_array(named)) == "2 x 3 x Int64 in Columns (Named, Dense)"
-@test copy_array(named) == named
-@test parent(copy_array(named)) !== base
+@assert brief(named) == "2 x 3 x Int64 in Columns (Named, Dense)"
+@assert brief(copy_array(named)) == "2 x 3 x Int64 in Columns (Named, Dense)"
+@assert copy_array(named) == named
+@assert parent(copy_array(named)) !== base
 
 # Permuted
 
 permuted = PermutedDimsArray(base, (2, 1))
-@test brief(permuted) == "3 x 2 x Int64 in Rows (Permute, Dense)"
-@test brief(copy_array(permuted)) == "3 x 2 x Int64 in Rows (Permute, Dense)"
-@test copy_array(permuted) == permuted
-@test parent(copy_array(permuted)) !== base
+@assert brief(permuted) == "3 x 2 x Int64 in Rows (Permute, Dense)"
+@assert brief(copy_array(permuted)) == "3 x 2 x Int64 in Rows (Permute, Dense)"
+@assert copy_array(permuted) == permuted
+@assert parent(copy_array(permuted)) !== base
 
 unpermuted = PermutedDimsArray(base, (1, 2))
-@test brief(unpermuted) == "2 x 3 x Int64 in Columns (!Permute, Dense)"
-@test brief(copy_array(unpermuted)) == "2 x 3 x Int64 in Columns (!Permute, Dense)"
-@test copy_array(unpermuted) == unpermuted
-@test parent(copy_array(unpermuted)) !== base
+@assert brief(unpermuted) == "2 x 3 x Int64 in Columns (!Permute, Dense)"
+@assert brief(copy_array(unpermuted)) == "2 x 3 x Int64 in Columns (!Permute, Dense)"
+@assert copy_array(unpermuted) == unpermuted
+@assert parent(copy_array(unpermuted)) !== base
 
 # LinearAlgebra
 
 using LinearAlgebra
 
 transposed = transpose(base)
-@test brief(transposed) == "3 x 2 x Int64 in Rows (Transpose, Dense)"
-@test brief(copy_array(transposed)) == "3 x 2 x Int64 in Rows (Transpose, Dense)"
-@test copy_array(transposed) == transposed
-@test parent(copy_array(transposed)) !== base
+@assert brief(transposed) == "3 x 2 x Int64 in Rows (Transpose, Dense)"
+@assert brief(copy_array(transposed)) == "3 x 2 x Int64 in Rows (Transpose, Dense)"
+@assert copy_array(transposed) == transposed
+@assert parent(copy_array(transposed)) !== base
 
 adjointed = adjoint(base)
-@test brief(adjointed) == "3 x 2 x Int64 in Rows (Adjoint, Dense)"
-@test brief(copy_array(adjointed)) == "3 x 2 x Int64 in Rows (Adjoint, Dense)"
-@test copy_array(adjointed) == adjointed
-@test parent(copy_array(adjointed)) !== base
-
-println("OK")
+@assert brief(adjointed) == "3 x 2 x Int64 in Rows (Adjoint, Dense)"
+@assert brief(copy_array(adjointed)) == "3 x 2 x Int64 in Rows (Adjoint, Dense)"
+@assert copy_array(adjointed) == adjointed
+@assert parent(copy_array(adjointed)) !== base
 
 # output
 
-OK
 ```
 
 ```jldoctest
-using Test
-
 # Dense
 
 base = [0, 1, 2]
 
-@test brief(base) == "3 x Int64 (Dense)"
-@test brief(copy_array(base)) == "3 x Int64 (Dense)"
-@test copy_array(base) == base
-@test copy_array(base) !== base
+@assert brief(base) == "3 x Int64 (Dense)"
+@assert brief(copy_array(base)) == "3 x Int64 (Dense)"
+@assert copy_array(base) == base
+@assert copy_array(base) !== base
 
 # Sparse
 
 using SparseArrays
 
 sparse = SparseVector(base)
-@test brief(sparse) == "3 x Int64 (Sparse 2 (67%) [Int64])"
-@test brief(copy_array(sparse)) == "3 x Int64 (Sparse 2 (67%) [Int64])"
-@test copy_array(sparse) == sparse
-@test copy_array(sparse) !== sparse
+@assert brief(sparse) == "3 x Int64 (Sparse 2 (67%) [Int64])"
+@assert brief(copy_array(sparse)) == "3 x Int64 (Sparse 2 (67%) [Int64])"
+@assert copy_array(sparse) == sparse
+@assert copy_array(sparse) !== sparse
 
 # ReadOnly
 
 read_only = read_only_array(base)
-@test brief(read_only) == "3 x Int64 (ReadOnly, Dense)"
-@test brief(copy_array(read_only)) == "3 x Int64 (Dense)"
-@test copy_array(read_only) == read_only
-@test copy_array(read_only) !== base
+@assert brief(read_only) == "3 x Int64 (ReadOnly, Dense)"
+@assert brief(copy_array(read_only)) == "3 x Int64 (Dense)"
+@assert copy_array(read_only) == read_only
+@assert copy_array(read_only) !== base
 
 # Named
 
 using NamedArrays
 
 named = NamedArray(base)
-@test brief(named) == "3 x Int64 (Named, Dense)"
-@test brief(copy_array(named)) == "3 x Int64 (Named, Dense)"
-@test copy_array(named) == named
-@test parent(copy_array(named)) !== base
+@assert brief(named) == "3 x Int64 (Named, Dense)"
+@assert brief(copy_array(named)) == "3 x Int64 (Named, Dense)"
+@assert copy_array(named) == named
+@assert parent(copy_array(named)) !== base
 
 # LinearAlgebra
 
 using LinearAlgebra
 
 transposed = transpose(base)
-@test brief(transposed) == "3 x Int64 (Transpose, Dense)"
-@test brief(copy_array(transposed)) == "3 x Int64 (Transpose, Dense)"
-@test copy_array(transposed) == transposed
-@test parent(copy_array(transposed)) !== base
+@assert brief(transposed) == "3 x Int64 (Transpose, Dense)"
+@assert brief(copy_array(transposed)) == "3 x Int64 (Transpose, Dense)"
+@assert copy_array(transposed) == transposed
+@assert parent(copy_array(transposed)) !== base
 
 adjointed = adjoint(base)
-@test brief(adjointed) == "3 x Int64 (Adjoint, Dense)"
-@test brief(copy_array(adjointed)) == "3 x Int64 (Adjoint, Dense)"
-@test copy_array(adjointed) == adjointed
-@test parent(copy_array(adjointed)) !== base
+@assert brief(adjointed) == "3 x Int64 (Adjoint, Dense)"
+@assert brief(copy_array(adjointed)) == "3 x Int64 (Adjoint, Dense)"
+@assert copy_array(adjointed) == adjointed
+@assert parent(copy_array(adjointed)) !== base
 
 # String
 
 base = split("abc", "")
 
-@test brief(base) == "3 x Str (Dense)"
-@test brief(copy_array(base)) == "3 x Str (Dense)"
-@test eltype(base) != AbstractString
-@test eltype(copy_array(base)) == AbstractString
-@test copy_array(base) == base
-
-println("OK")
+@assert brief(base) == "3 x Str (Dense)"
+@assert brief(copy_array(base)) == "3 x Str (Dense)"
+@assert eltype(base) != AbstractString
+@assert eltype(copy_array(base)) == AbstractString
+@assert copy_array(base) == base
 
 # output
 
-OK
 ```
 """
 function copy_array(
@@ -435,57 +427,52 @@ the axes with the original, and `ReadOnlyArray` wrappers are stripped from the r
 no clear [`major_axis`](@ref), such as a `@views` slice of a matrix, then the result will have the `default_major_axis`.
 
 ```jldoctest
-using Test
-
 base = rand(3, 4)
 
-@test brief(base) == "3 x 4 x Float64 in Columns (Dense)"
-@test similar_array(base) !== base
-@test brief(similar_array(base)) == "3 x 4 x Float64 in Columns (Dense)"
+@assert brief(base) == "3 x 4 x Float64 in Columns (Dense)"
+@assert similar_array(base) !== base
+@assert brief(similar_array(base)) == "3 x 4 x Float64 in Columns (Dense)"
 
-@test brief(similar_array(base; eltype = Int32)) == "3 x 4 x Int32 in Columns (Dense)"
-@test brief(similar_array(base; value = 0.0)) == "3 x 4 x Float64 in Columns (Dense)"
-@test all(similar_array(base; value = 0.0) .== 0)
+@assert brief(similar_array(base; eltype = Int32)) == "3 x 4 x Int32 in Columns (Dense)"
+@assert brief(similar_array(base; value = 0.0)) == "3 x 4 x Float64 in Columns (Dense)"
+@assert all(similar_array(base; value = 0.0) .== 0)
 
 # ReadOnly
 
 read_only = read_only_array(base)
-@test brief(read_only) == "3 x 4 x Float64 in Columns (ReadOnly, Dense)"
-@test brief(similar_array(read_only)) == "3 x 4 x Float64 in Columns (Dense)"
+@assert brief(read_only) == "3 x 4 x Float64 in Columns (ReadOnly, Dense)"
+@assert brief(similar_array(read_only)) == "3 x 4 x Float64 in Columns (Dense)"
 
 # Named
 
 using NamedArrays
 
 named = NamedArray(base)
-@test brief(named) == "3 x 4 x Float64 in Columns (Named, Dense)"
-@test similar_array(named) !== named
-@test brief(similar_array(named)) == "3 x 4 x Float64 in Columns (Named, Dense)"
+@assert brief(named) == "3 x 4 x Float64 in Columns (Named, Dense)"
+@assert similar_array(named) !== named
+@assert brief(similar_array(named)) == "3 x 4 x Float64 in Columns (Named, Dense)"
 
 # Permuted
 
 permuted = PermutedDimsArray(base, (2, 1))
-@test brief(permuted) == "4 x 3 x Float64 in Rows (Permute, Dense)"
-@test similar_array(permuted) !== permuted
-@test brief(similar_array(permuted)) == "4 x 3 x Float64 in Rows (Permute, Dense)"
+@assert brief(permuted) == "4 x 3 x Float64 in Rows (Permute, Dense)"
+@assert similar_array(permuted) !== permuted
+@assert brief(similar_array(permuted)) == "4 x 3 x Float64 in Rows (Permute, Dense)"
 
 # LinearAlgebra
 
 transposed = transpose(base)
-@test brief(transposed) == "4 x 3 x Float64 in Rows (Transpose, Dense)"
-@test similar_array(transposed) !== transposed
-@test brief(similar_array(transposed)) == "4 x 3 x Float64 in Rows (Transpose, Dense)"
+@assert brief(transposed) == "4 x 3 x Float64 in Rows (Transpose, Dense)"
+@assert similar_array(transposed) !== transposed
+@assert brief(similar_array(transposed)) == "4 x 3 x Float64 in Rows (Transpose, Dense)"
 
 adjointed = adjoint(base)
-@test brief(adjointed) == "4 x 3 x Float64 in Rows (Adjoint, Dense)"
-@test similar_array(adjointed) !== adjointed
-@test brief(similar_array(adjointed)) == "4 x 3 x Float64 in Rows (Adjoint, Dense)"
-
-println("OK")
+@assert brief(adjointed) == "4 x 3 x Float64 in Rows (Adjoint, Dense)"
+@assert similar_array(adjointed) !== adjointed
+@assert brief(similar_array(adjointed)) == "4 x 3 x Float64 in Rows (Adjoint, Dense)"
 
 # output
 
-OK
 ```
 """
 function similar_array(
@@ -583,133 +570,125 @@ is already sparse and has the correct `eltype` and `indtype`.
 
 
 ```jldoctest
-using Test
 using SparseArrays
 
 # Dense
 
 dense = rand(3, 4)
-@test sparsify(dense) == dense
-@test brief(dense) == "3 x 4 x Float64 in Columns (Dense)"
-@test brief(sparsify(dense)) == "3 x 4 x Float64 in Columns (Sparse 12 (100%) [UInt32])"
+@assert sparsify(dense) == dense
+@assert brief(dense) == "3 x 4 x Float64 in Columns (Dense)"
+@assert brief(sparsify(dense)) == "3 x 4 x Float64 in Columns (Sparse 12 (100%) [UInt32])"
 
 # Sparse
 
 sparse = SparseMatrixCSC([0 1 2; 3 4 0])
-@test sparsify(sparse) === sparse
-@test brief(sparse) == "2 x 3 x Int64 in Columns (Sparse 4 (67%) [Int64])"
+@assert sparsify(sparse) === sparse
+@assert brief(sparse) == "2 x 3 x Int64 in Columns (Sparse 4 (67%) [Int64])"
 
-@test sparsify(sparse; copy = true) == sparse
-@test sparsify(sparse; copy = true) !== sparse
-@test brief(sparsify(sparse)) == "2 x 3 x Int64 in Columns (Sparse 4 (67%) [Int64])"
+@assert sparsify(sparse; copy = true) == sparse
+@assert sparsify(sparse; copy = true) !== sparse
+@assert brief(sparsify(sparse)) == "2 x 3 x Int64 in Columns (Sparse 4 (67%) [Int64])"
 
-@test sparsify(sparse; eltype = Int8) == sparse
-@test brief(sparsify(sparse; eltype = Int8)) == "2 x 3 x Int8 in Columns (Sparse 4 (67%) [Int64])"
+@assert sparsify(sparse; eltype = Int8) == sparse
+@assert brief(sparsify(sparse; eltype = Int8)) == "2 x 3 x Int8 in Columns (Sparse 4 (67%) [Int64])"
 
-@test sparsify(sparse; indtype = Int8) == sparse
-@test brief(sparsify(sparse; indtype = Int8)) == "2 x 3 x Int64 in Columns (Sparse 4 (67%) [Int8])"
+@assert sparsify(sparse; indtype = Int8) == sparse
+@assert brief(sparsify(sparse; indtype = Int8)) == "2 x 3 x Int64 in Columns (Sparse 4 (67%) [Int8])"
 
 # ReadOnly
 
 read_only = read_only_array(sparse)
-@test sparsify(read_only) === read_only
-@test brief(read_only) == "2 x 3 x Int64 in Columns (ReadOnly, Sparse 4 (67%) [Int64])"
+@assert sparsify(read_only) === read_only
+@assert brief(read_only) == "2 x 3 x Int64 in Columns (ReadOnly, Sparse 4 (67%) [Int64])"
 
 read_only = read_only_array(dense)
-@test sparsify(read_only) == read_only
-@test brief(sparsify(read_only)) == "3 x 4 x Float64 in Columns (ReadOnly, Sparse 12 (100%) [UInt32])"
+@assert sparsify(read_only) == read_only
+@assert brief(sparsify(read_only)) == "3 x 4 x Float64 in Columns (ReadOnly, Sparse 12 (100%) [UInt32])"
 
 # Named
 
 using NamedArrays
 
 named = NamedArray(sparse)
-@test sparsify(named) === named
-@test brief(named) == "2 x 3 x Int64 in Columns (Named, Sparse 4 (67%) [Int64])"
+@assert sparsify(named) === named
+@assert brief(named) == "2 x 3 x Int64 in Columns (Named, Sparse 4 (67%) [Int64])"
 
 named = NamedArray(dense)
-@test sparsify(named) == named
-@test brief(sparsify(named)) == "3 x 4 x Float64 in Columns (Named, Sparse 12 (100%) [UInt32])"
+@assert sparsify(named) == named
+@assert brief(sparsify(named)) == "3 x 4 x Float64 in Columns (Named, Sparse 12 (100%) [UInt32])"
 
 # Permuted
 
 permuted = PermutedDimsArray(sparse, (2, 1))
-@test sparsify(permuted) === permuted
-@test brief(permuted) == "3 x 2 x Int64 in Rows (Permute, Sparse 4 (67%) [Int64])"
+@assert sparsify(permuted) === permuted
+@assert brief(permuted) == "3 x 2 x Int64 in Rows (Permute, Sparse 4 (67%) [Int64])"
 
 unpermuted = PermutedDimsArray(sparse, (1, 2))
-@test sparsify(unpermuted) === unpermuted
-@test brief(unpermuted) == "2 x 3 x Int64 in Columns (!Permute, Sparse 4 (67%) [Int64])"
+@assert sparsify(unpermuted) === unpermuted
+@assert brief(unpermuted) == "2 x 3 x Int64 in Columns (!Permute, Sparse 4 (67%) [Int64])"
 
 permuted = PermutedDimsArray(dense, (2, 1))
-@test sparsify(permuted) == permuted
-@test brief(permuted) == "4 x 3 x Float64 in Rows (Permute, Dense)"
-@test brief(sparsify(permuted)) == "4 x 3 x Float64 in Rows (Permute, Sparse 12 (100%) [UInt32])"
+@assert sparsify(permuted) == permuted
+@assert brief(permuted) == "4 x 3 x Float64 in Rows (Permute, Dense)"
+@assert brief(sparsify(permuted)) == "4 x 3 x Float64 in Rows (Permute, Sparse 12 (100%) [UInt32])"
 
 unpermuted = PermutedDimsArray(dense, (1, 2))
-@test sparsify(unpermuted) == unpermuted
-@test brief(unpermuted) == "3 x 4 x Float64 in Columns (!Permute, Dense)"
-@test brief(sparsify(unpermuted)) == "3 x 4 x Float64 in Columns (!Permute, Sparse 12 (100%) [UInt32])"
+@assert sparsify(unpermuted) == unpermuted
+@assert brief(unpermuted) == "3 x 4 x Float64 in Columns (!Permute, Dense)"
+@assert brief(sparsify(unpermuted)) == "3 x 4 x Float64 in Columns (!Permute, Sparse 12 (100%) [UInt32])"
 
 # LinearAlgebra
 
 transposed = transpose(sparse)
-@test sparsify(transposed) === transposed
-@test brief(transposed) == "3 x 2 x Int64 in Rows (Transpose, Sparse 4 (67%) [Int64])"
+@assert sparsify(transposed) === transposed
+@assert brief(transposed) == "3 x 2 x Int64 in Rows (Transpose, Sparse 4 (67%) [Int64])"
 
 adjointed = adjoint(sparse)
-@test sparsify(adjointed) === adjointed
-@test brief(adjointed) == "3 x 2 x Int64 in Rows (Adjoint, Sparse 4 (67%) [Int64])"
+@assert sparsify(adjointed) === adjointed
+@assert brief(adjointed) == "3 x 2 x Int64 in Rows (Adjoint, Sparse 4 (67%) [Int64])"
 
 transposed = transpose(dense)
-@test sparsify(transposed) == transposed
-@test brief(transposed) == "4 x 3 x Float64 in Rows (Transpose, Dense)"
-@test brief(sparsify(transposed)) == "4 x 3 x Float64 in Rows (Transpose, Sparse 12 (100%) [UInt32])"
+@assert sparsify(transposed) == transposed
+@assert brief(transposed) == "4 x 3 x Float64 in Rows (Transpose, Dense)"
+@assert brief(sparsify(transposed)) == "4 x 3 x Float64 in Rows (Transpose, Sparse 12 (100%) [UInt32])"
 
 adjointed = adjoint(dense)
-@test sparsify(adjointed) == adjointed
-@test brief(adjointed) == "4 x 3 x Float64 in Rows (Adjoint, Dense)"
-@test brief(sparsify(adjointed)) == "4 x 3 x Float64 in Rows (Adjoint, Sparse 12 (100%) [UInt32])"
-
-println("OK")
+@assert sparsify(adjointed) == adjointed
+@assert brief(adjointed) == "4 x 3 x Float64 in Rows (Adjoint, Dense)"
+@assert brief(sparsify(adjointed)) == "4 x 3 x Float64 in Rows (Adjoint, Sparse 12 (100%) [UInt32])"
 
 # output
 
-OK
 ```
 
 ```jldoctest
-using Test
 using SparseArrays
 
 # Dense
 
 dense = rand(4)
-@test sparsify(dense) == dense
-@test brief(dense) == "4 x Float64 (Dense)"
-@test brief(sparsify(dense)) == "4 x Float64 (Sparse 4 (100%) [UInt32])"
+@assert sparsify(dense) == dense
+@assert brief(dense) == "4 x Float64 (Dense)"
+@assert brief(sparsify(dense)) == "4 x Float64 (Sparse 4 (100%) [UInt32])"
 
 # Sparse
 
 sparse = SparseVector([0, 1, 2, 0])
-@test sparsify(sparse) === sparse
-@test brief(sparse) == "4 x Int64 (Sparse 2 (50%) [Int64])"
+@assert sparsify(sparse) === sparse
+@assert brief(sparse) == "4 x Int64 (Sparse 2 (50%) [Int64])"
 
-@test sparsify(sparse; copy = true) == sparse
-@test sparsify(sparse; copy = true) !== sparse
-@test brief(sparsify(sparse)) == "4 x Int64 (Sparse 2 (50%) [Int64])"
+@assert sparsify(sparse; copy = true) == sparse
+@assert sparsify(sparse; copy = true) !== sparse
+@assert brief(sparsify(sparse)) == "4 x Int64 (Sparse 2 (50%) [Int64])"
 
-@test sparsify(sparse; eltype = Int8) == sparse
-@test brief(sparsify(sparse; eltype = Int8)) == "4 x Int8 (Sparse 2 (50%) [Int64])"
+@assert sparsify(sparse; eltype = Int8) == sparse
+@assert brief(sparsify(sparse; eltype = Int8)) == "4 x Int8 (Sparse 2 (50%) [Int64])"
 
-@test sparsify(sparse; indtype = Int8) == sparse
-@test brief(sparsify(sparse; indtype = Int8)) == "4 x Int64 (Sparse 2 (50%) [Int8])"
-
-println("OK")
+@assert sparsify(sparse; indtype = Int8) == sparse
+@assert brief(sparsify(sparse; indtype = Int8)) == "4 x Int64 (Sparse 2 (50%) [Int8])"
 
 # output
 
-OK
 ```
 """
 function sparsify(
@@ -821,128 +800,120 @@ example, `densify` of a transposed matrix will be a transposed matrix). If `copy
 already dense and has the correct `eltype`.
 
 ```jldoctest
-using Test
 using SparseArrays
 
 # Dense
 
 dense = rand(3, 4)
-@test densify(dense) === dense
-@test brief(dense) == "3 x 4 x Float64 in Columns (Dense)"
+@assert densify(dense) === dense
+@assert brief(dense) == "3 x 4 x Float64 in Columns (Dense)"
 
-@test densify(dense; copy = true) !== dense
-@test densify(dense; copy = true) == dense
-@test brief(densify(dense; copy = true)) == "3 x 4 x Float64 in Columns (Dense)"
+@assert densify(dense; copy = true) !== dense
+@assert densify(dense; copy = true) == dense
+@assert brief(densify(dense; copy = true)) == "3 x 4 x Float64 in Columns (Dense)"
 
-@test isapprox(densify(dense; eltype = Float32), dense)
-@test brief(densify(dense; eltype = Float32)) == "3 x 4 x Float32 in Columns (Dense)"
+@assert isapprox(densify(dense; eltype = Float32), dense)
+@assert brief(densify(dense; eltype = Float32)) == "3 x 4 x Float32 in Columns (Dense)"
 
 # Sparse
 
 sparse = SparseMatrixCSC([0 1 2; 3 4 0])
 
-@test densify(sparse) == sparse
-@test brief(densify(sparse)) == "2 x 3 x Int64 in Columns (Dense)"
-@test brief(densify(sparse; eltype = Int8)) == "2 x 3 x Int8 in Columns (Dense)"
+@assert densify(sparse) == sparse
+@assert brief(densify(sparse)) == "2 x 3 x Int64 in Columns (Dense)"
+@assert brief(densify(sparse; eltype = Int8)) == "2 x 3 x Int8 in Columns (Dense)"
 
 # ReadOnly
 
 read_only = read_only_array(sparse)
-@test densify(read_only) == read_only
-@test brief(read_only) == "2 x 3 x Int64 in Columns (ReadOnly, Sparse 4 (67%) [Int64])"
-@test brief(densify(read_only)) == "2 x 3 x Int64 in Columns (ReadOnly, Dense)"
+@assert densify(read_only) == read_only
+@assert brief(read_only) == "2 x 3 x Int64 in Columns (ReadOnly, Sparse 4 (67%) [Int64])"
+@assert brief(densify(read_only)) == "2 x 3 x Int64 in Columns (ReadOnly, Dense)"
 
 read_only = read_only_array(dense)
-@test densify(read_only) == dense
+@assert densify(read_only) == dense
 
 # Named
 
 using NamedArrays
 
 named = NamedArray(sparse)
-@test densify(named) == named
-@test brief(named) == "2 x 3 x Int64 in Columns (Named, Sparse 4 (67%) [Int64])"
-@test brief(densify(named)) == "2 x 3 x Int64 in Columns (Named, Dense)"
+@assert densify(named) == named
+@assert brief(named) == "2 x 3 x Int64 in Columns (Named, Sparse 4 (67%) [Int64])"
+@assert brief(densify(named)) == "2 x 3 x Int64 in Columns (Named, Dense)"
 
 named = NamedArray(dense)
-@test densify(named) == dense
+@assert densify(named) == dense
 
 # Permuted
 
 permuted = PermutedDimsArray(dense, (2, 1))
-@test densify(permuted) === permuted
-@test brief(permuted) == "4 x 3 x Float64 in Rows (Permute, Dense)"
+@assert densify(permuted) === permuted
+@assert brief(permuted) == "4 x 3 x Float64 in Rows (Permute, Dense)"
 
 unpermuted = PermutedDimsArray(dense, (1, 2))
-@test densify(unpermuted) === unpermuted
-@test brief(unpermuted) == "3 x 4 x Float64 in Columns (!Permute, Dense)"
+@assert densify(unpermuted) === unpermuted
+@assert brief(unpermuted) == "3 x 4 x Float64 in Columns (!Permute, Dense)"
 
 permuted = PermutedDimsArray(sparse, (2, 1))
-@test densify(permuted) == permuted
-@test brief(permuted) == "3 x 2 x Int64 in Rows (Permute, Sparse 4 (67%) [Int64])"
-@test brief(densify(permuted)) == "3 x 2 x Int64 in Rows (Permute, Dense)"
+@assert densify(permuted) == permuted
+@assert brief(permuted) == "3 x 2 x Int64 in Rows (Permute, Sparse 4 (67%) [Int64])"
+@assert brief(densify(permuted)) == "3 x 2 x Int64 in Rows (Permute, Dense)"
 
 unpermuted = PermutedDimsArray(sparse, (1, 2))
-@test densify(unpermuted) == unpermuted
-@test brief(unpermuted) == "2 x 3 x Int64 in Columns (!Permute, Sparse 4 (67%) [Int64])"
-@test brief(densify(unpermuted)) == "2 x 3 x Int64 in Columns (!Permute, Dense)"
+@assert densify(unpermuted) == unpermuted
+@assert brief(unpermuted) == "2 x 3 x Int64 in Columns (!Permute, Sparse 4 (67%) [Int64])"
+@assert brief(densify(unpermuted)) == "2 x 3 x Int64 in Columns (!Permute, Dense)"
 
 # LinearAlgebra
 
 transposed = transpose(dense)
-@test densify(transposed) === transposed
-@test brief(transposed) == "4 x 3 x Float64 in Rows (Transpose, Dense)"
+@assert densify(transposed) === transposed
+@assert brief(transposed) == "4 x 3 x Float64 in Rows (Transpose, Dense)"
 
 adjointed = adjoint(dense)
-@test densify(adjointed) === adjointed
-@test brief(adjointed) == "4 x 3 x Float64 in Rows (Adjoint, Dense)"
+@assert densify(adjointed) === adjointed
+@assert brief(adjointed) == "4 x 3 x Float64 in Rows (Adjoint, Dense)"
 
 transposed = transpose(sparse)
-@test densify(transposed) == transposed
-@test brief(transposed) == "3 x 2 x Int64 in Rows (Transpose, Sparse 4 (67%) [Int64])"
-@test brief(densify(transposed)) == "3 x 2 x Int64 in Rows (Transpose, Dense)"
+@assert densify(transposed) == transposed
+@assert brief(transposed) == "3 x 2 x Int64 in Rows (Transpose, Sparse 4 (67%) [Int64])"
+@assert brief(densify(transposed)) == "3 x 2 x Int64 in Rows (Transpose, Dense)"
 
 adjointed = adjoint(sparse)
-@test densify(adjointed) == adjointed
-@test brief(adjointed) == "3 x 2 x Int64 in Rows (Adjoint, Sparse 4 (67%) [Int64])"
-@test brief(densify(adjointed)) == "3 x 2 x Int64 in Rows (Adjoint, Dense)"
-
-println("OK")
+@assert densify(adjointed) == adjointed
+@assert brief(adjointed) == "3 x 2 x Int64 in Rows (Adjoint, Sparse 4 (67%) [Int64])"
+@assert brief(densify(adjointed)) == "3 x 2 x Int64 in Rows (Adjoint, Dense)"
 
 # output
 
-OK
 ```
 
 ```jldoctest
-using Test
 using SparseArrays
 
 # Sparse
 
 sparse = SparseVector([0, 1, 2, 0])
 
-@test densify(sparse) == sparse
-@test brief(densify(sparse)) == "4 x Int64 (Dense)"
+@assert densify(sparse) == sparse
+@assert brief(densify(sparse)) == "4 x Int64 (Dense)"
 
 # Dense
 
 dense = rand(4)
-@test densify(dense) === dense
-@test brief(dense) == "4 x Float64 (Dense)"
+@assert densify(dense) === dense
+@assert brief(dense) == "4 x Float64 (Dense)"
 
-@test densify(dense; copy = true) !== dense
-@test densify(dense; copy = true) == dense
-@test brief(densify(dense; copy = true)) == "4 x Float64 (Dense)"
+@assert densify(dense; copy = true) !== dense
+@assert densify(dense; copy = true) == dense
+@assert brief(densify(dense; copy = true)) == "4 x Float64 (Dense)"
 
-@test isapprox(densify(dense; eltype = Float32), dense)
-@test brief(densify(dense; eltype = Float32)) == "4 x Float32 (Dense)"
-
-println("OK")
+@assert isapprox(densify(dense; eltype = Float32), dense)
+@assert brief(densify(dense; eltype = Float32)) == "4 x Float32 (Dense)"
 
 # output
 
-OK
 ```
 """
 function densify(matrix::AbstractMatrix; copy::Bool = false, eltype::Maybe{Type} = nothing)::AbstractMatrix
@@ -1066,27 +1037,22 @@ Create a sparse column-major matrix. This differs from the simple `SparseMatrixC
   - If `eltype` is specified, this will be the element type of the result.
 
 ```jldoctest
-using Test
-
 # Matrix
 
-@test brief(sparse_matrix_csc([0 1 2; 3 4 0])) == "2 x 3 x Int64 in Columns (Sparse 4 (67%) [UInt32])"
-@test brief(sparse_matrix_csc([0 1 2; 3 4 0]; eltype = Float32)) == "2 x 3 x Float32 in Columns (Sparse 4 (67%) [UInt32])"
-@test brief(sparse_matrix_csc([0 1 2; 3 4 0]; indtype = UInt8)) == "2 x 3 x Int64 in Columns (Sparse 4 (67%) [UInt8])"
+@assert brief(sparse_matrix_csc([0 1 2; 3 4 0])) == "2 x 3 x Int64 in Columns (Sparse 4 (67%) [UInt32])"
+@assert brief(sparse_matrix_csc([0 1 2; 3 4 0]; eltype = Float32)) == "2 x 3 x Float32 in Columns (Sparse 4 (67%) [UInt32])"
+@assert brief(sparse_matrix_csc([0 1 2; 3 4 0]; indtype = UInt8)) == "2 x 3 x Int64 in Columns (Sparse 4 (67%) [UInt8])"
 
 # Vectors
 
 sparse = sparse_matrix_csc([0 1 2; 3 4 0])
 
-@test brief(sparse_matrix_csc(2, 3, sparse.colptr, sparse.rowval, sparse.nzval)) == "2 x 3 x Int64 in Columns (Sparse 4 (67%) [UInt32])"
-@test brief(sparse_matrix_csc(2, 3, read_only_array(sparse.colptr), read_only_array(sparse.rowval), read_only_array(sparse.nzval))) ==
-      "2 x 3 x Int64 in Columns (ReadOnly, Sparse 4 (67%) [UInt32])"
-
-println("OK")
+@assert brief(sparse_matrix_csc(2, 3, sparse.colptr, sparse.rowval, sparse.nzval)) == "2 x 3 x Int64 in Columns (Sparse 4 (67%) [UInt32])"
+@assert brief(sparse_matrix_csc(2, 3, read_only_array(sparse.colptr), read_only_array(sparse.rowval), read_only_array(sparse.nzval))) ==
+      "2 x 3 x Int64 in Columns (ReadOnly, Sparse 4 (67%) [UInt32])";
 
 # output
 
-OK
 ```
 """
 function sparse_matrix_csc(
@@ -1144,23 +1110,18 @@ Create a sparse vector. This differs from the simple `SparseVector` in the follo
   - If `eltype` is specified, this will be the element type of the result.
 
 ```jldoctest
-using Test
-
 # Vector
 
-@test brief(sparse_vector([0, 1, 2])) == "3 x Int64 (Sparse 2 (67%) [UInt32])"
-@test brief(sparse_vector([0, 1, 2]; eltype = Float32)) == "3 x Float32 (Sparse 2 (67%) [UInt32])"
+@assert brief(sparse_vector([0, 1, 2])) == "3 x Int64 (Sparse 2 (67%) [UInt32])"
+@assert brief(sparse_vector([0, 1, 2]; eltype = Float32)) == "3 x Float32 (Sparse 2 (67%) [UInt32])"
 
 # Vectors
 
-@test brief(sparse_vector(3, [1, 3], [1.0, 2.0])) == "3 x Float64 (Sparse 2 (67%) [Int64])"
-@test brief(sparse_vector(3, read_only_array([1, 3]), read_only_array([1.0, 2.0]))) == "3 x Float64 (ReadOnly, Sparse 2 (67%) [Int64])"
-
-println("OK")
+@assert brief(sparse_vector(3, [1, 3], [1.0, 2.0])) == "3 x Float64 (Sparse 2 (67%) [Int64])"
+@assert brief(sparse_vector(3, read_only_array([1, 3]), read_only_array([1.0, 2.0]))) == "3 x Float64 (ReadOnly, Sparse 2 (67%) [Int64])"
 
 # output
 
-OK
 ```
 """
 function sparse_vector(
@@ -1196,16 +1157,11 @@ Create a sparse mask vector using only the indices of the `true` entries. Alas, 
 a vector of `Bool` for the data.
 
 ```jldoctest
-using Test
-
-@test brief(sparse_mask_vector(3, [1, 3])) == "3 x Bool (Sparse 2 (67%) [Int64])"
-@test brief(sparse_mask_vector(3, read_only_array([1, 3]))) == "3 x Bool (ReadOnly, Sparse 2 (67%) [Int64])"
-
-println("OK")
+@assert brief(sparse_mask_vector(3, [1, 3])) == "3 x Bool (Sparse 2 (67%) [Int64])"
+@assert brief(sparse_mask_vector(3, read_only_array([1, 3]))) == "3 x Bool (ReadOnly, Sparse 2 (67%) [Int64])"
 
 # output
 
-OK
 ```
 """
 function sparse_mask_vector(size::Integer, indptr::AbstractVector)::Union{ReadOnlyArray, SparseVector{Bool}}
@@ -1288,7 +1244,6 @@ given a sparse matrix, we consider the [`indtype_for_size`](@ref) for it, and if
 better (smaller) `indtype`.
 
 ```jldoctest
-using Test
 using LinearAlgebra
 
 # Dense
@@ -1296,92 +1251,88 @@ using LinearAlgebra
 dense = zeros(Int32, 5, 5)
 view(dense, diagind(dense)) .= 1
 
-@test bestify(dense) == dense
-@test brief(bestify(dense)) == "5 x 5 x Int32 in Columns (Sparse 5 (20%) [UInt32])"
+@assert bestify(dense) == dense
+@assert brief(bestify(dense)) == "5 x 5 x Int32 in Columns (Sparse 5 (20%) [UInt32])"
 
-@test bestify(dense; min_sparse_saving_fraction = 0.5) === dense
+@assert bestify(dense; min_sparse_saving_fraction = 0.5) === dense
 
 # Sparse
 
 sparse = sparse_matrix_csc(dense)
-@test bestify(sparse) === sparse
-@test brief(sparse) == "5 x 5 x Int32 in Columns (Sparse 5 (20%) [UInt32])"
+@assert bestify(sparse) === sparse
+@assert brief(sparse) == "5 x 5 x Int32 in Columns (Sparse 5 (20%) [UInt32])"
 
 # ReadOnly
 
 read_only = read_only_array(dense)
-@test bestify(read_only; min_sparse_saving_fraction = 0.5) === read_only
-@test brief(read_only) == "5 x 5 x Int32 in Columns (ReadOnly, Dense)"
+@assert bestify(read_only; min_sparse_saving_fraction = 0.5) === read_only
+@assert brief(read_only) == "5 x 5 x Int32 in Columns (ReadOnly, Dense)"
 
-@test bestify(read_only) == read_only
-@test brief(bestify(read_only)) == "5 x 5 x Int32 in Columns (ReadOnly, Sparse 5 (20%) [UInt32])"
+@assert bestify(read_only) == read_only
+@assert brief(bestify(read_only)) == "5 x 5 x Int32 in Columns (ReadOnly, Sparse 5 (20%) [UInt32])"
 
 read_only = read_only_array(sparse)
-@test bestify(read_only) === read_only
-@test brief(read_only) == "5 x 5 x Int32 in Columns (ReadOnly, Sparse 5 (20%) [UInt32])"
+@assert bestify(read_only) === read_only
+@assert brief(read_only) == "5 x 5 x Int32 in Columns (ReadOnly, Sparse 5 (20%) [UInt32])"
 
-@test bestify(read_only; min_sparse_saving_fraction = 0.5) == read_only
-@test brief(bestify(read_only; min_sparse_saving_fraction = 0.5)) == "5 x 5 x Int32 in Columns (ReadOnly, Dense)"
+@assert bestify(read_only; min_sparse_saving_fraction = 0.5) == read_only
+@assert brief(bestify(read_only; min_sparse_saving_fraction = 0.5)) == "5 x 5 x Int32 in Columns (ReadOnly, Dense)"
 
 # Named
 
 using NamedArrays
 
 named = NamedArray(dense)
-@test bestify(named; min_sparse_saving_fraction = 0.5) === named
-@test brief(named) == "5 x 5 x Int32 in Columns (Named, Dense)"
+@assert bestify(named; min_sparse_saving_fraction = 0.5) === named
+@assert brief(named) == "5 x 5 x Int32 in Columns (Named, Dense)"
 
-@test bestify(named) == named
-@test brief(bestify(named)) == "5 x 5 x Int32 in Columns (Named, Sparse 5 (20%) [UInt32])"
+@assert bestify(named) == named
+@assert brief(bestify(named)) == "5 x 5 x Int32 in Columns (Named, Sparse 5 (20%) [UInt32])"
 
 named = NamedArray(sparse)
-@test bestify(named) === named
-@test brief(named) == "5 x 5 x Int32 in Columns (Named, Sparse 5 (20%) [UInt32])"
+@assert bestify(named) === named
+@assert brief(named) == "5 x 5 x Int32 in Columns (Named, Sparse 5 (20%) [UInt32])"
 
-@test bestify(named; min_sparse_saving_fraction = 0.5) == named
-@test brief(bestify(named; min_sparse_saving_fraction = 0.5)) == "5 x 5 x Int32 in Columns (Named, Dense)"
+@assert bestify(named; min_sparse_saving_fraction = 0.5) == named
+@assert brief(bestify(named; min_sparse_saving_fraction = 0.5)) == "5 x 5 x Int32 in Columns (Named, Dense)"
 
 # Permuted
 
 permuted = PermutedDimsArray(dense, (2, 1))
-@test bestify(permuted; min_sparse_saving_fraction = 0.5) === permuted
-@test brief(permuted) == "5 x 5 x Int32 in Rows (Permute, Dense)"
+@assert bestify(permuted; min_sparse_saving_fraction = 0.5) === permuted
+@assert brief(permuted) == "5 x 5 x Int32 in Rows (Permute, Dense)"
 
-@test bestify(permuted) == permuted
-@test brief(bestify(permuted)) == "5 x 5 x Int32 in Rows (Permute, Sparse 5 (20%) [UInt32])"
+@assert bestify(permuted) == permuted
+@assert brief(bestify(permuted)) == "5 x 5 x Int32 in Rows (Permute, Sparse 5 (20%) [UInt32])"
 
 permuted = PermutedDimsArray(sparse, (1, 2))
-@test bestify(permuted) === permuted
-@test brief(permuted) == "5 x 5 x Int32 in Columns (!Permute, Sparse 5 (20%) [UInt32])"
+@assert bestify(permuted) === permuted
+@assert brief(permuted) == "5 x 5 x Int32 in Columns (!Permute, Sparse 5 (20%) [UInt32])"
 
-@test bestify(permuted; min_sparse_saving_fraction = 0.5) == permuted
-@test brief(bestify(permuted; min_sparse_saving_fraction = 0.5)) == "5 x 5 x Int32 in Columns (!Permute, Dense)"
+@assert bestify(permuted; min_sparse_saving_fraction = 0.5) == permuted
+@assert brief(bestify(permuted; min_sparse_saving_fraction = 0.5)) == "5 x 5 x Int32 in Columns (!Permute, Dense)"
 
 # LinearAlgebra
 
 transposed = transpose(dense)
-@test bestify(transposed; min_sparse_saving_fraction = 0.5) === transposed
-@test brief(transposed) == "5 x 5 x Int32 in Rows (Transpose, Dense)"
+@assert bestify(transposed; min_sparse_saving_fraction = 0.5) === transposed
+@assert brief(transposed) == "5 x 5 x Int32 in Rows (Transpose, Dense)"
 
-@test bestify(transposed) == transposed
-@test brief(bestify(transposed)) == "5 x 5 x Int32 in Rows (Transpose, Sparse 5 (20%) [UInt32])"
+@assert bestify(transposed) == transposed
+@assert brief(bestify(transposed)) == "5 x 5 x Int32 in Rows (Transpose, Sparse 5 (20%) [UInt32])"
 
 adjointed = adjoint(sparse)
-@test bestify(adjointed) === adjointed
-@test brief(adjointed) == "5 x 5 x Int32 in Rows (Adjoint, Sparse 5 (20%) [UInt32])"
+@assert bestify(adjointed) === adjointed
+@assert brief(adjointed) == "5 x 5 x Int32 in Rows (Adjoint, Sparse 5 (20%) [UInt32])"
 
-@test bestify(adjointed; min_sparse_saving_fraction = 0.5) == adjointed
-@test brief(bestify(adjointed; min_sparse_saving_fraction = 0.5)) == "5 x 5 x Int32 in Rows (Adjoint, Dense)"
-
-println("OK")
+@assert bestify(adjointed; min_sparse_saving_fraction = 0.5) == adjointed
+@assert brief(bestify(adjointed; min_sparse_saving_fraction = 0.5)) == "5 x 5 x Int32 in Rows (Adjoint, Dense)"
 
 # output
 
-OK
 ```
 
 ```jldoctest
-using Test
 using LinearAlgebra
 
 # Dense
@@ -1389,22 +1340,19 @@ using LinearAlgebra
 dense = zeros(Int32, 3)
 dense[1] = 1
 
-@test bestify(dense) == dense
-@test brief(bestify(dense)) == "3 x Int32 (Sparse 1 (33%) [UInt32])"
+@assert bestify(dense) == dense
+@assert brief(bestify(dense)) == "3 x Int32 (Sparse 1 (33%) [UInt32])"
 
-@test bestify(dense; min_sparse_saving_fraction = 0.5) === dense
+@assert bestify(dense; min_sparse_saving_fraction = 0.5) === dense
 
 # Sparse
 
 sparse = sparse_vector(dense)
-@test bestify(sparse) === sparse
-@test brief(sparse) == "3 x Int32 (Sparse 1 (33%) [UInt32])"
-
-println("OK")
+@assert bestify(sparse) === sparse
+@assert brief(sparse) == "3 x Int32 (Sparse 1 (33%) [UInt32])"
 
 # output
 
-OK
 ```
 """
 @documented function bestify(
@@ -1571,20 +1519,16 @@ end
 Return the `colptr` of a `sparse` matrix.
 
 ```jldoctest
-using Test
 using NamedArrays
 using SparseArrays
 
 sparse_matrix = SparseMatrixCSC([0 1 2; 3 4 0])
-@assert colptr(sparse_matrix) === sparse_matrix.colptr
-@assert colptr(read_only_array(sparse_matrix)) === sparse_matrix.colptr
-@assert colptr(NamedArray(sparse_matrix)) === sparse_matrix.colptr
-
-println("OK")
+@assert colptr(sparse_matrix) === sparse_matrix.colptr;
+@assert colptr(read_only_array(sparse_matrix)) === sparse_matrix.colptr;
+@assert colptr(NamedArray(sparse_matrix)) === sparse_matrix.colptr;
 
 # output
 
-OK
 ```
 """
 function colptr(read_only::SparseArrays.ReadOnly)::AbstractVector
@@ -1606,20 +1550,16 @@ end
 Return the `nzind` of a `sparse` vector.
 
 ```jldoctest
-using Test
 using NamedArrays
 using SparseArrays
 
 sparse_vector = SparseVector([0, 1, 2])
-@assert nzind(sparse_vector) === sparse_vector.nzind
-@assert nzind(read_only_array(sparse_vector)) === sparse_vector.nzind
-@assert nzind(NamedArray(sparse_vector)) === sparse_vector.nzind
-
-println("OK")
+@assert nzind(sparse_vector) === sparse_vector.nzind;
+@assert nzind(read_only_array(sparse_vector)) === sparse_vector.nzind;
+@assert nzind(NamedArray(sparse_vector)) === sparse_vector.nzind;
 
 # output
 
-OK
 ```
 """
 function nzind(read_only::SparseArrays.ReadOnly)::AbstractVector
@@ -1641,25 +1581,21 @@ end
 Return the `nzval` of a `sparse` array.
 
 ```jldoctest
-using Test
 using NamedArrays
 using SparseArrays
 
 sparse_matrix = SparseMatrixCSC([0 1 2; 3 4 0])
-@assert nzval(sparse_matrix) === sparse_matrix.nzval
-@assert nzval(read_only_array(sparse_matrix)) === sparse_matrix.nzval
-@assert nzval(NamedArray(sparse_matrix)) === sparse_matrix.nzval
+@assert nzval(sparse_matrix) === sparse_matrix.nzval;
+@assert nzval(read_only_array(sparse_matrix)) === sparse_matrix.nzval;
+@assert nzval(NamedArray(sparse_matrix)) === sparse_matrix.nzval;
 
 sparse_vector = SparseVector([0, 1, 2])
-@assert nzval(sparse_vector) === sparse_vector.nzval
-@assert nzval(read_only_array(sparse_vector)) === sparse_vector.nzval
-@assert nzval(NamedArray(sparse_vector)) === sparse_vector.nzval
-
-println("OK")
+@assert nzval(sparse_vector) === sparse_vector.nzval;
+@assert nzval(read_only_array(sparse_vector)) === sparse_vector.nzval;
+@assert nzval(NamedArray(sparse_vector)) === sparse_vector.nzval;
 
 # output
 
-OK
 ```
 """
 function nzval(vector::SparseVector)::AbstractVector
@@ -1685,20 +1621,16 @@ end
 Return the `rowval` of a `sparse` array.
 
 ```jldoctest
-using Test
 using NamedArrays
 using SparseArrays
 
 sparse_matrix = SparseMatrixCSC([0 1 2; 3 4 0])
-@assert rowval(sparse_matrix) === sparse_matrix.rowval
-@assert rowval(read_only_array(sparse_matrix)) === sparse_matrix.rowval
-@assert rowval(NamedArray(sparse_matrix)) === sparse_matrix.rowval
-
-println("OK")
+@assert rowval(sparse_matrix) === sparse_matrix.rowval;
+@assert rowval(read_only_array(sparse_matrix)) === sparse_matrix.rowval;
+@assert rowval(NamedArray(sparse_matrix)) === sparse_matrix.rowval;
 
 # output
 
-OK
 ```
 """
 function rowval(matrix::SparseMatrixCSC)::AbstractVector
@@ -1712,6 +1644,143 @@ end
 function rowval(named::NamedArray)::AbstractVector
     @assert issparse(parent(named))
     return rowval(parent(named))
+end
+
+"""
+    embed_dense_matrix_in_sparse_matrix(
+        matrix::AbstractMatrix{T};
+        rows_indices::AbstractVector{<:Integer},
+        n_rows::Integer,
+        columns_indices::AbstractVector{<:Integer},
+        n_columns::Integer,
+    )::SparseMatrixCSC{T} where {T}
+
+Embed a dense `matrix` into a sparse matrix of size `n_rows` x `n_columns`. The dense matrix values are placed at the
+positions given by `rows_indices` (which must be sorted) and `columns_indices` (which must be sorted). All entries of the
+dense matrix are assumed to be non-zero.
+
+!!! note
+
+    The returned sparse matrix uses the same storage as the provided dense matrix. It just wraps it with appropriate
+    indices to appear as a larger sparse matrix.
+
+```jldoctest
+using SparseArrays
+
+dense = rand(Float32, 3, 4)
+sparse = embed_dense_matrix_in_sparse_matrix(dense; rows_indices = [1, 3, 5], n_rows = 5, columns_indices = [2, 3, 4, 6], n_columns = 6)
+
+@assert all(sparse[[1, 3, 5], [2, 3, 4, 6]] .== dense)
+@assert all(sparse[[2, 4], :] .== 0)
+@assert all(sparse[:, [1, 5]] .== 0)
+
+# output
+
+```
+"""
+function embed_dense_matrix_in_sparse_matrix(
+    matrix::AbstractMatrix{T};
+    rows_indices::AbstractVector{<:Integer},
+    n_rows::Integer,
+    columns_indices::AbstractVector{<:Integer},
+    n_columns::Integer,
+)::SparseMatrixCSC{T} where {T}
+    n_dense_rows = length(rows_indices)
+    n_dense_cols = length(columns_indices)
+    @assert size(matrix) == (n_dense_rows, n_dense_cols)
+
+    index_type = indtype_for_size(n_rows * n_columns)
+
+    colptr = Vector{index_type}(undef, n_columns + 1)
+    colptr[1] = 1
+    dense_column_index = 1
+    for column_index in 1:n_columns
+        if dense_column_index <= n_dense_cols && columns_indices[dense_column_index] == column_index
+            colptr[column_index + 1] = colptr[column_index] + n_dense_rows
+            dense_column_index += 1
+        else
+            colptr[column_index + 1] = colptr[column_index]
+        end
+    end
+
+    nnz = n_dense_rows * n_dense_cols
+    rowval_vector = Vector{index_type}(undef, nnz)
+    for dense_column_index in 1:n_dense_cols
+        offset = (dense_column_index - 1) * n_dense_rows
+        @view(rowval_vector[(offset + 1):(offset + n_dense_rows)]) .= rows_indices
+    end
+
+    return SparseMatrixCSC(n_rows, n_columns, colptr, rowval_vector, vec(matrix))
+end
+
+"""
+    embed_sparse_matrix_in_sparse_matrix(
+        matrix::SparseMatrixCSC{T};
+        rows_indices::AbstractVector{<:Integer},
+        n_rows::Integer,
+        columns_indices::AbstractVector{<:Integer},
+        n_columns::Integer,
+    )::SparseMatrixCSC{T} where {T}
+
+Embed a sparse `matrix` into a larger sparse matrix of size `n_rows` x `n_columns`. The sparse matrix non-zero values
+are placed at the positions given by `rows_indices` (which must be sorted) and `columns_indices` (which must be sorted),
+which remap the row and column indices of the input matrix.
+
+!!! note
+
+    The returned sparse matrix uses the same `nzval` storage as the provided sparse matrix. Only the `colptr` and
+    `rowval` arrays are newly allocated with remapped indices.
+
+```jldoctest
+using SparseArrays
+
+input = sparse([1, 2, 1], [1, 2, 3], Float32[10, 20, 30], 2, 3)
+result = embed_sparse_matrix_in_sparse_matrix(input; rows_indices = [2, 4], n_rows = 5, columns_indices = [1, 3, 5], n_columns = 6)
+
+@assert result[2, 1] == 10
+@assert result[4, 3] == 20
+@assert result[2, 5] == 30
+@assert nnz(result) == 3
+@assert size(result) == (5, 6)
+
+# output
+
+```
+"""
+function embed_sparse_matrix_in_sparse_matrix(
+    matrix::SparseMatrixCSC{T};
+    rows_indices::AbstractVector{<:Integer},
+    n_rows::Integer,
+    columns_indices::AbstractVector{<:Integer},
+    n_columns::Integer,
+)::SparseMatrixCSC{T} where {T}
+    @assert size(matrix, 1) == length(rows_indices)
+    @assert size(matrix, 2) == length(columns_indices)
+
+    index_type = indtype_for_size(n_rows * n_columns)
+
+    old_colptr = matrix.colptr
+    old_rowval = matrix.rowval
+
+    new_colptr = Vector{index_type}(undef, n_columns + 1)
+    new_colptr[1] = 1
+    sparse_column_index = 1
+    for column_index in 1:n_columns
+        if sparse_column_index <= length(columns_indices) && columns_indices[sparse_column_index] == column_index
+            new_colptr[column_index + 1] =
+                new_colptr[column_index] + (old_colptr[sparse_column_index + 1] - old_colptr[sparse_column_index])
+            sparse_column_index += 1
+        else
+            new_colptr[column_index + 1] = new_colptr[column_index]
+        end
+    end
+
+    new_rowval = Vector{index_type}(undef, nnz(matrix))
+    for i in eachindex(old_rowval)
+        new_rowval[i] = rows_indices[old_rowval[i]]
+    end
+
+    return SparseMatrixCSC(n_rows, n_columns, new_colptr, new_rowval, matrix.nzval)
 end
 
 end  # module

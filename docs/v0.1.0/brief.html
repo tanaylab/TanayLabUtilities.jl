@@ -253,60 +253,55 @@
 </code> but modified for specific types (in particular, vectors and matrices) to give &quot;better&quot; results.
 </p>
 <pre>
-<code class="language-julia hljs">using Test
-
-@test brief(1.0) == &quot;1.0&quot;
-@test brief(true) == &quot;true&quot;
-@test brief(:foo) == &quot;:foo&quot;
-@test brief(nothing) == &quot;nothing&quot;
-@test brief(missing) == &quot;missing&quot;
-@test brief(undef) == &quot;undef&quot;
-@test brief((&quot;foo&quot;, :bar)) == &quot;(\&quot;foo\&quot;, :bar)&quot;
-@test brief(&quot;foo&quot; =&gt; :bar) == &quot;\&quot;foo\&quot; =&gt; :bar&quot;
-@test brief(&quot;foo&quot;) == &quot;\&quot;foo\&quot;&quot;
-@test brief(&quot;foo &quot;^10) == &quot;\&quot;foo foo foo foo ...\&quot; (40)&quot;
-@test brief([true, false]) == &quot;2 x Bool (Dense; 1 (50%) true)&quot;
-@test brief(Int64) == &quot;Int64&quot;
-@test brief(String) == &quot;Str&quot;
-@test brief(AbstractString) == &quot;Str&quot;
+<code class="language-julia hljs">@assert brief(1.0) == &quot;1.0&quot;
+@assert brief(true) == &quot;true&quot;
+@assert brief(:foo) == &quot;:foo&quot;
+@assert brief(nothing) == &quot;nothing&quot;
+@assert brief(missing) == &quot;missing&quot;
+@assert brief(undef) == &quot;undef&quot;
+@assert brief((&quot;foo&quot;, :bar)) == &quot;(\&quot;foo\&quot;, :bar)&quot;
+@assert brief(&quot;foo&quot; =&gt; :bar) == &quot;\&quot;foo\&quot; =&gt; :bar&quot;
+@assert brief(&quot;foo&quot;) == &quot;\&quot;foo\&quot;&quot;
+@assert brief(&quot;foo &quot;^10) == &quot;\&quot;foo foo foo foo ...\&quot; (40)&quot;
+@assert brief([true, false]) == &quot;2 x Bool (Dense; 1 (50%) true)&quot;
+@assert brief(Int64) == &quot;Int64&quot;
+@assert brief(String) == &quot;Str&quot;
+@assert brief(AbstractString) == &quot;Str&quot;
 
 @enum Foo Bar Baz
-@test brief(Bar) == &quot;Foo::Bar&quot;
+@assert brief(Bar) == &quot;Foo::Bar&quot;
 
 struct Vaz end
-@test brief(Vaz()) == summary(Vaz())
+@assert brief(Vaz()) == summary(Vaz())
 
-@test brief(Set([1])) == &quot;1 x Int64 (Set)&quot;
+@assert brief(Set([1])) == &quot;1 x Int64 (Set)&quot;
 
-@test brief(rand(5)) == &quot;5 x Float64 (Dense)&quot;
-@test brief(rand(3, 4)) == &quot;3 x 4 x Float64 in Columns (Dense)&quot;
+@assert brief(rand(5)) == &quot;5 x Float64 (Dense)&quot;
+@assert brief(rand(3, 4)) == &quot;3 x 4 x Float64 in Columns (Dense)&quot;
 
-@test brief(read_only_array(rand(5))) == &quot;5 x Float64 (ReadOnly, Dense)&quot;
-@test brief(PermutedDimsArray(rand(3, 4), (2, 1))) == &quot;4 x 3 x Float64 in Rows (Permute, Dense)&quot;
-@test brief(PermutedDimsArray(rand(3, 4), (1, 2))) == &quot;3 x 4 x Float64 in Columns (!Permute, Dense)&quot;
+@assert brief(read_only_array(rand(5))) == &quot;5 x Float64 (ReadOnly, Dense)&quot;
+@assert brief(PermutedDimsArray(rand(3, 4), (2, 1))) == &quot;4 x 3 x Float64 in Rows (Permute, Dense)&quot;
+@assert brief(PermutedDimsArray(rand(3, 4), (1, 2))) == &quot;3 x 4 x Float64 in Columns (!Permute, Dense)&quot;
 
 using SparseArrays
 
-@test brief(SparseVector([0.0, 1.0])) == &quot;2 x Float64 (Sparse 1 (50%) [Int64])&quot;
-@test brief(SparseMatrixCSC([0.0 1.0 2.0; 3.0 4.0 0.0])) == &quot;2 x 3 x Float64 in Columns (Sparse 4 (67%) [Int64])&quot;
+@assert brief(SparseVector([0.0, 1.0])) == &quot;2 x Float64 (Sparse 1 (50%) [Int64])&quot;
+@assert brief(SparseMatrixCSC([0.0 1.0 2.0; 3.0 4.0 0.0])) == &quot;2 x 3 x Float64 in Columns (Sparse 4 (67%) [Int64])&quot;
 
 using NamedArrays
 
-@test brief(NamedArray(rand(2))) == &quot;2 x Float64 (Named, Dense)&quot;
-@test brief(NamedArray(SparseVector([0.0, 1.0]))) == &quot;2 x Float64 (Named, Sparse 1 (50%) [Int64])&quot;
+@assert brief(NamedArray(rand(2))) == &quot;2 x Float64 (Named, Dense)&quot;
+@assert brief(NamedArray(SparseVector([0.0, 1.0]))) == &quot;2 x Float64 (Named, Sparse 1 (50%) [Int64])&quot;
 
 using LinearAlgebra
 
-@test brief(transpose(rand(2))) == &quot;2 x Float64 (Transpose, Dense)&quot;
-@test brief(adjoint(rand(2))) == &quot;2 x Float64 (Adjoint, Dense)&quot;
+@assert brief(transpose(rand(2))) == &quot;2 x Float64 (Transpose, Dense)&quot;
+@assert brief(adjoint(rand(2))) == &quot;2 x Float64 (Adjoint, Dense)&quot;
 
-@test brief(Dict([&quot;a&quot; =&gt; 1])) == &quot;1 x Str =&gt; Int64 (Dict)&quot;
-
-println(&quot;OK&quot;)
+@assert brief(Dict([&quot;a&quot; =&gt; 1])) == &quot;1 x Str =&gt; Int64 (Dict)&quot;
 
 # output
 
-OK
 </code>
 </pre>
 </div>
@@ -452,9 +447,7 @@ OK
 </code> doesn&#39;t do that - it doesn&#39;t add delimiters to the decimal fraction.
 </p>
 <pre>
-<code class="language-julia hljs">using Test
-
-println(delimited_number(123))
+<code class="language-julia hljs">println(delimited_number(123))
 println(delimited_number(1.0))
 println(delimited_number(1234567))
 println(delimited_number(1.2345678))
@@ -565,7 +558,7 @@ println(delimited_number(1.234567e9))
 <hr/>
 <p>This document was generated with 
 <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl
-</a> version 1.17.0. Using Julia version 1.11.5.
+</a> version 1.17.0. Using Julia version 1.11.8.
 </p>
 </section>
 <footer class="modal-card-foot">

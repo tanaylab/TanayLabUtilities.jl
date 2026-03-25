@@ -58,8 +58,6 @@ When downsampling a `matrix`, then `dims` must be specified to be `1`/`Rows` to 
 `2`/`Columns` to separately downsample each column.
 
 ```jldoctest
-using Test
-
 # Columns
 
 data = rand(1:100, 10, 5)
@@ -68,9 +66,9 @@ samples_per_column = vec(sum(data; dims = 1))
 for samples in (100, 250, 500, 750, 1000)
     downsampled = downsample(data, samples; dims = 2)
     downsamples_per_column = vec(sum(downsampled; dims = 1))
-    @test all(downsamples_per_column .== min.(samples_per_column, samples))
+    @assert all(downsamples_per_column .== min.(samples_per_column, samples))
     too_small_mask = samples_per_column .<= samples
-    @test all(downsampled[:, too_small_mask] .== data[:, too_small_mask])
+    @assert all(downsampled[:, too_small_mask] .== data[:, too_small_mask])
 end
 
 # Rows
@@ -81,16 +79,13 @@ samples_per_row = samples_per_column
 for samples in (100, 250, 500, 750, 1000)
     downsampled = downsample(data, samples; dims = 1)
     downsamples_per_row = vec(sum(downsampled; dims = 2))
-    @test all(downsamples_per_row .== min.(samples_per_row, samples))
+    @assert all(downsamples_per_row .== min.(samples_per_row, samples))
     too_small_mask = samples_per_row .<= samples
-    @test all(downsampled[too_small_mask, :] .== data[too_small_mask, :])
+    @assert all(downsampled[too_small_mask, :] .== data[too_small_mask, :])
 end
-
-println("OK")
 
 # output
 
-OK
 ```
 """
 function downsample(

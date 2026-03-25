@@ -45,7 +45,7 @@ handle_abnormal(IgnoreHandler, "message")
 
 ```jldoctest
 handle_abnormal(IgnoreHandler) do
-    @assert false
+    @assert false;
 end
 
 # output

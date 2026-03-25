@@ -299,8 +299,7 @@
 </div>
 </div>
 <pre>
-<code class="language-julia hljs">using Test
-using Random
+<code class="language-julia hljs">using Random
 
 size = 10
 
@@ -310,14 +309,11 @@ for policy in (:serial, :greedy, :dynamic, :static)
         results[index] = index
         return nothing
     end
-    @test results == collect(1:size)
+    @assert results == collect(1:size)
 end
-
-println(&quot;OK&quot;)
 
 # output
 
-OK
 </code>
 </pre>
 </div>
@@ -411,8 +407,7 @@ OK
 </div>
 </div>
 <pre>
-<code class="language-julia hljs">using Test
-using Random
+<code class="language-julia hljs">using Random
 
 size = 10
 
@@ -421,28 +416,25 @@ function collect_rng(rng::AbstractRNG)::Vector{Float64}
     parallel_loop_with_rng(1:size; rng) do index, rng
         results[index] = rand(rng)
     end
-    @test results[1] != results[2]
+    @assert results[1] != results[2]
     return results
 end
 
-@test collect_rng(MersenneTwister(1)) == collect_rng(MersenneTwister(1))
+@assert collect_rng(MersenneTwister(1)) == collect_rng(MersenneTwister(1))
 
 function collect_default_rng()::Vector{Float64}
     results = zeros(Float64, size)
     parallel_loop_with_rng(1:size; seed = 123456, policy = :dynamic) do index, _
         results[index] = rand()
     end
-    @test results[1] != results[2]
+    @assert results[1] != results[2]
     return results
 end
 
-@test collect_default_rng() == collect_default_rng()
-
-println(&quot;OK&quot;)
+@assert collect_default_rng() == collect_default_rng()
 
 # output
 
-OK
 </code>
 </pre>
 </div>
@@ -601,7 +593,7 @@ OK
 <hr/>
 <p>This document was generated with 
 <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl
-</a> version 1.17.0. Using Julia version 1.11.5.
+</a> version 1.17.0. Using Julia version 1.11.8.
 </p>
 </section>
 <footer class="modal-card-foot">

@@ -37,7 +37,6 @@ Given a vector of `full_indices`, split them into `cross_validation_parts` where
 testing indices.
 
 ```jldoctest
-using Test
 using Random
 
 cross_validation_indices = pick_cross_validation_indices(;
@@ -45,27 +44,24 @@ cross_validation_indices = pick_cross_validation_indices(;
     cross_validation_parts = 3,
     rng = Random.default_rng()
 )
-@test all([
+@assert all([
     length(test_indices)
     for test_indices
     in cross_validation_indices.test_indices_per_part
 ] .== 4)
-@test all([
+@assert all([
     length(train_indices)
     for train_indices
     in cross_validation_indices.train_indices_per_part
 ] .== 8)
-@test all([
+@assert all([
     length(union(Set(test_indices), Set(train_indices)))
     for (test_indices, train_indices)
     in zip(cross_validation_indices.test_indices_per_part, cross_validation_indices.train_indices_per_part)
 ] .== 12)
 
-println("OK")
-
 # output
 
-OK
 ```
 """
 function pick_cross_validation_indices(;

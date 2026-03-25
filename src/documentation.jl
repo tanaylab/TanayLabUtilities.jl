@@ -57,8 +57,8 @@ global constants, copied from other functions via [`function_default`](@ref), et
     return x + y
 end
 
-@assert foo() == 3
-@assert foo(2) == 4
+@assert foo() == 3;
+@assert foo(2) == 4;
 println(repr("text/markdown", @doc foo))
 
 # output

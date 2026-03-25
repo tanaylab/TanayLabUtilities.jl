@@ -29,7 +29,6 @@ specified `policy` and `progress`. If `policy` is `:serial`, then the standard v
 `progress` is ignored.
 
 ```jldoctest
-using Test
 using Distances
 using Random
 
@@ -39,22 +38,19 @@ m1 = rand(10, 20)
 m2 = rand(10, 30)
 
 d = pairwise(Euclidean(), m1; dims = 2)
-@test maximum(abs.(d .- parallel_pairwise(Euclidean(), m1; dims = 2, policy = :serial))) < 1e-6
-@test maximum(abs.(d .- parallel_pairwise(Euclidean(), m1; dims = 2, policy = :greedy))) < 1e-6
-@test maximum(abs.(d .- parallel_pairwise(Euclidean(), m1; dims = 2, policy = :dynamic))) < 1e-6
-@test maximum(abs.(d .- parallel_pairwise(Euclidean(), m1; dims = 2, policy = :static))) < 1e-6
+@assert maximum(abs.(d .- parallel_pairwise(Euclidean(), m1; dims = 2, policy = :serial))) < 1e-6
+@assert maximum(abs.(d .- parallel_pairwise(Euclidean(), m1; dims = 2, policy = :greedy))) < 1e-6
+@assert maximum(abs.(d .- parallel_pairwise(Euclidean(), m1; dims = 2, policy = :dynamic))) < 1e-6
+@assert maximum(abs.(d .- parallel_pairwise(Euclidean(), m1; dims = 2, policy = :static))) < 1e-6
 
 d = pairwise(Euclidean(), m1, m2; dims = 2)
-@test maximum(abs.(d .- parallel_pairwise(Euclidean(), m1, m2; dims = 2, policy = :serial))) < 1e-6
-@test maximum(abs.(d .- parallel_pairwise(Euclidean(), m1, m2; dims = 2, policy = :greedy))) < 1e-6
-@test maximum(abs.(d .- parallel_pairwise(Euclidean(), m1, m2; dims = 2, policy = :dynamic))) < 1e-6
-@test maximum(abs.(d .- parallel_pairwise(Euclidean(), m1, m2; dims = 2, policy = :static))) < 1e-6
-
-println("OK")
+@assert maximum(abs.(d .- parallel_pairwise(Euclidean(), m1, m2; dims = 2, policy = :serial))) < 1e-6
+@assert maximum(abs.(d .- parallel_pairwise(Euclidean(), m1, m2; dims = 2, policy = :greedy))) < 1e-6
+@assert maximum(abs.(d .- parallel_pairwise(Euclidean(), m1, m2; dims = 2, policy = :dynamic))) < 1e-6
+@assert maximum(abs.(d .- parallel_pairwise(Euclidean(), m1, m2; dims = 2, policy = :static))) < 1e-6
 
 # output
 
-OK
 ```
 """
 function parallel_pairwise(
@@ -151,7 +147,6 @@ specified `policy` and `progress`. If `policy` is `:serial`, then the standard v
 `progress` is ignored.
 
 ```jldoctest
-using Test
 using Distances
 using Random
 
@@ -161,16 +156,13 @@ m1 = rand(10, 20)
 m2 = rand(10, 20)
 
 d = colwise(Euclidean(), m1, m2)
-@test maximum(abs.(d .- parallel_colwise(Euclidean(), m1, m2; policy = :serial))) < 1e-6
-@test maximum(abs.(d .- parallel_colwise(Euclidean(), m1, m2; policy = :greedy))) < 1e-6
-@test maximum(abs.(d .- parallel_colwise(Euclidean(), m1, m2; policy = :dynamic))) < 1e-6
-@test maximum(abs.(d .- parallel_colwise(Euclidean(), m1, m2; policy = :static))) < 1e-6
-
-println("OK")
+@assert maximum(abs.(d .- parallel_colwise(Euclidean(), m1, m2; policy = :serial))) < 1e-6
+@assert maximum(abs.(d .- parallel_colwise(Euclidean(), m1, m2; policy = :greedy))) < 1e-6
+@assert maximum(abs.(d .- parallel_colwise(Euclidean(), m1, m2; policy = :dynamic))) < 1e-6
+@assert maximum(abs.(d .- parallel_colwise(Euclidean(), m1, m2; policy = :static))) < 1e-6
 
 # output
 
-OK
 """
 function parallel_colwise(  # FLAKY TESTED
     distance,
@@ -179,7 +171,7 @@ function parallel_colwise(  # FLAKY TESTED
     policy::Symbol = :greedy,
     progress::Maybe{Progress} = nothing,
 )::AbstractVector
-    @assert policy in (:serial, :greedy, :dynamic, :static)
+    @assert policy in (:serial, :greedy, :dynamic, :static);
     if policy == :serial
         return flame_timed("colwise." * string(nameof(typeof(distance)))) do
             return colwise(distance, X, Y)
@@ -187,8 +179,8 @@ function parallel_colwise(  # FLAKY TESTED
     else
         n_X_rows, n_X_columns = size(X)
         n_Y_rows, n_Y_columns = size(Y)
-        @assert n_X_columns == n_Y_columns
-        @assert n_X_rows == n_Y_rows
+        @assert n_X_columns == n_Y_columns;
+        @assert n_X_rows == n_Y_rows;
         @views X_column = X[:, 1]
         @views Y_column = Y[:, 1]
         first_distance = evaluate(distance, X_column, Y_column)

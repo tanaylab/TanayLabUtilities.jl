@@ -330,8 +330,8 @@ end
     return positional + named
 end
 
-using Logging
 using Test
+using Logging
 logger = TestLogger(; min_level = Logging.Debug)
 with_logger(logger) do
     return foo(1; named = 2)
@@ -433,7 +433,7 @@ Debug : foo return: 3 }
 <hr/>
 <p>This document was generated with 
 <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl
-</a> version 1.17.0. Using Julia version 1.11.5.
+</a> version 1.17.0. Using Julia version 1.11.8.
 </p>
 </section>
 <footer class="modal-card-foot">
