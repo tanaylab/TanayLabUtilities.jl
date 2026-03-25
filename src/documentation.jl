@@ -17,7 +17,7 @@ using ..Brief
 
 import ..Logger.pass_args
 
-function documented_wrapper(::AbstractString, inner_function)
+function documented_wrapper(::AbstractString, inner_function)  # UNTESTED
     return inner_function
 end
 
@@ -26,7 +26,7 @@ struct FunctionMetadata
     defaults::Dict{Symbol, Any}
 end
 
-function set_metadata_of_function(
+function set_metadata_of_function(  # UNTESTED
     function_module::Module,
     function_name::Symbol,
     function_metadata::FunctionMetadata,
@@ -35,7 +35,7 @@ function set_metadata_of_function(
         @eval function_module __TLU_FUNCTION_METADATA__ = Dict{Symbol, Any}()
     end
 
-    Base.invokelatest() do
+    Core.invokelatest() do
         return function_module.__TLU_FUNCTION_METADATA__[function_name] = function_metadata
     end
 

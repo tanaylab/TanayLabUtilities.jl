@@ -67,7 +67,7 @@ function Base.lock(lock::MostlyReadWriteLock)::Nothing
     return nothing
 end
 
-function Base.unlock(lock::MostlyReadWriteLock)::Nothing
+function Base.unlock(lock::MostlyReadWriteLock)::Nothing  # UNTESTED
     lock.writer_active[] = false
     flame_timed("ReentrantLock.unlock") do
         return Base.unlock(lock.write_mutex)
@@ -158,7 +158,7 @@ function ConcurrentUtils.trylock_read(action::Function, lock::MostlyReadWriteLoc
     end
 end
 
-function ConcurrentUtils.unlock_read(lock::MostlyReadWriteLock)::Nothing
+function ConcurrentUtils.unlock_read(lock::MostlyReadWriteLock)::Nothing  # UNTESTED
     atomic_sub!(lock.readers, 1)
     return nothing
 end

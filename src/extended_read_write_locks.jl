@@ -322,7 +322,7 @@ function what_suffix(::Nothing)::AbstractString  # UNTESTED
     return ""
 end
 
-function what_suffix(what::AbstractString)::AbstractString
+function what_suffix(what::AbstractString)::AbstractString  # UNTESTED
     return " " * what
 end
 

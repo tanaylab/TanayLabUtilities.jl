@@ -166,7 +166,7 @@ function do_logged(debug_group, _source_, _module_, definition)
     return esc(ExprTools.combinedef(outer_definition))
 end
 
-function parse_arg(arg::Symbol)::AbstractString
+function parse_arg(arg::Symbol)::AbstractString  # UNTESTED
     return split(string(arg), "::"; limit = 2)[1]
 end
 
@@ -174,7 +174,7 @@ function parse_arg(arg::Expr)::AbstractString  # UNTESTED
     return parse_arg(arg.args[1])
 end
 
-function logged_wrapper(
+function logged_wrapper(  # UNTESTED
     _group::Maybe{Symbol},
     _module::Module,
     _file::AbstractString,
@@ -203,7 +203,7 @@ function logged_wrapper(
             @debug "$(full_name) return }" _module = _module _file = _file _line = _line _group = _group
         end;
         result
-    )  # flaky tested
+    )
 end
 
 NEXT_TASK_ID = Atomic{Int}(1)

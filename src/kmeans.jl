@@ -420,7 +420,7 @@ function _repick_unused_centers!(
         centers[:, i] .= view(X, :, j)
         _sq_euclidean_colwise!(ds, X, view(X, :, j))
         ds[j] = 0
-        @turbo for l in eachindex(sampling_weights)
+        @turbo for l in eachindex(sampling_weights)  # NOJET
             sampling_weights[l] = min(sampling_weights[l], ds[l])
         end
     end

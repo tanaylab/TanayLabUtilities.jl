@@ -720,7 +720,7 @@ function relayout!(destination::AbstractMatrix, source::AbstractMatrix)::Abstrac
     end
 end
 
-function named_relayout(destination::AbstractMatrix, source::NamedMatrix)::NamedArray
+function named_relayout(destination::AbstractMatrix, source::NamedMatrix)::NamedArray  # UNTESTED
     @assert named_relayout(destination, parent(source)) === destination
     result = NamedArray(destination, source.dicts, source.dimnames)
     return result
@@ -738,7 +738,7 @@ function named_relayout(destination::NamedArray, source::AbstractMatrix)::Abstra
     return destination
 end
 
-function named_relayout(destination::AbstractMatrix, source::AbstractMatrix)::AbstractMatrix
+function named_relayout(destination::AbstractMatrix, source::AbstractMatrix)::AbstractMatrix  # UNTESTED
     @assert unnamed_relayout(destination, source) === destination
     return destination
 end
@@ -767,14 +767,14 @@ function unnamed_relayout(destination::Adjoint, source::AbstractMatrix)::Abstrac
     return destination
 end
 
-function unnamed_relayout(destination::SparseMatrixCSC, source::AbstractMatrix)::SparseMatrixCSC
+function unnamed_relayout(destination::SparseMatrixCSC, source::AbstractMatrix)::SparseMatrixCSC  # UNTESTED
     @assert size(destination) == size(source)
     @assert issparse(source)
     @assert LinearAlgebra.transpose!(destination, flip(mutable_array(source))) === destination  # NOJET
     return destination
 end
 
-function unnamed_relayout(destination::DenseMatrix, source::AbstractMatrix)::DenseMatrix
+function unnamed_relayout(destination::DenseMatrix, source::AbstractMatrix)::DenseMatrix  # UNTESTED
     @assert size(destination) == size(source)
     @assert !issparse(source)
     @assert LinearAlgebra.transpose!(destination, flip(mutable_array(source))) === destination
@@ -896,7 +896,7 @@ end
 function flipped(matrix::AbstractMatrix)::AbstractMatrix
     return flame_timed("flipped") do
         axis = require_major_axis(matrix)
-        local result  # UNTESTED
+        local result
 
         if issparse(matrix)
             flame_timed("flipped.sparse") do

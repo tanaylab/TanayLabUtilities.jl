@@ -204,11 +204,11 @@ function initialize_tree(input::AbstractVector{T})::AbstractVector{T} where {T <
     return tree
 end
 
-function ceil_power_of_two(size::Integer)::Integer
+function ceil_power_of_two(size::Integer)::Integer  # UNTESTED
     return 2^Int(ceil(log2(size)))
 end
 
-function random_sample!(tree::AbstractVector{<:Integer}, random::Integer)::Integer
+function random_sample!(tree::AbstractVector{<:Integer}, random::Integer)::Integer  # UNTESTED
     size_of_level = 1
     base_of_level = length(tree)
 

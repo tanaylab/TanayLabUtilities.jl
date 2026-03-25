@@ -156,7 +156,7 @@ function format_brief_array(matrix::AbstractMatrix, prefixes::Vector{String}; tr
     return "$(delimited_number(n_rows)) x $(delimited_number(n_columns)) x $(eltype(matrix)) $(layout_suffix) ($(join(prefixes, ", "))$(suffix)$(mask_suffix(matrix)))"
 end
 
-function mask_suffix(::AbstractArray)::AbstractString
+function mask_suffix(::AbstractArray)::AbstractString  # UNTESTED
     return ""
 end
 

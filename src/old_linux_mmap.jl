@@ -38,9 +38,9 @@ function __init__()::Nothing
     end
 
     if IS_OLD_LINUX_KERNEL
-        @info "Old linux kernel, will pre-populate mmap into RAM disk: $(version_string)"  # FLAKY TESTED
+        @info "Old linux kernel, will pre-populate mmap into RAM disk: $(version_string)"  # FLAKY TESTED # NOJET
     else
-        @debug "New linux kernel, will not pre-populate mmap into RAM disk: $(version_string)" _group = :tlu_env  # FLAKY TESTED
+        @debug "New linux kernel, will not pre-populate mmap into RAM disk: $(version_string)" _group = :tlu_env  # FLAKY TESTED # NOJET
     end
 
     return nothing

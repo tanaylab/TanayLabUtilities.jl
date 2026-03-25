@@ -63,9 +63,9 @@ function __init__()::Nothing
     return nothing
 end
 
-function normalize_path(path::AbstractString)::AbstractString
+function normalize_path(path::AbstractString)::AbstractString  # UNTESTED
     if path == "/"
-        return path  # UNTESTED
+        return path
     else
         return abspath(rstrip(path, '/'))
     end

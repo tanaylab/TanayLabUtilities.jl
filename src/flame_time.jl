@@ -29,7 +29,7 @@ using ..Brief
 using ..Types
 
 mutable struct RUsage
-    ru_utime::Tuple{Int64, Int64}  # User CPU time (sec, usec)
+    ru_utime::Tuple{Int64, Int64}  # User CPU time (sec, usec)  # NOJET
     ru_stime::Tuple{Int64, Int64}  # System CPU time (sec, usec)
     ru_maxrss::Int64               # Maximum resident set size
     ru_ixrss::Int64                # Integral shared memory size
@@ -62,7 +62,7 @@ function __init__()::Nothing
     else
         FLAME_MEASUREMENTS_DICT =  # UNTESTED
             Dict{Tuple{AbstractString, Bool}, Union{SerialMeasurement, ParallelMeasurement}}()
-        FLAME_MEASUREMENTS_FILE = path  # NOLINT  # UNTESTED
+        FLAME_MEASUREMENTS_FILE = path  # NOLINT # UNTESTED
         FLAME_PREFIX = Base.source_path()  # UNTESTED
         if FLAME_PREFIX === nothing  # UNTESTED
             FLAME_PREFIX = "Main"  # UNTESTED
@@ -108,16 +108,16 @@ function __end__()::Nothing
     return nothing
 end
 
-@inline function get_flame_stack(private_storage)
+@inline function get_flame_stack(private_storage)  # UNTESTED
     if FLAME_MEASUREMENTS_DICT === nothing
         return nothing
     else
-        flame_stack = get(private_storage, :flame_stack, nothing)  # UNTESTED
-        if flame_stack === nothing  # UNTESTED
-            flame_stack = AbstractString[FLAME_PREFIX]  # UNTESTED
-            private_storage[:flame_stack] = flame_stack  # UNTESTED
+        flame_stack = get(private_storage, :flame_stack, nothing)
+        if flame_stack === nothing
+            flame_stack = AbstractString[FLAME_PREFIX]
+            private_storage[:flame_stack] = flame_stack
         end
-        return flame_stack  # UNTESTED
+        return flame_stack
     end
 end
 
@@ -305,18 +305,18 @@ function flame_timed(body::Function, name::AbstractString; iterations::Integer =
             @assert iterations >= 0  # UNTESTED
             new_measurement = ParallelMeasurement(1, iterations, elapsed_ns, 0)  # UNTESTED
         else
-            gc_ns = Base.gc_num().total_time - start_gc_ns  # UNTESTED
-            gc_full_sweeps = Base.gc_num().full_sweep - start_gc_full_sweeps  # UNTESTED
-            gc_pauses = Base.gc_num().pause - start_gc_pauses  # UNTESTED
+            gc_ns = Base.gc_num().total_time - start_gc_ns  # UNTESTED # NOJET
+            gc_full_sweeps = Base.gc_num().full_sweep - start_gc_full_sweeps  # UNTESTED # NOJET
+            gc_pauses = Base.gc_num().pause - start_gc_pauses  # UNTESTED # NOJET
             end_rusage = get_rusage()  # UNTESTED
-            system_cpu_us = end_rusage.ru_stime[1] * 1000000 + end_rusage.ru_stime[2] - start_system_cpu_us  # UNTESTED
-            user_cpu_us = end_rusage.ru_utime[1] * 1000000 + end_rusage.ru_utime[2] - start_user_cpu_us  # UNTESTED
-            soft_page_faults = end_rusage.ru_minflt - start_soft_page_faults  # UNTESTED
-            hard_page_faults = end_rusage.ru_majflt - start_hard_page_faults  # UNTESTED
-            read_blocks = end_rusage.ru_inblock - start_read_blocks  # UNTESTED
-            write_blocks = end_rusage.ru_oublock - start_write_blocks  # UNTESTED
-            voluntary_context_switches = end_rusage.ru_nvcsw - start_voluntary_context_switches  # UNTESTED
-            involuntary_context_switches = end_rusage.ru_nivcsw - start_involuntary_context_switches  # UNTESTED
+            system_cpu_us = end_rusage.ru_stime[1] * 1000000 + end_rusage.ru_stime[2] - start_system_cpu_us  # UNTESTED # NOJET
+            user_cpu_us = end_rusage.ru_utime[1] * 1000000 + end_rusage.ru_utime[2] - start_user_cpu_us  # UNTESTED # NOJET
+            soft_page_faults = end_rusage.ru_minflt - start_soft_page_faults  # UNTESTED # NOJET
+            hard_page_faults = end_rusage.ru_majflt - start_hard_page_faults  # UNTESTED # NOJET
+            read_blocks = end_rusage.ru_inblock - start_read_blocks  # UNTESTED # NOJET
+            write_blocks = end_rusage.ru_oublock - start_write_blocks  # UNTESTED # NOJET
+            voluntary_context_switches = end_rusage.ru_nvcsw - start_voluntary_context_switches  # UNTESTED # NOJET
+            involuntary_context_switches = end_rusage.ru_nivcsw - start_involuntary_context_switches  # UNTESTED # NOJET
             new_measurement = SerialMeasurement(  # UNTESTED
                 1,
                 iterations,
