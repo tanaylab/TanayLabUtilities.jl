@@ -46,11 +46,20 @@ end
         col_sum1 = sum(x[:, 1])
         col_sum2 = sum(x[:, 2])
         n = size(x, 1)
-        result = Matrix{Float64}(undef, n, 2)
+        result = Matrix{Float64}(undef, n, 3)
         for i in 1:n
             ref = chi2_manual(x[i, 1], x[i, 2], col_sum1, col_sum2; yates)
             result[i, 1] = ref.chi2
             result[i, 2] = ref.pval
+        end
+        # Benjamini-Hochberg FDR
+        p_values = result[:, 2]
+        order = sortperm(p_values)
+        for (rank, row_index) in enumerate(order)
+            result[row_index, 3] = min(p_values[row_index] * n / rank, 1.0)
+        end
+        for rank in (n - 1):-1:1
+            result[order[rank], 3] = min(result[order[rank], 3], result[order[rank + 1], 3])
         end
         return result
     end

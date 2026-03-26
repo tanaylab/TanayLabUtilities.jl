@@ -34,14 +34,17 @@ the input matrix) contain non-negative counts. Each entry defines one 2x2 table 
 If `yates` is `true` (the default), Yates' continuity correction is applied. The inputs must not contain `NaN` values.
 The function works with both dense and sparse inputs.
 
-Returns an `n x 2` matrix where the first column contains the chi-squared statistics and the second column contains
-the p-values (for chi-squared with 1 degree of freedom, computed as `erfc(sqrt(chi2 / 2))`).
+Returns an `n x 3` matrix where the first column contains the chi-squared statistics, the second column contains
+the p-values (for chi-squared with 1 degree of freedom, computed as `erfc(sqrt(chi2 / 2))`), and the third column
+contains the FDR-corrected p-values (Benjamini-Hochberg procedure).
 
 ```jldoctest
 result = chi_squared([10, 30, 50], [20, 40, 60])
-@assert size(result) == (3, 2)
+@assert size(result) == (3, 3)
 @views @assert all(result[:, 1] .>= 0)
 @views @assert all(0 .<= result[:, 2] .<= 1)
+@views @assert all(0 .<= result[:, 3] .<= 1)
+@views @assert all(result[:, 3] .>= result[:, 2] .- 1e-12)
 
 # output
 
@@ -52,6 +55,7 @@ result_yates = chi_squared([10, 30], [20, 40]; yates = true)
 result_no_yates = chi_squared([10, 30], [20, 40]; yates = false)
 @views @assert all(result_yates[:, 1] .<= result_no_yates[:, 1] .+ 1e-12)
 @views @assert all(result_yates[:, 2] .>= result_no_yates[:, 2] .- 1e-12)
+@views @assert all(result_yates[:, 3] .>= result_yates[:, 2] .- 1e-12)
 
 # output
 
@@ -59,7 +63,7 @@ result_no_yates = chi_squared([10, 30], [20, 40]; yates = false)
 
 ```jldoctest
 result = chi_squared([10 20; 30 40; 50 60])
-@assert size(result) == (3, 2)
+@assert size(result) == (3, 3)
 
 # output
 
@@ -85,9 +89,10 @@ function chi_squared(
         n_total = first_column_sum + second_column_sum
         half_n_total = n_total / 2.0
 
-        result = Matrix{Float64}(undef, n_rows, 2)
+        result = Matrix{Float64}(undef, n_rows, 3)
         @views result_chi_squared = result[:, 1]
         @views result_p_values = result[:, 2]
+        @views result_fdr = result[:, 3]
 
         if yates
             @turbo for row_index in 1:n_rows
@@ -120,6 +125,26 @@ function chi_squared(
 
         @inbounds for row_index in 1:n_rows
             result_p_values[row_index] = erfc(sqrt(result_chi_squared[row_index] / 2.0))
+        end
+
+        order = sortperm(result_p_values)
+        sorted_fdr = Vector{Float64}(undef, n_rows)
+        n_rows_float = Float64(n_rows)
+
+        @inbounds for rank in 1:n_rows
+            sorted_fdr[rank] = result_p_values[order[rank]]
+        end
+
+        @turbo for rank in 1:n_rows
+            sorted_fdr[rank] = min(sorted_fdr[rank] * n_rows_float / rank, 1.0)
+        end
+
+        @inbounds for rank in (n_rows - 1):-1:1
+            sorted_fdr[rank] = min(sorted_fdr[rank], sorted_fdr[rank + 1])
+        end
+
+        @inbounds for rank in 1:n_rows
+            result_fdr[order[rank]] = sorted_fdr[rank]
         end
 
         return result

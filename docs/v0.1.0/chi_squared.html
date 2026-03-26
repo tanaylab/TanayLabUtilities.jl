@@ -282,16 +282,18 @@ chi_squared(
 </code> values. The function works with both dense and sparse inputs.
 </p>
 <p>Returns an 
-<code>n x 2
-</code> matrix where the first column contains the chi-squared statistics and the second column contains the p-values (for chi-squared with 1 degree of freedom, computed as 
+<code>n x 3
+</code> matrix where the first column contains the chi-squared statistics, the second column contains the p-values (for chi-squared with 1 degree of freedom, computed as 
 <code>erfc(sqrt(chi2 / 2))
-</code>).
+</code>), and the third column contains the FDR-corrected p-values (Benjamini-Hochberg procedure).
 </p>
 <pre>
 <code class="language-julia hljs">result = chi_squared([10, 30, 50], [20, 40, 60])
-@assert size(result) == (3, 2)
+@assert size(result) == (3, 3)
 @views @assert all(result[:, 1] .&gt;= 0)
 @views @assert all(0 .&lt;= result[:, 2] .&lt;= 1)
+@views @assert all(0 .&lt;= result[:, 3] .&lt;= 1)
+@views @assert all(result[:, 3] .&gt;= result[:, 2] .- 1e-12)
 
 # output
 
@@ -302,6 +304,7 @@ chi_squared(
 result_no_yates = chi_squared([10, 30], [20, 40]; yates = false)
 @views @assert all(result_yates[:, 1] .&lt;= result_no_yates[:, 1] .+ 1e-12)
 @views @assert all(result_yates[:, 2] .&gt;= result_no_yates[:, 2] .- 1e-12)
+@views @assert all(result_yates[:, 3] .&gt;= result_yates[:, 2] .- 1e-12)
 
 # output
 
@@ -309,7 +312,7 @@ result_no_yates = chi_squared([10, 30], [20, 40]; yates = false)
 </pre>
 <pre>
 <code class="language-julia hljs">result = chi_squared([10 20; 30 40; 50 60])
-@assert size(result) == (3, 2)
+@assert size(result) == (3, 3)
 
 # output
 

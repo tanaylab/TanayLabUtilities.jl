@@ -150,7 +150,7 @@
 </g>
 </g>
 <!-- ReadOnlyArrays&#45;&gt;MatrixLayouts -->
-<g id="edge16" class="edge">
+<g id="edge17" class="edge">
 <title>ReadOnlyArrays&#45;&gt;MatrixLayouts</title>
 <path fill="none" stroke="black" d="M485.58,-165.51C442.68,-156.47 376.79,-142.59 330.31,-132.79"/>
 <polygon fill="black" stroke="black" points="331.22,-129.41 320.72,-130.77 329.78,-136.26 331.22,-129.41"/>
@@ -246,7 +246,7 @@
 </g>
 </g>
 <!-- MatrixFormats&#45;&gt;Downsample -->
-<g id="edge20" class="edge">
+<g id="edge19" class="edge">
 <title>MatrixFormats&#45;&gt;Downsample</title>
 <path fill="none" stroke="black" d="M300.04,-54.93C323.05,-46.36 357.88,-33.37 383.87,-23.68"/>
 <polygon fill="black" stroke="black" points="384.84,-27.05 392.99,-20.28 382.4,-20.49 384.84,-27.05"/>
@@ -288,7 +288,7 @@
 <polygon fill="black" stroke="black" points="419.32,-78.41 409.03,-75.89 415.51,-84.28 419.32,-78.41"/>
 </g>
 <!-- ParallelLoops&#45;&gt;Downsample -->
-<g id="edge19" class="edge">
+<g id="edge20" class="edge">
 <title>ParallelLoops&#45;&gt;Downsample</title>
 <path fill="none" stroke="black" d="M474.31,-110.15C471.96,-97.3 466.62,-73.45 456.78,-55.32 451.41,-45.41 443.58,-35.73 436.42,-27.92"/>
 <polygon fill="black" stroke="black" points="439.03,-25.57 429.57,-20.81 433.99,-30.43 439.03,-25.57"/>
@@ -339,7 +339,7 @@
 <polygon fill="black" stroke="black" points="243.92,-137.95 251.88,-130.96 241.3,-131.46 243.92,-137.95"/>
 </g>
 <!-- Documentation&#45;&gt;MatrixLayouts -->
-<g id="edge17" class="edge">
+<g id="edge16" class="edge">
 <title>Documentation&#45;&gt;MatrixLayouts</title>
 <path fill="none" stroke="black" d="M87.55,-165.51C125.71,-156.55 184.17,-142.82 225.8,-133.04"/>
 <polygon fill="black" stroke="black" points="226.39,-136.5 235.33,-130.8 224.79,-129.68 226.39,-136.5"/>
