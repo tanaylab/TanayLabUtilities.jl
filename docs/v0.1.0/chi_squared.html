@@ -1,0 +1,399 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Chi Squared · TanayLabUtilities.jl v0.1.0
+</title>
+<meta name="title" content="Chi Squared · TanayLabUtilities.jl v0.1.0"/>
+<meta property="og:title" content="Chi Squared · TanayLabUtilities.jl v0.1.0"/>
+<meta property="twitter:title" content="Chi Squared · TanayLabUtilities.jl v0.1.0"/>
+<meta name="description" content="Documentation for TanayLabUtilities.jl v0.1.0."/>
+<meta property="og:description" content="Documentation for TanayLabUtilities.jl v0.1.0."/>
+<meta property="twitter:description" content="Documentation for TanayLabUtilities.jl v0.1.0."/>
+<script data-outdated-warner src="assets/warner.js">
+</script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/>
+<script>documenterBaseURL="."
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="assets/documenter.js">
+</script>
+<script src="search_index.js">
+</script>
+<script src="siteinfo.js">
+</script>
+<script src="../versions.js">
+</script>
+<link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/>
+<link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/>
+<link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/>
+<link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/>
+<link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/>
+<link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/>
+<script src="assets/themeswap.js">
+</script>
+</head>
+<body>
+<div id="documenter">
+<nav class="docs-sidebar">
+<div class="docs-package-name">
+<span class="docs-autofit">
+<a href="index.html">TanayLabUtilities.jl v0.1.0
+</a>
+</span>
+</div>
+<button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)
+</button>
+<ul class="docs-menu">
+<li>
+<a class="tocitem" href="index.html">TanayLabUtilities
+</a>
+</li>
+<li>
+<a class="tocitem" href="types.html">Types
+</a>
+</li>
+<li>
+<a class="tocitem" href="brief.html">Brief
+</a>
+</li>
+<li>
+<a class="tocitem" href="logger.html">Logger
+</a>
+</li>
+<li>
+<a class="tocitem" href="flame_time.html">Flame Time
+</a>
+</li>
+<li>
+<a class="tocitem" href="parallel_loops.html">Parallel Loops
+</a>
+</li>
+<li>
+<a class="tocitem" href="parallel_distances.html">Parallel Distances
+</a>
+</li>
+<li>
+<a class="tocitem" href="parallel_storage.html">Parallel Storage
+</a>
+</li>
+<li>
+<a class="tocitem" href="mostly_read_write_locks.html">Mostly-Read Write Locks
+</a>
+</li>
+<li>
+<a class="tocitem" href="extended_read_write_locks.html">Extended Read-Write Locks
+</a>
+</li>
+<li>
+<a class="tocitem" href="unique_names.html">Unique Names
+</a>
+</li>
+<li>
+<a class="tocitem" href="documentation.html">Documentation
+</a>
+</li>
+<li>
+<a class="tocitem" href="handlers.html">Handlers
+</a>
+</li>
+<li>
+<a class="tocitem" href="read_only_arrays.html">Read-Only Arrays
+</a>
+</li>
+<li>
+<a class="tocitem" href="downsample.html">Downsample
+</a>
+</li>
+<li>
+<a class="tocitem" href="zero_correlation.html">Zero Correlation
+</a>
+</li>
+<li>
+<a class="tocitem" href="cross_validations.html">Cross Validations
+</a>
+</li>
+<li>
+<a class="tocitem" href="global_weak_cache.html">Global Weak Cache
+</a>
+</li>
+<li>
+<a class="tocitem" href="kmeans.html">K-Means
+</a>
+</li>
+<li>
+<a class="tocitem" href="cached_ispath.html">Cached IsPath
+</a>
+</li>
+<li>
+<a class="tocitem" href="old_linux_mmap.html">Old Linux Mmap
+</a>
+</li>
+<li>
+<a class="tocitem" href="bits_loops.html">Bits Loops
+</a>
+</li>
+</ul>
+<div class="docs-version-selector field has-addons">
+<div class="control">
+<span class="docs-label button is-static is-size-7">Version
+</span>
+</div>
+<div class="docs-selector control is-expanded">
+<div class="select is-fullwidth is-size-7">
+<select id="documenter-version-selector">
+</select>
+</div>
+</div>
+</div>
+</nav>
+<div class="docs-main">
+<header class="docs-navbar">
+<a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#">
+</a>
+<nav class="breadcrumb">
+<ul class="is-hidden-mobile">
+<li class="is-active">
+<a href="chi_squared.html">Chi Squared
+</a>
+</li>
+</ul>
+<ul class="is-hidden-tablet">
+<li class="is-active">
+<a href="chi_squared.html">Chi Squared
+</a>
+</li>
+</ul>
+</nav>
+<div class="docs-right">
+<a class="docs-navbar-link" href="https://github.com/tanaylab/TanayLabUtilities.jl/blob/main{path}?plain=1#L{line}" title="View the repository on GitHub">
+<span class="docs-icon fa-brands">
+</span>
+<span class="docs-label is-hidden-touch">GitHub
+</span>
+</a>
+<a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings">
+</a>
+<a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings">
+</a>
+</div>
+</header>
+<article class="content" id="documenter-page">
+<h1 id="Chi-Squared">
+<a class="docs-heading-anchor" href="#Chi-Squared">Chi Squared
+</a>
+<a id="Chi-Squared-1">
+</a>
+<a class="docs-heading-anchor-permalink" href="#Chi-Squared" title="Permalink">
+</a>
+</h1>
+<article>
+<details class="docstring" open="true">
+<summary id="TanayLabUtilities.ChiSquared">
+<a class="docstring-binding" href="#TanayLabUtilities.ChiSquared">
+<code>TanayLabUtilities.ChiSquared
+</code>
+</a> — 
+<span class="docstring-category">Module
+</span>
+</summary>
+<section>
+<div>
+<p>Chi-squared test for 2x2 contingency tables derived from two count vectors.
+</p>
+</div>
+</section>
+</details>
+</article>
+<article>
+<details class="docstring" open="true">
+<summary id="TanayLabUtilities.ChiSquared.chi_squared">
+<a class="docstring-binding" href="#TanayLabUtilities.ChiSquared.chi_squared">
+<code>TanayLabUtilities.ChiSquared.chi_squared
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+</summary>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">chi_squared(
+    first_column::AbstractVector{&lt;:Real},
+    second_column::AbstractVector{&lt;:Real};
+    yates::Bool = true,
+)::Matrix{Float64}
+
+chi_squared(
+    matrix::AbstractMatrix{&lt;:Real};
+    yates::Bool = true,
+)::Matrix{Float64}
+</code>
+</pre>
+<p>Compute chi-squared statistics and p-values for 2x2 contingency tables. The two input vectors (or the two columns of the input matrix) contain non-negative counts. Each entry defines one 2x2 table together with the column sums:
+</p>
+<table>
+<tr>
+<th style="text-align: left">
+</th>
+<th style="text-align: left">First
+</th>
+<th style="text-align: left">Second
+</th>
+</tr>
+<tr>
+<td style="text-align: left">Current entry
+</td>
+<td style="text-align: left">
+<code>a
+</code>
+</td>
+<td style="text-align: left">
+<code>c
+</code>
+</td>
+</tr>
+<tr>
+<td style="text-align: left">Other entries
+</td>
+<td style="text-align: left">
+<code>sum1 - a
+</code>
+</td>
+<td style="text-align: left">
+<code>sum2 - c
+</code>
+</td>
+</tr>
+</table>
+<p>If 
+<code>yates
+</code> is 
+<code>true
+</code> (the default), Yates&#39; continuity correction is applied. The inputs must not contain 
+<code>NaN
+</code> values. The function works with both dense and sparse inputs.
+</p>
+<p>Returns an 
+<code>n x 2
+</code> matrix where the first column contains the chi-squared statistics and the second column contains the p-values (for chi-squared with 1 degree of freedom, computed as 
+<code>erfc(sqrt(chi2 / 2))
+</code>).
+</p>
+<pre>
+<code class="language-julia hljs">result = chi_squared([10, 30, 50], [20, 40, 60])
+@assert size(result) == (3, 2)
+@views @assert all(result[:, 1] .&gt;= 0)
+@views @assert all(0 .&lt;= result[:, 2] .&lt;= 1)
+
+# output
+
+</code>
+</pre>
+<pre>
+<code class="language-julia hljs">result_yates = chi_squared([10, 30], [20, 40]; yates = true)
+result_no_yates = chi_squared([10, 30], [20, 40]; yates = false)
+@views @assert all(result_yates[:, 1] .&lt;= result_no_yates[:, 1] .+ 1e-12)
+@views @assert all(result_yates[:, 2] .&gt;= result_no_yates[:, 2] .- 1e-12)
+
+# output
+
+</code>
+</pre>
+<pre>
+<code class="language-julia hljs">result = chi_squared([10 20; 30 40; 50 60])
+@assert size(result) == (3, 2)
+
+# output
+
+</code>
+</pre>
+</div>
+</section>
+</details>
+</article>
+<h2 id="Index">
+<a class="docs-heading-anchor" href="#Index">Index
+</a>
+<a id="Index-1">
+</a>
+<a class="docs-heading-anchor-permalink" href="#Index" title="Permalink">
+</a>
+</h2>
+<ul>
+<li>
+<a href="chi_squared.html#TanayLabUtilities.ChiSquared">
+<code>TanayLabUtilities.ChiSquared
+</code>
+</a>
+</li>
+<li>
+<a href="chi_squared.html#TanayLabUtilities.ChiSquared.chi_squared">
+<code>TanayLabUtilities.ChiSquared.chi_squared
+</code>
+</a>
+</li>
+</ul>
+</article>
+<nav class="docs-footer">
+<p class="footer-message">Powered by 
+<a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl
+</a> and the 
+<a href="https://julialang.org/">Julia Programming Language
+</a>.
+</p>
+</nav>
+</div>
+<div class="modal" id="documenter-settings">
+<div class="modal-background">
+</div>
+<div class="modal-card">
+<header class="modal-card-head">
+<p class="modal-card-title">Settings
+</p>
+<button class="delete">
+</button>
+</header>
+<section class="modal-card-body">
+<p>
+<label class="label">Theme
+</label>
+<div class="select">
+<select id="documenter-themepicker">
+<option value="auto">Automatic (OS)
+</option>
+<option value="documenter-light">documenter-light
+</option>
+<option value="documenter-dark">documenter-dark
+</option>
+<option value="catppuccin-latte">catppuccin-latte
+</option>
+<option value="catppuccin-frappe">catppuccin-frappe
+</option>
+<option value="catppuccin-macchiato">catppuccin-macchiato
+</option>
+<option value="catppuccin-mocha">catppuccin-mocha
+</option>
+</select>
+</div>
+</p>
+<hr/>
+<p>This document was generated with 
+<a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl
+</a> version 1.17.0. Using Julia version 1.12.5.
+</p>
+</section>
+<footer class="modal-card-foot">
+</footer>
+</div>
+</div>
+</div>
+</body>
+</html>

@@ -50,6 +50,7 @@ makedocs(;
         "read_only_arrays.md",
         "downsample.md",
         "zero_correlation.md",
+        "chi_squared.md",
         "cross_validations.md",
         "global_weak_cache.md",
         "kmeans.md",

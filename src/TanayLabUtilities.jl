@@ -79,6 +79,9 @@ include("downsample.jl")
 include("zero_correlation.jl")
 @reexport using .ZeroCorrelation
 
+include("chi_squared.jl")
+@reexport using .ChiSquared
+
 include("old_linux_mmap.jl")
 @reexport using .OldLinuxMmap
 
