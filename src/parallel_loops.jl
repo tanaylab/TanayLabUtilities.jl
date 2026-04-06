@@ -316,10 +316,16 @@ function is_debug_enabled_for_caller(group::Maybe{Symbol} = nothing)  # UNTESTED
         caller_module = Main
     else
         caller_frame = stack[4]
-        if caller_frame === nothing || caller_frame.linfo === nothing || caller_frame.linfo.def === nothing
+        linfo = caller_frame.linfo
+        if linfo === nothing
             caller_module = Main
+        elseif linfo isa Module
+            caller_module = linfo
+        elseif linfo isa Core.MethodInstance
+            def = linfo.def
+            caller_module = def isa Method ? def.module : def isa Module ? def : Main  # NOJET
         else
-            caller_module = caller_frame.linfo.def.module  # NOJET
+            caller_module = Main
         end
     end
     return Logging.shouldlog(logger, Logging.Debug, caller_module, group, :check)
