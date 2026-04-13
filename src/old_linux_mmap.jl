@@ -119,7 +119,7 @@ function mmap_populate_if_old_linux_ramdisk(  # UNTESTED
                     Csize_t(bytes_size),
                     Cint(prot),
                     Cint(flags),
-                    Cint(fd(file)),
+                    Cint(reinterpret(Int32, fd(file))),
                     Csize_t(0),
                 )
                 if ptr == Ptr{Cvoid}(-1)

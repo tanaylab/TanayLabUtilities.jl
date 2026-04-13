@@ -61,7 +61,7 @@
 </g>
 </g>
 <!-- Types&#45;&gt;FlameTime -->
-<g id="edge18" class="edge">
+<g id="edge19" class="edge">
 <title>Types&#45;&gt;FlameTime</title>
 <path fill="none" stroke="#000000" d="M284.0866,-329.9197C295.7589,-321.6893 312.8105,-309.6657 326.4378,-300.0567"/>
 <polygon fill="#000000" stroke="#000000" points="328.6518,-302.7782 334.8074,-294.155 324.6179,-297.0574 328.6518,-302.7782"/>
@@ -100,7 +100,7 @@
 </g>
 </g>
 <!-- MatrixFormats&#45;&gt;Downsample -->
-<g id="edge15" class="edge">
+<g id="edge14" class="edge">
 <title>MatrixFormats&#45;&gt;Downsample</title>
 <path fill="none" stroke="#000000" d="M468.5913,-54.9197C445.4598,-46.023 410.8049,-32.6942 385.012,-22.7739"/>
 <polygon fill="#000000" stroke="#000000" points="386.193,-19.4782 375.6031,-19.155 383.6801,-26.0116 386.193,-19.4782"/>
@@ -199,7 +199,7 @@
 <polygon fill="#000000" stroke="#000000" points="355.4247,-82.7412 361.6319,-74.155 351.4251,-76.9963 355.4247,-82.7412"/>
 </g>
 <!-- ParallelLoops&#45;&gt;Downsample -->
-<g id="edge14" class="edge">
+<g id="edge15" class="edge">
 <title>ParallelLoops&#45;&gt;Downsample</title>
 <path fill="none" stroke="#000000" d="M297.5195,-109.8455C299.1957,-96.8042 303.3132,-73.1086 312.5,-55 317.8082,-44.5367 325.9243,-34.3695 333.2949,-26.3096"/>
 <polygon fill="#000000" stroke="#000000" points="335.8906,-28.6596 340.2854,-19.0192 330.838,-23.8148 335.8906,-28.6596"/>
@@ -214,7 +214,7 @@
 </g>
 </g>
 <!-- Documentation&#45;&gt;MatrixLayouts -->
-<g id="edge12" class="edge">
+<g id="edge11" class="edge">
 <title>Documentation&#45;&gt;MatrixLayouts</title>
 <path fill="none" stroke="#000000" d="M393.054,-164.9197C411.7212,-156.219 439.4828,-143.2792 460.6047,-133.4343"/>
 <polygon fill="#000000" stroke="#000000" points="462.2004,-136.5521 469.7856,-129.155 459.2431,-130.2074 462.2004,-136.5521"/>
@@ -292,7 +292,7 @@
 </g>
 </g>
 <!-- ReadOnlyArrays&#45;&gt;MatrixLayouts -->
-<g id="edge10" class="edge">
+<g id="edge12" class="edge">
 <title>ReadOnlyArrays&#45;&gt;MatrixLayouts</title>
 <path fill="none" stroke="#000000" d="M490.5,-164.9197C490.5,-157.9083 490.5,-148.1442 490.5,-139.4652"/>
 <polygon fill="#000000" stroke="#000000" points="494.0001,-139.3408 490.5,-129.3408 487.0001,-139.3409 494.0001,-139.3408"/>
@@ -316,7 +316,7 @@
 </g>
 </g>
 <!-- Handlers&#45;&gt;MatrixLayouts -->
-<g id="edge11" class="edge">
+<g id="edge10" class="edge">
 <title>Handlers&#45;&gt;MatrixLayouts</title>
 <path fill="none" stroke="#000000" d="M573.0813,-164.9197C557.6893,-156.4541 535.001,-143.9755 517.2984,-134.2391"/>
 <polygon fill="#000000" stroke="#000000" points="518.5035,-130.9075 508.0546,-129.155 515.13,-137.041 518.5035,-130.9075"/>
@@ -340,7 +340,7 @@
 </g>
 </g>
 <!-- Brief&#45;&gt;FlameTime -->
-<g id="edge19" class="edge">
+<g id="edge18" class="edge">
 <title>Brief&#45;&gt;FlameTime</title>
 <path fill="none" stroke="#000000" d="M348.5,-329.9197C348.5,-322.9083 348.5,-313.1442 348.5,-304.4652"/>
 <polygon fill="#000000" stroke="#000000" points="352.0001,-304.3408 348.5,-294.3408 345.0001,-304.3409 352.0001,-304.3408"/>
