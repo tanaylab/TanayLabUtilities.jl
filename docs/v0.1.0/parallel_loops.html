@@ -85,6 +85,10 @@
 </ul>
 </li>
 <li>
+<a class="tocitem" href="permute.html">Permute
+</a>
+</li>
+<li>
 <a class="tocitem" href="parallel_distances.html">Parallel Distances
 </a>
 </li>
@@ -501,6 +505,36 @@ end
 </section>
 </details>
 </article>
+<article>
+<details class="docstring" open="true">
+<summary id="TanayLabUtilities.ParallelLoops.DebugProgressUnknown">
+<a class="docstring-binding" href="#TanayLabUtilities.ParallelLoops.DebugProgressUnknown">
+<code>TanayLabUtilities.ParallelLoops.DebugProgressUnknown
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+</summary>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">DebugProgressUnknown(; kwargs...)::Maybe{ProgressUnknown}
+</code>
+</pre>
+<p>Same as 
+<code>ProgressUnknown
+</code> in 
+<code>ProgressMeter
+</code>, but returns 
+<code>nothing
+</code> if debug is not enabled for the modules calling 
+<code>DebugProgressUnknown
+</code>. Use this for progress bars where the total amount of work is not known in advance (for example, a planning phase that walks a data set to discover the set of properties to act on).
+</p>
+</div>
+</section>
+</details>
+</article>
 <h2 id="Index">
 <a class="docs-heading-anchor" href="#Index">Index
 </a>
@@ -519,6 +553,12 @@ end
 <li>
 <a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.DebugProgress">
 <code>TanayLabUtilities.ParallelLoops.DebugProgress
+</code>
+</a>
+</li>
+<li>
+<a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.DebugProgressUnknown">
+<code>TanayLabUtilities.ParallelLoops.DebugProgressUnknown
 </code>
 </a>
 </li>
@@ -545,7 +585,7 @@ end
 <nav class="docs-footer">
 <a class="docs-footer-prevpage" href="flame_time.html">« Flame Time
 </a>
-<a class="docs-footer-nextpage" href="parallel_distances.html">Parallel Distances »
+<a class="docs-footer-nextpage" href="permute.html">Permute »
 </a>
 <div class="flexbox-break">
 </div>

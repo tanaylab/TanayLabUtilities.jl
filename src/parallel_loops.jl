@@ -4,6 +4,7 @@ Parallel loops.
 module ParallelLoops
 
 export DebugProgress
+export DebugProgressUnknown
 export is_in_parallel_loop
 export parallel_loop_with_rng
 export parallel_loop_wo_rng
@@ -340,6 +341,21 @@ Same as `Progress` in `ProgressMeter`, but returns `nothing` if debug is not ena
 function DebugProgress(n::Integer; group::Maybe{Symbol} = nothing, kwargs...)::Maybe{Progress}  # UNTESTED
     if is_debug_enabled_for_caller(group)
         return Progress(n; kwargs...)
+    else
+        return nothing
+    end
+end
+
+"""
+    DebugProgressUnknown(; kwargs...)::Maybe{ProgressUnknown}
+
+Same as `ProgressUnknown` in `ProgressMeter`, but returns `nothing` if debug is not enabled for the modules calling
+`DebugProgressUnknown`. Use this for progress bars where the total amount of work is not known in advance (for example,
+a planning phase that walks a data set to discover the set of properties to act on).
+"""
+function DebugProgressUnknown(; group::Maybe{Symbol} = nothing, kwargs...)::Maybe{ProgressUnknown}  # UNTESTED
+    if is_debug_enabled_for_caller(group)
+        return ProgressUnknown(; kwargs...)
     else
         return nothing
     end

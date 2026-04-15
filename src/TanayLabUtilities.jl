@@ -61,6 +61,9 @@ include("kmeans.jl")
 include("parallel_loops.jl")
 @reexport using .ParallelLoops
 
+include("permute.jl")
+@reexport using .Permute
+
 include("parallel_distances.jl")
 @reexport using .ParallelDistances
 

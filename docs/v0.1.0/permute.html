@@ -1,0 +1,809 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Permute · TanayLabUtilities.jl v0.1.0
+</title>
+<meta name="title" content="Permute · TanayLabUtilities.jl v0.1.0"/>
+<meta property="og:title" content="Permute · TanayLabUtilities.jl v0.1.0"/>
+<meta property="twitter:title" content="Permute · TanayLabUtilities.jl v0.1.0"/>
+<meta name="description" content="Documentation for TanayLabUtilities.jl v0.1.0."/>
+<meta property="og:description" content="Documentation for TanayLabUtilities.jl v0.1.0."/>
+<meta property="twitter:description" content="Documentation for TanayLabUtilities.jl v0.1.0."/>
+<script data-outdated-warner src="assets/warner.js">
+</script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/>
+<script>documenterBaseURL="."
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="assets/documenter.js">
+</script>
+<script src="search_index.js">
+</script>
+<script src="siteinfo.js">
+</script>
+<script src="../versions.js">
+</script>
+<link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/>
+<link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/>
+<link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/>
+<link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/>
+<link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/>
+<link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/>
+<script src="assets/themeswap.js">
+</script>
+</head>
+<body>
+<div id="documenter">
+<nav class="docs-sidebar">
+<div class="docs-package-name">
+<span class="docs-autofit">
+<a href="index.html">TanayLabUtilities.jl v0.1.0
+</a>
+</span>
+</div>
+<button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)
+</button>
+<ul class="docs-menu">
+<li>
+<a class="tocitem" href="index.html">TanayLabUtilities
+</a>
+</li>
+<li>
+<a class="tocitem" href="types.html">Types
+</a>
+</li>
+<li>
+<a class="tocitem" href="brief.html">Brief
+</a>
+</li>
+<li>
+<a class="tocitem" href="logger.html">Logger
+</a>
+</li>
+<li>
+<a class="tocitem" href="flame_time.html">Flame Time
+</a>
+</li>
+<li>
+<a class="tocitem" href="parallel_loops.html">Parallel Loops
+</a>
+</li>
+<li class="is-active">
+<a class="tocitem" href="permute.html">Permute
+</a>
+<ul class="internal">
+<li>
+<a class="tocitem" href="#Index">
+<span>Index
+</span>
+</a>
+</li>
+</ul>
+</li>
+<li>
+<a class="tocitem" href="parallel_distances.html">Parallel Distances
+</a>
+</li>
+<li>
+<a class="tocitem" href="parallel_storage.html">Parallel Storage
+</a>
+</li>
+<li>
+<a class="tocitem" href="mostly_read_write_locks.html">Mostly-Read Write Locks
+</a>
+</li>
+<li>
+<a class="tocitem" href="extended_read_write_locks.html">Extended Read-Write Locks
+</a>
+</li>
+<li>
+<a class="tocitem" href="unique_names.html">Unique Names
+</a>
+</li>
+<li>
+<a class="tocitem" href="documentation.html">Documentation
+</a>
+</li>
+<li>
+<a class="tocitem" href="handlers.html">Handlers
+</a>
+</li>
+<li>
+<a class="tocitem" href="read_only_arrays.html">Read-Only Arrays
+</a>
+</li>
+<li>
+<a class="tocitem" href="downsample.html">Downsample
+</a>
+</li>
+<li>
+<a class="tocitem" href="zero_correlation.html">Zero Correlation
+</a>
+</li>
+<li>
+<a class="tocitem" href="cross_validations.html">Cross Validations
+</a>
+</li>
+<li>
+<a class="tocitem" href="global_weak_cache.html">Global Weak Cache
+</a>
+</li>
+<li>
+<a class="tocitem" href="kmeans.html">K-Means
+</a>
+</li>
+<li>
+<a class="tocitem" href="cached_ispath.html">Cached IsPath
+</a>
+</li>
+<li>
+<a class="tocitem" href="old_linux_mmap.html">Old Linux Mmap
+</a>
+</li>
+<li>
+<a class="tocitem" href="bits_loops.html">Bits Loops
+</a>
+</li>
+</ul>
+<div class="docs-version-selector field has-addons">
+<div class="control">
+<span class="docs-label button is-static is-size-7">Version
+</span>
+</div>
+<div class="docs-selector control is-expanded">
+<div class="select is-fullwidth is-size-7">
+<select id="documenter-version-selector">
+</select>
+</div>
+</div>
+</div>
+</nav>
+<div class="docs-main">
+<header class="docs-navbar">
+<a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#">
+</a>
+<nav class="breadcrumb">
+<ul class="is-hidden-mobile">
+<li class="is-active">
+<a href="permute.html">Permute
+</a>
+</li>
+</ul>
+<ul class="is-hidden-tablet">
+<li class="is-active">
+<a href="permute.html">Permute
+</a>
+</li>
+</ul>
+</nav>
+<div class="docs-right">
+<a class="docs-navbar-link" href="https://github.com/tanaylab/TanayLabUtilities.jl/blob/main{path}?plain=1#L{line}" title="View the repository on GitHub">
+<span class="docs-icon fa-brands">
+</span>
+<span class="docs-label is-hidden-touch">GitHub
+</span>
+</a>
+<a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings">
+</a>
+<a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings">
+</a>
+</div>
+</header>
+<article class="content" id="documenter-page">
+<h1 id="Permute">
+<a class="docs-heading-anchor" href="#Permute">Permute
+</a>
+<a id="Permute-1">
+</a>
+<a class="docs-heading-anchor-permalink" href="#Permute" title="Permalink">
+</a>
+</h1>
+<article>
+<details class="docstring" open="true">
+<summary id="TanayLabUtilities.Permute">
+<a class="docstring-binding" href="#TanayLabUtilities.Permute">
+<code>TanayLabUtilities.Permute
+</code>
+</a> — 
+<span class="docstring-category">Module
+</span>
+</summary>
+<section>
+<div>
+<p>In-place permutation kernels for vectors and matrices, dense and sparse.
+</p>
+</div>
+</section>
+</details>
+</article>
+<article>
+<details class="docstring" open="true">
+<summary id="TanayLabUtilities.Permute.permute_vector!">
+<a class="docstring-binding" href="#TanayLabUtilities.Permute.permute_vector!">
+<code>TanayLabUtilities.Permute.permute_vector!
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+</summary>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">permute_vector!(;
+    destination::AbstractVector,
+    source::AbstractVector,
+    permutation::AbstractVector{&lt;:Integer},
+    progress::Maybe{Progress} = nothing,
+)::Nothing
+</code>
+</pre>
+<p>Fill 
+<code>destination
+</code> such that 
+<code>destination[index] == source[permutation[index]]
+</code> for every 
+<code>index
+</code>. If 
+<code>progress
+</code> is given, advance it by 
+<code>length(source)
+</code> once after filling is complete.
+</p>
+<p>The caller must pre-allocate 
+<code>destination
+</code> with the same length as 
+<code>source
+</code>. This function never allocates the destination.
+</p>
+<pre>
+<code class="language-julia hljs">source = [10, 20, 30, 40]
+destination = similar(source)
+permutation = [4, 2, 1, 3]
+permute_vector!(; destination, source, permutation)
+@assert destination == [40, 20, 10, 30]
+
+# output
+
+</code>
+</pre>
+</div>
+</section>
+</details>
+</article>
+<article>
+<details class="docstring" open="true">
+<summary id="TanayLabUtilities.Permute.permute_sparse_vector!">
+<a class="docstring-binding" href="#TanayLabUtilities.Permute.permute_sparse_vector!">
+<code>TanayLabUtilities.Permute.permute_sparse_vector!
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+</summary>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">permute_sparse_vector!(;
+    destination_nzind::AbstractVector{&lt;:Integer},
+    destination_nzval::AbstractVector,
+    source::SparseVector,
+    inverse_permutation::AbstractVector{&lt;:Integer},
+    progress::Maybe{Progress} = nothing,
+)::Nothing
+</code>
+</pre>
+<p>Fill the 
+<code>(nzind, nzval)
+</code> backing pair of a sparse vector destination such that 
+<code>destination[inverse_permutation[index]] == source[index]
+</code> for every 
+<code>index
+</code>. Destination indices and values are written in ascending 
+<code>nzind
+</code> order so the result is a valid 
+<code>SparseVector
+</code> backing pair. If 
+<code>progress
+</code> is given, advance it by 
+<code>length(source)
+</code> (the dense length) once after filling is complete.
+</p>
+<pre>
+<code class="language-julia hljs">using SparseArrays
+
+source = sparsevec([1, 3, 5], [10.0, 30.0, 50.0], 5)
+inverse_permutation = [5, 4, 3, 2, 1]
+destination_nzind = Vector{Int}(undef, nnz(source))
+destination_nzval = Vector{Float64}(undef, nnz(source))
+permute_sparse_vector!(; destination_nzind, destination_nzval, source, inverse_permutation)
+destination = SparseVector(length(source), destination_nzind, destination_nzval)
+@assert destination == sparsevec([1, 3, 5], [50.0, 30.0, 10.0], 5)
+
+# output
+
+</code>
+</pre>
+</div>
+</section>
+</details>
+</article>
+<article>
+<details class="docstring" open="true">
+<summary id="TanayLabUtilities.Permute.permute_dense_matrix_rows!">
+<a class="docstring-binding" href="#TanayLabUtilities.Permute.permute_dense_matrix_rows!">
+<code>TanayLabUtilities.Permute.permute_dense_matrix_rows!
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+</summary>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">permute_dense_matrix_rows!(;
+    destination::AbstractMatrix,
+    source::AbstractMatrix,
+    rows_permutation::AbstractVector{&lt;:Integer},
+    progress::Maybe{Progress} = nothing,
+)::Nothing
+</code>
+</pre>
+<p>Fill 
+<code>destination
+</code> such that 
+<code>destination[destination_row, :] == source[rows_permutation[destination_row], :]
+</code> for every 
+<code>destination_row
+</code>. Parallelized per destination column. If 
+<code>progress
+</code> is given, advance it by 
+<code>n_rows
+</code> per destination column completed.
+</p>
+<pre>
+<code class="language-julia hljs">source = Float64[1 2; 3 4; 5 6]
+destination = similar(source)
+rows_permutation = [3, 1, 2]
+permute_dense_matrix_rows!(; destination, source, rows_permutation)
+@assert destination == [5.0 6.0; 1.0 2.0; 3.0 4.0]
+
+# output
+
+</code>
+</pre>
+</div>
+</section>
+</details>
+</article>
+<article>
+<details class="docstring" open="true">
+<summary id="TanayLabUtilities.Permute.permute_dense_matrix_columns!">
+<a class="docstring-binding" href="#TanayLabUtilities.Permute.permute_dense_matrix_columns!">
+<code>TanayLabUtilities.Permute.permute_dense_matrix_columns!
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+</summary>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">permute_dense_matrix_columns!(;
+    destination::AbstractMatrix,
+    source::AbstractMatrix,
+    columns_permutation::AbstractVector{&lt;:Integer},
+    progress::Maybe{Progress} = nothing,
+)::Nothing
+</code>
+</pre>
+<p>Fill 
+<code>destination
+</code> such that 
+<code>destination[:, destination_column] == source[:, columns_permutation[destination_column]]
+</code> for every 
+<code>destination_column
+</code>. Parallelized per destination column. If 
+<code>progress
+</code> is given, advance it by 
+<code>n_rows
+</code> per destination column completed.
+</p>
+<pre>
+<code class="language-julia hljs">source = Float64[1 2 3; 4 5 6; 7 8 9]
+destination = similar(source)
+columns_permutation = [3, 1, 2]
+permute_dense_matrix_columns!(; destination, source, columns_permutation)
+@assert destination == [3.0 1.0 2.0; 6.0 4.0 5.0; 9.0 7.0 8.0]
+
+# output
+
+</code>
+</pre>
+</div>
+</section>
+</details>
+</article>
+<article>
+<details class="docstring" open="true">
+<summary id="TanayLabUtilities.Permute.permute_dense_matrix_both!">
+<a class="docstring-binding" href="#TanayLabUtilities.Permute.permute_dense_matrix_both!">
+<code>TanayLabUtilities.Permute.permute_dense_matrix_both!
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+</summary>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">permute_dense_matrix_both!(;
+    destination::AbstractMatrix,
+    source::AbstractMatrix,
+    rows_permutation::AbstractVector{&lt;:Integer},
+    columns_permutation::AbstractVector{&lt;:Integer},
+    progress::Maybe{Progress} = nothing,
+)::Nothing
+</code>
+</pre>
+<p>Fill 
+<code>destination
+</code> such that 
+<code>destination[destination_row, destination_column] == source[rows_permutation[destination_row], columns_permutation[destination_column]]
+</code> for every 
+<code>(destination_row, destination_column)
+</code>. Single-pass; parallelized per destination column. If 
+<code>progress
+</code> is given, advance it by 
+<code>n_rows
+</code> per destination column completed.
+</p>
+<pre>
+<code class="language-julia hljs">source = Float64[1 2 3; 4 5 6]
+destination = similar(source)
+rows_permutation = [2, 1]
+columns_permutation = [3, 1, 2]
+permute_dense_matrix_both!(; destination, source, rows_permutation, columns_permutation)
+@assert destination == [6.0 4.0 5.0; 3.0 1.0 2.0]
+
+# output
+
+</code>
+</pre>
+</div>
+</section>
+</details>
+</article>
+<article>
+<details class="docstring" open="true">
+<summary id="TanayLabUtilities.Permute.permute_sparse_matrix_rows!">
+<a class="docstring-binding" href="#TanayLabUtilities.Permute.permute_sparse_matrix_rows!">
+<code>TanayLabUtilities.Permute.permute_sparse_matrix_rows!
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+</summary>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">permute_sparse_matrix_rows!(;
+    destination_colptr::AbstractVector{&lt;:Integer},
+    destination_rowval::AbstractVector{&lt;:Integer},
+    destination_nzval::AbstractVector,
+    source::SparseMatrixCSC,
+    inverse_rows_permutation::AbstractVector{&lt;:Integer},
+    progress::Maybe{Progress} = nothing,
+)::Nothing
+</code>
+</pre>
+<p>Fill the 
+<code>(colptr, rowval, nzval)
+</code> backing triplet of a sparse destination such that 
+<code>destination[inverse_rows_permutation[source_row], :] == source[source_row, :]
+</code> for every 
+<code>source_row
+</code>. The destination has the same 
+<code>colptr
+</code> as the source. Parallelized per destination column. If 
+<code>progress
+</code> is given, advance it by the column nnz per column completed.
+</p>
+<pre>
+<code class="language-julia hljs">using SparseArrays
+
+source = sparse([1.0 2.0; 3.0 0.0; 0.0 4.0])
+destination_colptr = Vector{Int}(undef, size(source, 2) + 1)
+destination_rowval = Vector{Int}(undef, nnz(source))
+destination_nzval = Vector{Float64}(undef, nnz(source))
+inverse_rows_permutation = [2, 3, 1]
+permute_sparse_matrix_rows!(;
+    destination_colptr,
+    destination_rowval,
+    destination_nzval,
+    source,
+    inverse_rows_permutation,
+)
+destination = SparseMatrixCSC(
+    size(source, 1),
+    size(source, 2),
+    destination_colptr,
+    destination_rowval,
+    destination_nzval,
+)
+@assert destination == sparse([0.0 4.0; 1.0 2.0; 3.0 0.0])
+
+# output
+
+</code>
+</pre>
+</div>
+</section>
+</details>
+</article>
+<article>
+<details class="docstring" open="true">
+<summary id="TanayLabUtilities.Permute.permute_sparse_matrix_columns!">
+<a class="docstring-binding" href="#TanayLabUtilities.Permute.permute_sparse_matrix_columns!">
+<code>TanayLabUtilities.Permute.permute_sparse_matrix_columns!
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+</summary>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">permute_sparse_matrix_columns!(;
+    destination_colptr::AbstractVector{&lt;:Integer},
+    destination_rowval::AbstractVector{&lt;:Integer},
+    destination_nzval::AbstractVector,
+    source::SparseMatrixCSC,
+    columns_permutation::AbstractVector{&lt;:Integer},
+    progress::Maybe{Progress} = nothing,
+)::Nothing
+</code>
+</pre>
+<p>Fill the 
+<code>(colptr, rowval, nzval)
+</code> backing triplet of a sparse destination such that 
+<code>destination[:, destination_column] == source[:, columns_permutation[destination_column]]
+</code> for every 
+<code>destination_column
+</code>. Parallelized per destination column. If 
+<code>progress
+</code> is given, advance it by the column nnz per destination column completed.
+</p>
+<pre>
+<code class="language-julia hljs">using SparseArrays
+
+source = sparse([1.0 0.0 2.0; 0.0 3.0 0.0; 4.0 5.0 0.0])
+destination_colptr = Vector{Int}(undef, size(source, 2) + 1)
+destination_rowval = Vector{Int}(undef, nnz(source))
+destination_nzval = Vector{Float64}(undef, nnz(source))
+columns_permutation = [3, 1, 2]
+permute_sparse_matrix_columns!(;
+    destination_colptr,
+    destination_rowval,
+    destination_nzval,
+    source,
+    columns_permutation,
+)
+destination = SparseMatrixCSC(
+    size(source, 1),
+    size(source, 2),
+    destination_colptr,
+    destination_rowval,
+    destination_nzval,
+)
+@assert destination == sparse([2.0 1.0 0.0; 0.0 0.0 3.0; 0.0 4.0 5.0])
+
+# output
+
+</code>
+</pre>
+</div>
+</section>
+</details>
+</article>
+<article>
+<details class="docstring" open="true">
+<summary id="TanayLabUtilities.Permute.permute_sparse_matrix_both!">
+<a class="docstring-binding" href="#TanayLabUtilities.Permute.permute_sparse_matrix_both!">
+<code>TanayLabUtilities.Permute.permute_sparse_matrix_both!
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+</summary>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">permute_sparse_matrix_both!(;
+    destination_colptr::AbstractVector{&lt;:Integer},
+    destination_rowval::AbstractVector{&lt;:Integer},
+    destination_nzval::AbstractVector,
+    source::SparseMatrixCSC,
+    inverse_rows_permutation::AbstractVector{&lt;:Integer},
+    columns_permutation::AbstractVector{&lt;:Integer},
+    progress::Maybe{Progress} = nothing,
+)::Nothing
+</code>
+</pre>
+<p>Fill the 
+<code>(colptr, rowval, nzval)
+</code> backing triplet of a sparse destination such that 
+<code>destination[inverse_rows_permutation[source_row], destination_column] == source[source_row, columns_permutation[destination_column]]
+</code> for every 
+<code>(source_row, destination_column)
+</code>. Single-pass; parallelized per destination column. If 
+<code>progress
+</code> is given, advance it by the column nnz per destination column completed.
+</p>
+<pre>
+<code class="language-julia hljs">using SparseArrays
+
+source = sparse([1.0 2.0 0.0; 0.0 3.0 4.0])
+destination_colptr = Vector{Int}(undef, size(source, 2) + 1)
+destination_rowval = Vector{Int}(undef, nnz(source))
+destination_nzval = Vector{Float64}(undef, nnz(source))
+inverse_rows_permutation = [2, 1]
+columns_permutation = [3, 1, 2]
+permute_sparse_matrix_both!(;
+    destination_colptr,
+    destination_rowval,
+    destination_nzval,
+    source,
+    inverse_rows_permutation,
+    columns_permutation,
+)
+destination = SparseMatrixCSC(
+    size(source, 1),
+    size(source, 2),
+    destination_colptr,
+    destination_rowval,
+    destination_nzval,
+)
+@assert destination == sparse([4.0 0.0 3.0; 0.0 1.0 2.0])
+
+# output
+
+</code>
+</pre>
+</div>
+</section>
+</details>
+</article>
+<h2 id="Index">
+<a class="docs-heading-anchor" href="#Index">Index
+</a>
+<a id="Index-1">
+</a>
+<a class="docs-heading-anchor-permalink" href="#Index" title="Permalink">
+</a>
+</h2>
+<ul>
+<li>
+<a href="permute.html#TanayLabUtilities.Permute">
+<code>TanayLabUtilities.Permute
+</code>
+</a>
+</li>
+<li>
+<a href="permute.html#TanayLabUtilities.Permute.permute_dense_matrix_both!">
+<code>TanayLabUtilities.Permute.permute_dense_matrix_both!
+</code>
+</a>
+</li>
+<li>
+<a href="permute.html#TanayLabUtilities.Permute.permute_dense_matrix_columns!">
+<code>TanayLabUtilities.Permute.permute_dense_matrix_columns!
+</code>
+</a>
+</li>
+<li>
+<a href="permute.html#TanayLabUtilities.Permute.permute_dense_matrix_rows!">
+<code>TanayLabUtilities.Permute.permute_dense_matrix_rows!
+</code>
+</a>
+</li>
+<li>
+<a href="permute.html#TanayLabUtilities.Permute.permute_sparse_matrix_both!">
+<code>TanayLabUtilities.Permute.permute_sparse_matrix_both!
+</code>
+</a>
+</li>
+<li>
+<a href="permute.html#TanayLabUtilities.Permute.permute_sparse_matrix_columns!">
+<code>TanayLabUtilities.Permute.permute_sparse_matrix_columns!
+</code>
+</a>
+</li>
+<li>
+<a href="permute.html#TanayLabUtilities.Permute.permute_sparse_matrix_rows!">
+<code>TanayLabUtilities.Permute.permute_sparse_matrix_rows!
+</code>
+</a>
+</li>
+<li>
+<a href="permute.html#TanayLabUtilities.Permute.permute_sparse_vector!">
+<code>TanayLabUtilities.Permute.permute_sparse_vector!
+</code>
+</a>
+</li>
+<li>
+<a href="permute.html#TanayLabUtilities.Permute.permute_vector!">
+<code>TanayLabUtilities.Permute.permute_vector!
+</code>
+</a>
+</li>
+</ul>
+</article>
+<nav class="docs-footer">
+<a class="docs-footer-prevpage" href="parallel_loops.html">« Parallel Loops
+</a>
+<a class="docs-footer-nextpage" href="parallel_distances.html">Parallel Distances »
+</a>
+<div class="flexbox-break">
+</div>
+<p class="footer-message">Powered by 
+<a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl
+</a> and the 
+<a href="https://julialang.org/">Julia Programming Language
+</a>.
+</p>
+</nav>
+</div>
+<div class="modal" id="documenter-settings">
+<div class="modal-background">
+</div>
+<div class="modal-card">
+<header class="modal-card-head">
+<p class="modal-card-title">Settings
+</p>
+<button class="delete">
+</button>
+</header>
+<section class="modal-card-body">
+<p>
+<label class="label">Theme
+</label>
+<div class="select">
+<select id="documenter-themepicker">
+<option value="auto">Automatic (OS)
+</option>
+<option value="documenter-light">documenter-light
+</option>
+<option value="documenter-dark">documenter-dark
+</option>
+<option value="catppuccin-latte">catppuccin-latte
+</option>
+<option value="catppuccin-frappe">catppuccin-frappe
+</option>
+<option value="catppuccin-macchiato">catppuccin-macchiato
+</option>
+<option value="catppuccin-mocha">catppuccin-mocha
+</option>
+</select>
+</div>
+</p>
+<hr/>
+<p>This document was generated with 
+<a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl
+</a> version 1.17.0. Using Julia version 1.12.5.
+</p>
+</section>
+<footer class="modal-card-foot">
+</footer>
+</div>
+</div>
+</div>
+</body>
+</html>

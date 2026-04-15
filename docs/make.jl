@@ -40,6 +40,7 @@ makedocs(;
         "logger.md",
         "flame_time.md",
         "parallel_loops.md",
+        "permute.md",
         "parallel_distances.md",
         "parallel_storage.md",
         "mostly_read_write_locks.md",
