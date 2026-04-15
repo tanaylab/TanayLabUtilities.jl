@@ -314,7 +314,17 @@ permute_vector!(; destination, source, permutation)
 <code>progress
 </code> is given, advance it by 
 <code>length(source)
-</code> (the dense length) once after filling is complete.
+</code> once after filling is complete.
+</p>
+<p>Use 
+<a href="permute.html#TanayLabUtilities.Permute.permute_sparse_vector_buffers!">
+<code>permute_sparse_vector_buffers!
+</code>
+</a> when the source is held as raw 
+<code>(nzind, nzval)
+</code> buffers rather than a 
+<code>SparseVector
+</code>.
 </p>
 <pre>
 <code class="language-julia hljs">using SparseArrays
@@ -331,6 +341,50 @@ destination = SparseVector(length(source), destination_nzind, destination_nzval)
 
 </code>
 </pre>
+</div>
+</section>
+</details>
+</article>
+<article>
+<details class="docstring" open="true">
+<summary id="TanayLabUtilities.Permute.permute_sparse_vector_buffers!">
+<a class="docstring-binding" href="#TanayLabUtilities.Permute.permute_sparse_vector_buffers!">
+<code>TanayLabUtilities.Permute.permute_sparse_vector_buffers!
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+</summary>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">permute_sparse_vector_buffers!(;
+    destination_nzind::AbstractVector{&lt;:Integer},
+    destination_nzval::Maybe{AbstractVector},
+    source_length::Integer,
+    source_nzind::AbstractVector{&lt;:Integer},
+    source_nzval::Maybe{AbstractVector},
+    inverse_permutation::AbstractVector{&lt;:Integer},
+    progress::Maybe{Progress} = nothing,
+)::Nothing
+</code>
+</pre>
+<p>Like 
+<a href="permute.html#TanayLabUtilities.Permute.permute_sparse_vector!">
+<code>permute_sparse_vector!
+</code>
+</a>, but takes the source 
+<code>(nzind, nzval)
+</code> backing pair and the dense 
+<code>source_length
+</code> directly. Pass 
+<code>nothing
+</code> for both 
+<code>source_nzval
+</code> and 
+<code>destination_nzval
+</code> to permute an all-true boolean sparse vector that stores no values.
+</p>
 </div>
 </section>
 </details>
@@ -516,6 +570,16 @@ permute_dense_matrix_both!(; destination, source, rows_permutation, columns_perm
 <code>progress
 </code> is given, advance it by the column nnz per column completed.
 </p>
+<p>Use 
+<a href="permute.html#TanayLabUtilities.Permute.permute_sparse_matrix_rows_buffers!">
+<code>permute_sparse_matrix_rows_buffers!
+</code>
+</a> when the source is held as raw 
+<code>(colptr, rowval, nzval)
+</code> buffers rather than a 
+<code>SparseMatrixCSC
+</code>.
+</p>
 <pre>
 <code class="language-julia hljs">using SparseArrays
 
@@ -544,6 +608,52 @@ destination = SparseMatrixCSC(
 
 </code>
 </pre>
+</div>
+</section>
+</details>
+</article>
+<article>
+<details class="docstring" open="true">
+<summary id="TanayLabUtilities.Permute.permute_sparse_matrix_rows_buffers!">
+<a class="docstring-binding" href="#TanayLabUtilities.Permute.permute_sparse_matrix_rows_buffers!">
+<code>TanayLabUtilities.Permute.permute_sparse_matrix_rows_buffers!
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+</summary>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">permute_sparse_matrix_rows_buffers!(;
+    destination_colptr::AbstractVector{&lt;:Integer},
+    destination_rowval::AbstractVector{&lt;:Integer},
+    destination_nzval::Maybe{AbstractVector},
+    source_n_rows::Integer,
+    source_colptr::AbstractVector{&lt;:Integer},
+    source_rowval::AbstractVector{&lt;:Integer},
+    source_nzval::Maybe{AbstractVector},
+    inverse_rows_permutation::AbstractVector{&lt;:Integer},
+    progress::Maybe{Progress} = nothing,
+)::Nothing
+</code>
+</pre>
+<p>Like 
+<a href="permute.html#TanayLabUtilities.Permute.permute_sparse_matrix_rows!">
+<code>permute_sparse_matrix_rows!
+</code>
+</a>, but takes the source 
+<code>(colptr, rowval, nzval)
+</code> backing triplet and the 
+<code>source_n_rows
+</code> directly. Pass 
+<code>nothing
+</code> for both 
+<code>source_nzval
+</code> and 
+<code>destination_nzval
+</code> to permute an all-true boolean sparse matrix that stores no values.
+</p>
 </div>
 </section>
 </details>
@@ -581,6 +691,16 @@ destination = SparseMatrixCSC(
 <code>progress
 </code> is given, advance it by the column nnz per destination column completed.
 </p>
+<p>Use 
+<a href="permute.html#TanayLabUtilities.Permute.permute_sparse_matrix_columns_buffers!">
+<code>permute_sparse_matrix_columns_buffers!
+</code>
+</a> when the source is held as raw 
+<code>(colptr, rowval, nzval)
+</code> buffers rather than a 
+<code>SparseMatrixCSC
+</code>.
+</p>
 <pre>
 <code class="language-julia hljs">using SparseArrays
 
@@ -609,6 +729,52 @@ destination = SparseMatrixCSC(
 
 </code>
 </pre>
+</div>
+</section>
+</details>
+</article>
+<article>
+<details class="docstring" open="true">
+<summary id="TanayLabUtilities.Permute.permute_sparse_matrix_columns_buffers!">
+<a class="docstring-binding" href="#TanayLabUtilities.Permute.permute_sparse_matrix_columns_buffers!">
+<code>TanayLabUtilities.Permute.permute_sparse_matrix_columns_buffers!
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+</summary>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">permute_sparse_matrix_columns_buffers!(;
+    destination_colptr::AbstractVector{&lt;:Integer},
+    destination_rowval::AbstractVector{&lt;:Integer},
+    destination_nzval::Maybe{AbstractVector},
+    source_n_rows::Integer,
+    source_colptr::AbstractVector{&lt;:Integer},
+    source_rowval::AbstractVector{&lt;:Integer},
+    source_nzval::Maybe{AbstractVector},
+    columns_permutation::AbstractVector{&lt;:Integer},
+    progress::Maybe{Progress} = nothing,
+)::Nothing
+</code>
+</pre>
+<p>Like 
+<a href="permute.html#TanayLabUtilities.Permute.permute_sparse_matrix_columns!">
+<code>permute_sparse_matrix_columns!
+</code>
+</a>, but takes the source 
+<code>(colptr, rowval, nzval)
+</code> backing triplet and the 
+<code>source_n_rows
+</code> directly. Pass 
+<code>nothing
+</code> for both 
+<code>source_nzval
+</code> and 
+<code>destination_nzval
+</code> to permute an all-true boolean sparse matrix that stores no values.
+</p>
 </div>
 </section>
 </details>
@@ -647,6 +813,16 @@ destination = SparseMatrixCSC(
 <code>progress
 </code> is given, advance it by the column nnz per destination column completed.
 </p>
+<p>Use 
+<a href="permute.html#TanayLabUtilities.Permute.permute_sparse_matrix_both_buffers!">
+<code>permute_sparse_matrix_both_buffers!
+</code>
+</a> when the source is held as raw 
+<code>(colptr, rowval, nzval)
+</code> buffers rather than a 
+<code>SparseMatrixCSC
+</code>.
+</p>
 <pre>
 <code class="language-julia hljs">using SparseArrays
 
@@ -677,6 +853,53 @@ destination = SparseMatrixCSC(
 
 </code>
 </pre>
+</div>
+</section>
+</details>
+</article>
+<article>
+<details class="docstring" open="true">
+<summary id="TanayLabUtilities.Permute.permute_sparse_matrix_both_buffers!">
+<a class="docstring-binding" href="#TanayLabUtilities.Permute.permute_sparse_matrix_both_buffers!">
+<code>TanayLabUtilities.Permute.permute_sparse_matrix_both_buffers!
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+</summary>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">permute_sparse_matrix_both_buffers!(;
+    destination_colptr::AbstractVector{&lt;:Integer},
+    destination_rowval::AbstractVector{&lt;:Integer},
+    destination_nzval::Maybe{AbstractVector},
+    source_n_rows::Integer,
+    source_colptr::AbstractVector{&lt;:Integer},
+    source_rowval::AbstractVector{&lt;:Integer},
+    source_nzval::Maybe{AbstractVector},
+    inverse_rows_permutation::AbstractVector{&lt;:Integer},
+    columns_permutation::AbstractVector{&lt;:Integer},
+    progress::Maybe{Progress} = nothing,
+)::Nothing
+</code>
+</pre>
+<p>Like 
+<a href="permute.html#TanayLabUtilities.Permute.permute_sparse_matrix_both!">
+<code>permute_sparse_matrix_both!
+</code>
+</a>, but takes the source 
+<code>(colptr, rowval, nzval)
+</code> backing triplet and the 
+<code>source_n_rows
+</code> directly. Pass 
+<code>nothing
+</code> for both 
+<code>source_nzval
+</code> and 
+<code>destination_nzval
+</code> to permute an all-true boolean sparse matrix that stores no values.
+</p>
 </div>
 </section>
 </details>
@@ -721,8 +944,20 @@ destination = SparseMatrixCSC(
 </a>
 </li>
 <li>
+<a href="permute.html#TanayLabUtilities.Permute.permute_sparse_matrix_both_buffers!">
+<code>TanayLabUtilities.Permute.permute_sparse_matrix_both_buffers!
+</code>
+</a>
+</li>
+<li>
 <a href="permute.html#TanayLabUtilities.Permute.permute_sparse_matrix_columns!">
 <code>TanayLabUtilities.Permute.permute_sparse_matrix_columns!
+</code>
+</a>
+</li>
+<li>
+<a href="permute.html#TanayLabUtilities.Permute.permute_sparse_matrix_columns_buffers!">
+<code>TanayLabUtilities.Permute.permute_sparse_matrix_columns_buffers!
 </code>
 </a>
 </li>
@@ -733,8 +968,20 @@ destination = SparseMatrixCSC(
 </a>
 </li>
 <li>
+<a href="permute.html#TanayLabUtilities.Permute.permute_sparse_matrix_rows_buffers!">
+<code>TanayLabUtilities.Permute.permute_sparse_matrix_rows_buffers!
+</code>
+</a>
+</li>
+<li>
 <a href="permute.html#TanayLabUtilities.Permute.permute_sparse_vector!">
 <code>TanayLabUtilities.Permute.permute_sparse_vector!
+</code>
+</a>
+</li>
+<li>
+<a href="permute.html#TanayLabUtilities.Permute.permute_sparse_vector_buffers!">
+<code>TanayLabUtilities.Permute.permute_sparse_vector_buffers!
 </code>
 </a>
 </li>

@@ -5,12 +5,16 @@ module Permute
 
 export permute_vector!
 export permute_sparse_vector!
+export permute_sparse_vector_buffers!
 export permute_dense_matrix_rows!
 export permute_dense_matrix_columns!
 export permute_dense_matrix_both!
 export permute_sparse_matrix_rows!
+export permute_sparse_matrix_rows_buffers!
 export permute_sparse_matrix_columns!
+export permute_sparse_matrix_columns_buffers!
 export permute_sparse_matrix_both!
+export permute_sparse_matrix_both_buffers!
 
 using ..Documentation
 using ..ParallelLoops
@@ -73,7 +77,10 @@ end
 Fill the `(nzind, nzval)` backing pair of a sparse vector destination such that
 `destination[inverse_permutation[index]] == source[index]` for every `index`. Destination indices and values are
 written in ascending `nzind` order so the result is a valid `SparseVector` backing pair. If `progress` is given,
-advance it by `length(source)` (the dense length) once after filling is complete.
+advance it by `length(source)` once after filling is complete.
+
+Use [`permute_sparse_vector_buffers!`](@ref) when the source is held as raw `(nzind, nzval)` buffers rather than a
+`SparseVector`.
 
 ```jldoctest
 using SparseArrays
@@ -97,14 +104,49 @@ function permute_sparse_vector!(;
     inverse_permutation::AbstractVector{<:Integer},
     progress::Maybe{Progress} = nothing,
 )::Nothing
-    source_length = length(source)
-    source_nnz = nnz(source)
-    @assert length(destination_nzind) == source_nnz
-    @assert length(destination_nzval) == source_nnz
-    @assert length(inverse_permutation) == source_length
+    return permute_sparse_vector_buffers!(;
+        destination_nzind,
+        destination_nzval,
+        source_length = length(source),
+        source_nzind = SparseArrays.nonzeroinds(source),
+        source_nzval = nonzeros(source),
+        inverse_permutation,
+        progress,
+    )
+end
 
-    source_nzind = SparseArrays.nonzeroinds(source)
-    source_nzval = nonzeros(source)
+"""
+    permute_sparse_vector_buffers!(;
+        destination_nzind::AbstractVector{<:Integer},
+        destination_nzval::Maybe{AbstractVector},
+        source_length::Integer,
+        source_nzind::AbstractVector{<:Integer},
+        source_nzval::Maybe{AbstractVector},
+        inverse_permutation::AbstractVector{<:Integer},
+        progress::Maybe{Progress} = nothing,
+    )::Nothing
+
+Like [`permute_sparse_vector!`](@ref), but takes the source `(nzind, nzval)` backing pair and the dense `source_length`
+directly. Pass `nothing` for both `source_nzval` and `destination_nzval` to permute an all-true boolean sparse vector
+that stores no values.
+"""
+function permute_sparse_vector_buffers!(;
+    destination_nzind::AbstractVector{<:Integer},
+    destination_nzval::Maybe{AbstractVector},
+    source_length::Integer,
+    source_nzind::AbstractVector{<:Integer},
+    source_nzval::Maybe{AbstractVector},
+    inverse_permutation::AbstractVector{<:Integer},
+    progress::Maybe{Progress} = nothing,
+)::Nothing
+    source_nnz = length(source_nzind)
+    @assert (source_nzval === nothing) == (destination_nzval === nothing)
+    if source_nzval !== nothing
+        @assert length(source_nzval) == source_nnz
+        @assert length(destination_nzval) == source_nnz
+    end
+    @assert length(destination_nzind) == source_nnz
+    @assert length(inverse_permutation) == source_length
 
     permuted_nzind = Vector{Int}(undef, source_nnz)
     @inbounds for scan_index in 1:source_nnz
@@ -114,7 +156,12 @@ function permute_sparse_vector!(;
     @inbounds for destination_index in 1:source_nnz
         ordered_scan_index = sort_order[destination_index]
         destination_nzind[destination_index] = permuted_nzind[ordered_scan_index]
-        destination_nzval[destination_index] = source_nzval[ordered_scan_index]
+    end
+    if source_nzval !== nothing
+        @inbounds for destination_index in 1:source_nnz
+            ordered_scan_index = sort_order[destination_index]
+            destination_nzval[destination_index] = source_nzval[ordered_scan_index]
+        end
     end
 
     if progress !== nothing
@@ -277,6 +324,9 @@ Fill the `(colptr, rowval, nzval)` backing triplet of a sparse destination such 
 == source[:, columns_permutation[destination_column]]` for every `destination_column`. Parallelized per destination
 column. If `progress` is given, advance it by the column nnz per destination column completed.
 
+Use [`permute_sparse_matrix_columns_buffers!`](@ref) when the source is held as raw `(colptr, rowval, nzval)` buffers
+rather than a `SparseMatrixCSC`.
+
 ```jldoctest
 using SparseArrays
 
@@ -313,16 +363,58 @@ function permute_sparse_matrix_columns!(;
     columns_permutation::AbstractVector{<:Integer},
     progress::Maybe{Progress} = nothing,
 )::Nothing
-    n_columns = size(source, 2)
-    source_nnz = nnz(source)
+    return permute_sparse_matrix_columns_buffers!(;
+        destination_colptr,
+        destination_rowval,
+        destination_nzval,
+        source_n_rows = size(source, 1),
+        source_colptr = source.colptr,
+        source_rowval = source.rowval,
+        source_nzval = source.nzval,
+        columns_permutation,
+        progress,
+    )
+end
+
+"""
+    permute_sparse_matrix_columns_buffers!(;
+        destination_colptr::AbstractVector{<:Integer},
+        destination_rowval::AbstractVector{<:Integer},
+        destination_nzval::Maybe{AbstractVector},
+        source_n_rows::Integer,
+        source_colptr::AbstractVector{<:Integer},
+        source_rowval::AbstractVector{<:Integer},
+        source_nzval::Maybe{AbstractVector},
+        columns_permutation::AbstractVector{<:Integer},
+        progress::Maybe{Progress} = nothing,
+    )::Nothing
+
+Like [`permute_sparse_matrix_columns!`](@ref), but takes the source `(colptr, rowval, nzval)` backing triplet and the
+`source_n_rows` directly. Pass `nothing` for both `source_nzval` and `destination_nzval` to permute an all-true
+boolean sparse matrix that stores no values.
+"""
+function permute_sparse_matrix_columns_buffers!(;
+    destination_colptr::AbstractVector{<:Integer},
+    destination_rowval::AbstractVector{<:Integer},
+    destination_nzval::Maybe{AbstractVector},
+    source_n_rows::Integer,
+    source_colptr::AbstractVector{<:Integer},
+    source_rowval::AbstractVector{<:Integer},
+    source_nzval::Maybe{AbstractVector},
+    columns_permutation::AbstractVector{<:Integer},
+    progress::Maybe{Progress} = nothing,
+)::Nothing
+    n_columns = length(source_colptr) - 1
+    source_nnz = length(source_rowval)
+    @assert (source_nzval === nothing) == (destination_nzval === nothing)
+    if source_nzval !== nothing
+        @assert length(source_nzval) == source_nnz
+        @assert length(destination_nzval) == source_nnz
+    end
     @assert length(destination_colptr) == n_columns + 1
     @assert length(destination_rowval) == source_nnz
-    @assert length(destination_nzval) == source_nnz
     @assert length(columns_permutation) == n_columns
-
-    source_colptr = source.colptr
-    source_rowval = source.rowval
-    source_nzval = source.nzval
+    @assert source_n_rows >= 0
 
     destination_colptr[1] = 1
     @inbounds for destination_column in 1:n_columns
@@ -331,7 +423,7 @@ function permute_sparse_matrix_columns!(;
         destination_colptr[destination_column + 1] = destination_colptr[destination_column] + column_length
     end
 
-    parallel_loop_wo_rng(1:n_columns; name = "permute_sparse_matrix_columns!") do destination_column
+    parallel_loop_wo_rng(1:n_columns; name = "permute_sparse_matrix_columns_buffers!") do destination_column
         source_column = columns_permutation[destination_column]
         source_start = source_colptr[source_column]
         source_stop = source_colptr[source_column + 1] - 1
@@ -339,7 +431,11 @@ function permute_sparse_matrix_columns!(;
         column_nnz = source_stop - source_start + 1
         @inbounds for column_offset in 0:(column_nnz - 1)
             destination_rowval[destination_start + column_offset] = source_rowval[source_start + column_offset]
-            destination_nzval[destination_start + column_offset] = source_nzval[source_start + column_offset]
+        end
+        if source_nzval !== nothing
+            @inbounds for column_offset in 0:(column_nnz - 1)
+                destination_nzval[destination_start + column_offset] = source_nzval[source_start + column_offset]
+            end
         end
         if progress !== nothing
             next!(progress; step = column_nnz)  # UNTESTED
@@ -363,6 +459,9 @@ Fill the `(colptr, rowval, nzval)` backing triplet of a sparse destination such 
 `destination[inverse_rows_permutation[source_row], :] == source[source_row, :]` for every `source_row`. The destination
 has the same `colptr` as the source. Parallelized per destination column. If `progress` is given, advance it by the
 column nnz per column completed.
+
+Use [`permute_sparse_matrix_rows_buffers!`](@ref) when the source is held as raw `(colptr, rowval, nzval)` buffers
+rather than a `SparseMatrixCSC`.
 
 ```jldoctest
 using SparseArrays
@@ -400,22 +499,63 @@ function permute_sparse_matrix_rows!(;
     inverse_rows_permutation::AbstractVector{<:Integer},
     progress::Maybe{Progress} = nothing,
 )::Nothing
-    n_rows, n_columns = size(source)
-    source_nnz = nnz(source)
+    return permute_sparse_matrix_rows_buffers!(;
+        destination_colptr,
+        destination_rowval,
+        destination_nzval,
+        source_n_rows = size(source, 1),
+        source_colptr = source.colptr,
+        source_rowval = source.rowval,
+        source_nzval = source.nzval,
+        inverse_rows_permutation,
+        progress,
+    )
+end
+
+"""
+    permute_sparse_matrix_rows_buffers!(;
+        destination_colptr::AbstractVector{<:Integer},
+        destination_rowval::AbstractVector{<:Integer},
+        destination_nzval::Maybe{AbstractVector},
+        source_n_rows::Integer,
+        source_colptr::AbstractVector{<:Integer},
+        source_rowval::AbstractVector{<:Integer},
+        source_nzval::Maybe{AbstractVector},
+        inverse_rows_permutation::AbstractVector{<:Integer},
+        progress::Maybe{Progress} = nothing,
+    )::Nothing
+
+Like [`permute_sparse_matrix_rows!`](@ref), but takes the source `(colptr, rowval, nzval)` backing triplet and the
+`source_n_rows` directly. Pass `nothing` for both `source_nzval` and `destination_nzval` to permute an all-true
+boolean sparse matrix that stores no values.
+"""
+function permute_sparse_matrix_rows_buffers!(;
+    destination_colptr::AbstractVector{<:Integer},
+    destination_rowval::AbstractVector{<:Integer},
+    destination_nzval::Maybe{AbstractVector},
+    source_n_rows::Integer,
+    source_colptr::AbstractVector{<:Integer},
+    source_rowval::AbstractVector{<:Integer},
+    source_nzval::Maybe{AbstractVector},
+    inverse_rows_permutation::AbstractVector{<:Integer},
+    progress::Maybe{Progress} = nothing,
+)::Nothing
+    n_columns = length(source_colptr) - 1
+    source_nnz = length(source_rowval)
+    @assert (source_nzval === nothing) == (destination_nzval === nothing)
+    if source_nzval !== nothing
+        @assert length(source_nzval) == source_nnz
+        @assert length(destination_nzval) == source_nnz
+    end
     @assert length(destination_colptr) == n_columns + 1
     @assert length(destination_rowval) == source_nnz
-    @assert length(destination_nzval) == source_nnz
-    @assert length(inverse_rows_permutation) == n_rows
-
-    source_colptr = source.colptr
-    source_rowval = source.rowval
-    source_nzval = source.nzval
+    @assert length(inverse_rows_permutation) == source_n_rows
 
     @inbounds for colptr_index in 1:(n_columns + 1)
         destination_colptr[colptr_index] = source_colptr[colptr_index]
     end
 
-    parallel_loop_wo_rng(1:n_columns; name = "permute_sparse_matrix_rows!") do column_index
+    parallel_loop_wo_rng(1:n_columns; name = "permute_sparse_matrix_rows_buffers!") do column_index
         source_start = source_colptr[column_index]
         source_stop = source_colptr[column_index + 1] - 1
         column_nnz = source_stop - source_start + 1
@@ -430,8 +570,13 @@ function permute_sparse_matrix_rows!(;
             @inbounds for column_offset in 0:(column_nnz - 1)
                 ordered_scan_index = sort_order[column_offset + 1]
                 destination_rowval[destination_start + column_offset] = permuted_rowval[ordered_scan_index]
-                destination_nzval[destination_start + column_offset] =
-                    source_nzval[source_start + ordered_scan_index - 1]
+            end
+            if source_nzval !== nothing
+                @inbounds for column_offset in 0:(column_nnz - 1)
+                    ordered_scan_index = sort_order[column_offset + 1]
+                    destination_nzval[destination_start + column_offset] =
+                        source_nzval[source_start + ordered_scan_index - 1]
+                end
             end
         end
         if progress !== nothing
@@ -457,6 +602,9 @@ Fill the `(colptr, rowval, nzval)` backing triplet of a sparse destination such 
 `destination[inverse_rows_permutation[source_row], destination_column] == source[source_row,
 columns_permutation[destination_column]]` for every `(source_row, destination_column)`. Single-pass; parallelized per
 destination column. If `progress` is given, advance it by the column nnz per destination column completed.
+
+Use [`permute_sparse_matrix_both_buffers!`](@ref) when the source is held as raw `(colptr, rowval, nzval)` buffers
+rather than a `SparseMatrixCSC`.
 
 ```jldoctest
 using SparseArrays
@@ -497,17 +645,61 @@ function permute_sparse_matrix_both!(;
     columns_permutation::AbstractVector{<:Integer},
     progress::Maybe{Progress} = nothing,
 )::Nothing
-    n_rows, n_columns = size(source)
-    source_nnz = nnz(source)
+    return permute_sparse_matrix_both_buffers!(;
+        destination_colptr,
+        destination_rowval,
+        destination_nzval,
+        source_n_rows = size(source, 1),
+        source_colptr = source.colptr,
+        source_rowval = source.rowval,
+        source_nzval = source.nzval,
+        inverse_rows_permutation,
+        columns_permutation,
+        progress,
+    )
+end
+
+"""
+    permute_sparse_matrix_both_buffers!(;
+        destination_colptr::AbstractVector{<:Integer},
+        destination_rowval::AbstractVector{<:Integer},
+        destination_nzval::Maybe{AbstractVector},
+        source_n_rows::Integer,
+        source_colptr::AbstractVector{<:Integer},
+        source_rowval::AbstractVector{<:Integer},
+        source_nzval::Maybe{AbstractVector},
+        inverse_rows_permutation::AbstractVector{<:Integer},
+        columns_permutation::AbstractVector{<:Integer},
+        progress::Maybe{Progress} = nothing,
+    )::Nothing
+
+Like [`permute_sparse_matrix_both!`](@ref), but takes the source `(colptr, rowval, nzval)` backing triplet and the
+`source_n_rows` directly. Pass `nothing` for both `source_nzval` and `destination_nzval` to permute an all-true
+boolean sparse matrix that stores no values.
+"""
+function permute_sparse_matrix_both_buffers!(;
+    destination_colptr::AbstractVector{<:Integer},
+    destination_rowval::AbstractVector{<:Integer},
+    destination_nzval::Maybe{AbstractVector},
+    source_n_rows::Integer,
+    source_colptr::AbstractVector{<:Integer},
+    source_rowval::AbstractVector{<:Integer},
+    source_nzval::Maybe{AbstractVector},
+    inverse_rows_permutation::AbstractVector{<:Integer},
+    columns_permutation::AbstractVector{<:Integer},
+    progress::Maybe{Progress} = nothing,
+)::Nothing
+    n_columns = length(source_colptr) - 1
+    source_nnz = length(source_rowval)
+    @assert (source_nzval === nothing) == (destination_nzval === nothing)
+    if source_nzval !== nothing
+        @assert length(source_nzval) == source_nnz
+        @assert length(destination_nzval) == source_nnz
+    end
     @assert length(destination_colptr) == n_columns + 1
     @assert length(destination_rowval) == source_nnz
-    @assert length(destination_nzval) == source_nnz
-    @assert length(inverse_rows_permutation) == n_rows
+    @assert length(inverse_rows_permutation) == source_n_rows
     @assert length(columns_permutation) == n_columns
-
-    source_colptr = source.colptr
-    source_rowval = source.rowval
-    source_nzval = source.nzval
 
     destination_colptr[1] = 1
     @inbounds for destination_column in 1:n_columns
@@ -516,7 +708,7 @@ function permute_sparse_matrix_both!(;
         destination_colptr[destination_column + 1] = destination_colptr[destination_column] + column_length
     end
 
-    parallel_loop_wo_rng(1:n_columns; name = "permute_sparse_matrix_both!") do destination_column
+    parallel_loop_wo_rng(1:n_columns; name = "permute_sparse_matrix_both_buffers!") do destination_column
         source_column = columns_permutation[destination_column]
         source_start = source_colptr[source_column]
         source_stop = source_colptr[source_column + 1] - 1
@@ -532,8 +724,13 @@ function permute_sparse_matrix_both!(;
             @inbounds for column_offset in 0:(column_nnz - 1)
                 ordered_scan_index = sort_order[column_offset + 1]
                 destination_rowval[destination_start + column_offset] = permuted_rowval[ordered_scan_index]
-                destination_nzval[destination_start + column_offset] =
-                    source_nzval[source_start + ordered_scan_index - 1]
+            end
+            if source_nzval !== nothing
+                @inbounds for column_offset in 0:(column_nnz - 1)
+                    ordered_scan_index = sort_order[column_offset + 1]
+                    destination_nzval[destination_start + column_offset] =
+                        source_nzval[source_start + ordered_scan_index - 1]
+                end
             end
         end
         if progress !== nothing
