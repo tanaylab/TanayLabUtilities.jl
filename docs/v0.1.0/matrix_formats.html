@@ -636,11 +636,13 @@ sparse_matrix_csc(
 </p>
 <ul>
 <li>
-<p>The integer index type is 
+<p>The integer index type is the smallest unsigned type that fits the data (
+<code>UInt16
+</code>, 
 <code>UInt32
-</code> if possible. Only very large matrix sizes use 
+</code>, or 
 <code>UInt64
-</code>. This greatly reduces the size of large matrices.
+</code>). This greatly reduces the size of large matrices.
 </p>
 </li>
 <li>
@@ -661,17 +663,17 @@ sparse_matrix_csc(
 <pre>
 <code class="language-julia hljs"># Matrix
 
-@assert brief(sparse_matrix_csc([0 1 2; 3 4 0])) == &quot;2 x 3 x Int64 in Columns (Sparse 4 (67%) [UInt32])&quot;
-@assert brief(sparse_matrix_csc([0 1 2; 3 4 0]; eltype = Float32)) == &quot;2 x 3 x Float32 in Columns (Sparse 4 (67%) [UInt32])&quot;
+@assert brief(sparse_matrix_csc([0 1 2; 3 4 0])) == &quot;2 x 3 x Int64 in Columns (Sparse 4 (67%) [UInt16])&quot;
+@assert brief(sparse_matrix_csc([0 1 2; 3 4 0]; eltype = Float32)) == &quot;2 x 3 x Float32 in Columns (Sparse 4 (67%) [UInt16])&quot;
 @assert brief(sparse_matrix_csc([0 1 2; 3 4 0]; indtype = UInt8)) == &quot;2 x 3 x Int64 in Columns (Sparse 4 (67%) [UInt8])&quot;
 
 # Vectors
 
 sparse = sparse_matrix_csc([0 1 2; 3 4 0])
 
-@assert brief(sparse_matrix_csc(2, 3, sparse.colptr, sparse.rowval, sparse.nzval)) == &quot;2 x 3 x Int64 in Columns (Sparse 4 (67%) [UInt32])&quot;
+@assert brief(sparse_matrix_csc(2, 3, sparse.colptr, sparse.rowval, sparse.nzval)) == &quot;2 x 3 x Int64 in Columns (Sparse 4 (67%) [UInt16])&quot;
 @assert brief(sparse_matrix_csc(2, 3, read_only_array(sparse.colptr), read_only_array(sparse.rowval), read_only_array(sparse.nzval))) ==
-      &quot;2 x 3 x Int64 in Columns (ReadOnly, Sparse 4 (67%) [UInt32])&quot;;
+      &quot;2 x 3 x Int64 in Columns (ReadOnly, Sparse 4 (67%) [UInt16])&quot;;
 
 # output
 
@@ -713,11 +715,13 @@ sparse_vector(
 </p>
 <ul>
 <li>
-<p>The integer index type is 
+<p>The integer index type is the smallest unsigned type that fits the data (
+<code>UInt16
+</code>, 
 <code>UInt32
-</code> if possible. Only very large matrix sizes use 
+</code>, or 
 <code>UInt64
-</code>. This greatly reduces the size of large matrices.
+</code>). This greatly reduces the size of large matrices.
 </p>
 </li>
 <li>
@@ -738,8 +742,8 @@ sparse_vector(
 <pre>
 <code class="language-julia hljs"># Vector
 
-@assert brief(sparse_vector([0, 1, 2])) == &quot;3 x Int64 (Sparse 2 (67%) [UInt32])&quot;
-@assert brief(sparse_vector([0, 1, 2]; eltype = Float32)) == &quot;3 x Float32 (Sparse 2 (67%) [UInt32])&quot;
+@assert brief(sparse_vector([0, 1, 2])) == &quot;3 x Int64 (Sparse 2 (67%) [UInt16])&quot;
+@assert brief(sparse_vector([0, 1, 2]; eltype = Float32)) == &quot;3 x Float32 (Sparse 2 (67%) [UInt16])&quot;
 
 # Vectors
 
@@ -1014,7 +1018,7 @@ sparsify(
 dense = rand(3, 4)
 @assert sparsify(dense) == dense
 @assert brief(dense) == &quot;3 x 4 x Float64 in Columns (Dense)&quot;
-@assert brief(sparsify(dense)) == &quot;3 x 4 x Float64 in Columns (Sparse 12 (100%) [UInt32])&quot;
+@assert brief(sparsify(dense)) == &quot;3 x 4 x Float64 in Columns (Sparse 12 (100%) [UInt16])&quot;
 
 # Sparse
 
@@ -1040,7 +1044,7 @@ read_only = read_only_array(sparse)
 
 read_only = read_only_array(dense)
 @assert sparsify(read_only) == read_only
-@assert brief(sparsify(read_only)) == &quot;3 x 4 x Float64 in Columns (ReadOnly, Sparse 12 (100%) [UInt32])&quot;
+@assert brief(sparsify(read_only)) == &quot;3 x 4 x Float64 in Columns (ReadOnly, Sparse 12 (100%) [UInt16])&quot;
 
 # Named
 
@@ -1052,7 +1056,7 @@ named = NamedArray(sparse)
 
 named = NamedArray(dense)
 @assert sparsify(named) == named
-@assert brief(sparsify(named)) == &quot;3 x 4 x Float64 in Columns (Named, Sparse 12 (100%) [UInt32])&quot;
+@assert brief(sparsify(named)) == &quot;3 x 4 x Float64 in Columns (Named, Sparse 12 (100%) [UInt16])&quot;
 
 # Permuted
 
@@ -1067,12 +1071,12 @@ unpermuted = PermutedDimsArray(sparse, (1, 2))
 permuted = PermutedDimsArray(dense, (2, 1))
 @assert sparsify(permuted) == permuted
 @assert brief(permuted) == &quot;4 x 3 x Float64 in Rows (Permute, Dense)&quot;
-@assert brief(sparsify(permuted)) == &quot;4 x 3 x Float64 in Rows (Permute, Sparse 12 (100%) [UInt32])&quot;
+@assert brief(sparsify(permuted)) == &quot;4 x 3 x Float64 in Rows (Permute, Sparse 12 (100%) [UInt16])&quot;
 
 unpermuted = PermutedDimsArray(dense, (1, 2))
 @assert sparsify(unpermuted) == unpermuted
 @assert brief(unpermuted) == &quot;3 x 4 x Float64 in Columns (!Permute, Dense)&quot;
-@assert brief(sparsify(unpermuted)) == &quot;3 x 4 x Float64 in Columns (!Permute, Sparse 12 (100%) [UInt32])&quot;
+@assert brief(sparsify(unpermuted)) == &quot;3 x 4 x Float64 in Columns (!Permute, Sparse 12 (100%) [UInt16])&quot;
 
 # LinearAlgebra
 
@@ -1087,12 +1091,12 @@ adjointed = adjoint(sparse)
 transposed = transpose(dense)
 @assert sparsify(transposed) == transposed
 @assert brief(transposed) == &quot;4 x 3 x Float64 in Rows (Transpose, Dense)&quot;
-@assert brief(sparsify(transposed)) == &quot;4 x 3 x Float64 in Rows (Transpose, Sparse 12 (100%) [UInt32])&quot;
+@assert brief(sparsify(transposed)) == &quot;4 x 3 x Float64 in Rows (Transpose, Sparse 12 (100%) [UInt16])&quot;
 
 adjointed = adjoint(dense)
 @assert sparsify(adjointed) == adjointed
 @assert brief(adjointed) == &quot;4 x 3 x Float64 in Rows (Adjoint, Dense)&quot;
-@assert brief(sparsify(adjointed)) == &quot;4 x 3 x Float64 in Rows (Adjoint, Sparse 12 (100%) [UInt32])&quot;
+@assert brief(sparsify(adjointed)) == &quot;4 x 3 x Float64 in Rows (Adjoint, Sparse 12 (100%) [UInt16])&quot;
 
 # output
 
@@ -1106,7 +1110,7 @@ adjointed = adjoint(dense)
 dense = rand(4)
 @assert sparsify(dense) == dense
 @assert brief(dense) == &quot;4 x Float64 (Dense)&quot;
-@assert brief(sparsify(dense)) == &quot;4 x Float64 (Sparse 4 (100%) [UInt32])&quot;
+@assert brief(sparsify(dense)) == &quot;4 x Float64 (Sparse 4 (100%) [UInt16])&quot;
 
 # Sparse
 
@@ -1335,81 +1339,81 @@ dense = zeros(Int32, 5, 5)
 view(dense, diagind(dense)) .= 1
 
 @assert bestify(dense) == dense
-@assert brief(bestify(dense)) == &quot;5 x 5 x Int32 in Columns (Sparse 5 (20%) [UInt32])&quot;
+@assert brief(bestify(dense)) == &quot;5 x 5 x Int32 in Columns (Sparse 5 (20%) [UInt16])&quot;
 
-@assert bestify(dense; min_sparse_saving_fraction = 0.5) === dense
+@assert bestify(dense; min_sparse_saving_fraction = 0.6) === dense
 
 # Sparse
 
 sparse = sparse_matrix_csc(dense)
 @assert bestify(sparse) === sparse
-@assert brief(sparse) == &quot;5 x 5 x Int32 in Columns (Sparse 5 (20%) [UInt32])&quot;
+@assert brief(sparse) == &quot;5 x 5 x Int32 in Columns (Sparse 5 (20%) [UInt16])&quot;
 
 # ReadOnly
 
 read_only = read_only_array(dense)
-@assert bestify(read_only; min_sparse_saving_fraction = 0.5) === read_only
+@assert bestify(read_only; min_sparse_saving_fraction = 0.6) === read_only
 @assert brief(read_only) == &quot;5 x 5 x Int32 in Columns (ReadOnly, Dense)&quot;
 
 @assert bestify(read_only) == read_only
-@assert brief(bestify(read_only)) == &quot;5 x 5 x Int32 in Columns (ReadOnly, Sparse 5 (20%) [UInt32])&quot;
+@assert brief(bestify(read_only)) == &quot;5 x 5 x Int32 in Columns (ReadOnly, Sparse 5 (20%) [UInt16])&quot;
 
 read_only = read_only_array(sparse)
 @assert bestify(read_only) === read_only
-@assert brief(read_only) == &quot;5 x 5 x Int32 in Columns (ReadOnly, Sparse 5 (20%) [UInt32])&quot;
+@assert brief(read_only) == &quot;5 x 5 x Int32 in Columns (ReadOnly, Sparse 5 (20%) [UInt16])&quot;
 
-@assert bestify(read_only; min_sparse_saving_fraction = 0.5) == read_only
-@assert brief(bestify(read_only; min_sparse_saving_fraction = 0.5)) == &quot;5 x 5 x Int32 in Columns (ReadOnly, Dense)&quot;
+@assert bestify(read_only; min_sparse_saving_fraction = 0.6) == read_only
+@assert brief(bestify(read_only; min_sparse_saving_fraction = 0.6)) == &quot;5 x 5 x Int32 in Columns (ReadOnly, Dense)&quot;
 
 # Named
 
 using NamedArrays
 
 named = NamedArray(dense)
-@assert bestify(named; min_sparse_saving_fraction = 0.5) === named
+@assert bestify(named; min_sparse_saving_fraction = 0.6) === named
 @assert brief(named) == &quot;5 x 5 x Int32 in Columns (Named, Dense)&quot;
 
 @assert bestify(named) == named
-@assert brief(bestify(named)) == &quot;5 x 5 x Int32 in Columns (Named, Sparse 5 (20%) [UInt32])&quot;
+@assert brief(bestify(named)) == &quot;5 x 5 x Int32 in Columns (Named, Sparse 5 (20%) [UInt16])&quot;
 
 named = NamedArray(sparse)
 @assert bestify(named) === named
-@assert brief(named) == &quot;5 x 5 x Int32 in Columns (Named, Sparse 5 (20%) [UInt32])&quot;
+@assert brief(named) == &quot;5 x 5 x Int32 in Columns (Named, Sparse 5 (20%) [UInt16])&quot;
 
-@assert bestify(named; min_sparse_saving_fraction = 0.5) == named
-@assert brief(bestify(named; min_sparse_saving_fraction = 0.5)) == &quot;5 x 5 x Int32 in Columns (Named, Dense)&quot;
+@assert bestify(named; min_sparse_saving_fraction = 0.6) == named
+@assert brief(bestify(named; min_sparse_saving_fraction = 0.6)) == &quot;5 x 5 x Int32 in Columns (Named, Dense)&quot;
 
 # Permuted
 
 permuted = PermutedDimsArray(dense, (2, 1))
-@assert bestify(permuted; min_sparse_saving_fraction = 0.5) === permuted
+@assert bestify(permuted; min_sparse_saving_fraction = 0.6) === permuted
 @assert brief(permuted) == &quot;5 x 5 x Int32 in Rows (Permute, Dense)&quot;
 
 @assert bestify(permuted) == permuted
-@assert brief(bestify(permuted)) == &quot;5 x 5 x Int32 in Rows (Permute, Sparse 5 (20%) [UInt32])&quot;
+@assert brief(bestify(permuted)) == &quot;5 x 5 x Int32 in Rows (Permute, Sparse 5 (20%) [UInt16])&quot;
 
 permuted = PermutedDimsArray(sparse, (1, 2))
 @assert bestify(permuted) === permuted
-@assert brief(permuted) == &quot;5 x 5 x Int32 in Columns (!Permute, Sparse 5 (20%) [UInt32])&quot;
+@assert brief(permuted) == &quot;5 x 5 x Int32 in Columns (!Permute, Sparse 5 (20%) [UInt16])&quot;
 
-@assert bestify(permuted; min_sparse_saving_fraction = 0.5) == permuted
-@assert brief(bestify(permuted; min_sparse_saving_fraction = 0.5)) == &quot;5 x 5 x Int32 in Columns (!Permute, Dense)&quot;
+@assert bestify(permuted; min_sparse_saving_fraction = 0.6) == permuted
+@assert brief(bestify(permuted; min_sparse_saving_fraction = 0.6)) == &quot;5 x 5 x Int32 in Columns (!Permute, Dense)&quot;
 
 # LinearAlgebra
 
 transposed = transpose(dense)
-@assert bestify(transposed; min_sparse_saving_fraction = 0.5) === transposed
+@assert bestify(transposed; min_sparse_saving_fraction = 0.6) === transposed
 @assert brief(transposed) == &quot;5 x 5 x Int32 in Rows (Transpose, Dense)&quot;
 
 @assert bestify(transposed) == transposed
-@assert brief(bestify(transposed)) == &quot;5 x 5 x Int32 in Rows (Transpose, Sparse 5 (20%) [UInt32])&quot;
+@assert brief(bestify(transposed)) == &quot;5 x 5 x Int32 in Rows (Transpose, Sparse 5 (20%) [UInt16])&quot;
 
 adjointed = adjoint(sparse)
 @assert bestify(adjointed) === adjointed
-@assert brief(adjointed) == &quot;5 x 5 x Int32 in Rows (Adjoint, Sparse 5 (20%) [UInt32])&quot;
+@assert brief(adjointed) == &quot;5 x 5 x Int32 in Rows (Adjoint, Sparse 5 (20%) [UInt16])&quot;
 
-@assert bestify(adjointed; min_sparse_saving_fraction = 0.5) == adjointed
-@assert brief(bestify(adjointed; min_sparse_saving_fraction = 0.5)) == &quot;5 x 5 x Int32 in Rows (Adjoint, Dense)&quot;
+@assert bestify(adjointed; min_sparse_saving_fraction = 0.6) == adjointed
+@assert brief(bestify(adjointed; min_sparse_saving_fraction = 0.6)) == &quot;5 x 5 x Int32 in Rows (Adjoint, Dense)&quot;
 
 # output
 
@@ -1424,15 +1428,15 @@ dense = zeros(Int32, 3)
 dense[1] = 1
 
 @assert bestify(dense) == dense
-@assert brief(bestify(dense)) == &quot;3 x Int32 (Sparse 1 (33%) [UInt32])&quot;
+@assert brief(bestify(dense)) == &quot;3 x Int32 (Sparse 1 (33%) [UInt16])&quot;
 
-@assert bestify(dense; min_sparse_saving_fraction = 0.5) === dense
+@assert bestify(dense; min_sparse_saving_fraction = 0.6) === dense
 
 # Sparse
 
 sparse = sparse_vector(dense)
 @assert bestify(sparse) === sparse
-@assert brief(sparse) == &quot;3 x Int32 (Sparse 1 (33%) [UInt32])&quot;
+@assert brief(sparse) == &quot;3 x Int32 (Sparse 1 (33%) [UInt16])&quot;
 
 # output
 
@@ -1458,20 +1462,26 @@ sparse = sparse_vector(dense)
 <code class="language-julia hljs">indtype_for_size(size::Integer)::Type
 </code>
 </pre>
-<p>Return the integer data type which is large enough to hold indices and offsets for a 
+<p>Return the smallest unsigned integer data type which is large enough to hold indices and offsets for a 
 <code>SparseMatrixCSC
 </code> matrix of some 
 <code>size
-</code> (total number of elements). We try to use 
+</code> (total number of elements). We use 
+<code>UInt16
+</code> for small data, 
 <code>UInt32
-</code> whenever possible because for large matrices (especially with 32-bit value types) this will drastically reduce the amount of space used.
+</code> for medium data, and 
+<code>UInt64
+</code> only for very large data, because smaller index types drastically reduce the amount of space used.
 </p>
 <pre>
-<code class="language-julia hljs">println(10000000 =&gt; indtype_for_size(10000000))
+<code class="language-julia hljs">println(1000 =&gt; indtype_for_size(1000))
+println(10000000 =&gt; indtype_for_size(10000000))
 println(10000000000 =&gt; indtype_for_size(10000000000))
 
 # output
 
+1000 =&gt; UInt16
 10000000 =&gt; UInt32
 10000000000 =&gt; UInt64
 </code>
