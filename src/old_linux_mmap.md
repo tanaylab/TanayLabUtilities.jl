@@ -2,6 +2,7 @@
 
 ```@docs
 TanayLabUtilities.OldLinuxMmap
+TanayLabUtilities.OldLinuxMmap.mmap_with_small_pages
 TanayLabUtilities.OldLinuxMmap.mmap_populate_if_old_linux_ramdisk
 ```
 

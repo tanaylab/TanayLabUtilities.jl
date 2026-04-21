@@ -238,6 +238,41 @@
 </article>
 <article>
 <details class="docstring" open="true">
+<summary id="TanayLabUtilities.OldLinuxMmap.mmap_with_small_pages">
+<a class="docstring-binding" href="#TanayLabUtilities.OldLinuxMmap.mmap_with_small_pages">
+<code>TanayLabUtilities.OldLinuxMmap.mmap_with_small_pages
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+</summary>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">mmap_with_small_pages(
+    io::IO,
+    ::Type{ArrayT},
+    dims::Union{Integer, Tuple{Vararg{Integer}}},
+    offset::Integer;
+    grow::Bool = true,
+    shared::Bool = true,
+)::ArrayT where {T, ArrayT &lt;: Array{T}}
+</code>
+</pre>
+<p>Call 
+<code>Mmap.mmap
+</code> with the given arguments and, on Linux, immediately disable Transparent Huge Pages on the returned region via 
+<code>madvise(MADV_NOHUGEPAGE)
+</code>. Use this in place of 
+<code>Mmap.mmap
+</code> when you rely on demand paging to load only the specific bytes an access actually touches: without disabling THP, Linux can promote consecutive 4 KiB pages into 2 MiB huge pages, turning a single-byte access into a 2 MiB fault and defeating the lazy-load benefit of memory mapping a large file.
+</p>
+</div>
+</section>
+</details>
+</article>
+<article>
+<details class="docstring" open="true">
 <summary id="TanayLabUtilities.OldLinuxMmap.mmap_populate_if_old_linux_ramdisk">
 <a class="docstring-binding" href="#TanayLabUtilities.OldLinuxMmap.mmap_populate_if_old_linux_ramdisk">
 <code>TanayLabUtilities.OldLinuxMmap.mmap_populate_if_old_linux_ramdisk
@@ -293,6 +328,12 @@
 <li>
 <a href="old_linux_mmap.html#TanayLabUtilities.OldLinuxMmap.mmap_populate_if_old_linux_ramdisk">
 <code>TanayLabUtilities.OldLinuxMmap.mmap_populate_if_old_linux_ramdisk
+</code>
+</a>
+</li>
+<li>
+<a href="old_linux_mmap.html#TanayLabUtilities.OldLinuxMmap.mmap_with_small_pages">
+<code>TanayLabUtilities.OldLinuxMmap.mmap_with_small_pages
 </code>
 </a>
 </li>

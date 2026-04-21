@@ -21,6 +21,7 @@ should probably be able to delete this module in 2030. Sigh.
 module OldLinuxMmap
 
 export mmap_populate_if_old_linux_ramdisk
+export mmap_with_small_pages
 
 import Mmap
 
@@ -72,6 +73,37 @@ function disable_thp(ptr::Ptr{Cvoid}, size::Integer)::Nothing  # FLAKY TESTED
         end
     end
     return nothing
+end
+
+"""
+    mmap_with_small_pages(
+        io::IO,
+        ::Type{ArrayT},
+        dims::Union{Integer, Tuple{Vararg{Integer}}},
+        offset::Integer;
+        grow::Bool = true,
+        shared::Bool = true,
+    )::ArrayT where {T, ArrayT <: Array{T}}
+
+Call `Mmap.mmap` with the given arguments and, on Linux, immediately disable Transparent Huge Pages
+on the returned region via `madvise(MADV_NOHUGEPAGE)`. Use this in place of `Mmap.mmap` when you
+rely on demand paging to load only the specific bytes an access actually touches: without disabling
+THP, Linux can promote consecutive 4 KiB pages into 2 MiB huge pages, turning a single-byte access
+into a 2 MiB fault and defeating the lazy-load benefit of memory mapping a large file.
+"""
+function mmap_with_small_pages(  # FLAKY TESTED
+    io::IO,
+    ::Type{ArrayT},
+    dims::Union{Integer, Tuple{Vararg{Integer}}},
+    offset::Integer;
+    grow::Bool = true,
+    shared::Bool = true,
+)::ArrayT where {T, ArrayT <: Array{T}}
+    array = Mmap.mmap(io, ArrayT, dims, offset; grow, shared)
+    @static if Sys.islinux()
+        disable_thp(Ptr{Cvoid}(pointer(array)), length(array) * sizeof(T))
+    end
+    return array
 end
 
 """
@@ -150,11 +182,7 @@ function mmap_populate_if_old_linux_ramdisk(  # UNTESTED
     end
 
     return open(path, mode) do file  # NOJET
-        array = Mmap.mmap(file, ArrayT, size; grow = false)
-        @static if Sys.islinux()
-            disable_thp(Ptr{Cvoid}(pointer(array)), bytes_size)  # NOJET # FLAKY TESTED
-        end
-        return array
+        return mmap_with_small_pages(file, ArrayT, size, 0; grow = false)  # NOJET
     end
 end
 
