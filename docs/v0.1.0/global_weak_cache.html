@@ -255,10 +255,18 @@
 </code>purge
 <code>is set, then any existing value is ignored and is replaced by the result of the
 </code>getter
-<code>. If the
+<code>. The file&#39;s inode is always compared, so a cached entry is invalidated if the file at
+</code>path
+<code>has been replaced (for example, by
+</code>rm
+<code>followed by re-creation). By default, the
 </code>mtime
-<code>of the file does not match the value when the object was cached, it is likewise ignored and
-</code>getter` is called to fetch a fresh value.
+<code>of the file is **not** checked: callers are assumed to be the sole writers of the file, and their own writes (which bump the
+</code>mtime
+<code>) must not throw away a cached object that is still in use. If the caller instead wants to treat external
+</code>mtime
+<code>changes as invalidation (for example, because the file may be rewritten by an unrelated process), set
+</code>check_mtime = true`.
 </p>
 <p>There&#39;s a singleton 
 <code>GLOBAL_CACHE
