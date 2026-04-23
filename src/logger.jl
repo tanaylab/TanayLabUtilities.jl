@@ -214,8 +214,8 @@ function metafmt(
     show_location::Bool,
     level::LogLevel,
     _module,
-    ::Symbol,
-    ::Symbol,
+    ::Any,
+    ::Any,
     file::AbstractString,
     line::Maybe{Integer},
 )::Tuple{Symbol, AbstractString, AbstractString}
