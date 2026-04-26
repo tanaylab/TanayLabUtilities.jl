@@ -273,13 +273,13 @@
 
 sparse_median(
     matrix::AbstractMatrix{&lt;:Real};
-    dims::Integer,
+    dims::Maybe{Integer} = nothing,
     positive::Bool = false,
     result::Maybe{AbstractVector{&lt;:AbstractFloat}} = nothing,
     scratch::Maybe{AbstractVector{&lt;:AbstractFloat}} = nothing,
     progress::Maybe{Progress} = nothing,
     progress_chunk::Maybe{Integer} = nothing,
-)::AbstractVector{&lt;:AbstractFloat}
+)::Union{Float64, AbstractVector{&lt;:AbstractFloat}}
 </code>
 </pre>
 <p>Compute the median of the values of a 
@@ -298,7 +298,11 @@ sparse_median(
 </code>
 </a>) of a 
 <code>matrix
-</code>. This is equivalent to 
+</code>, or of all the elements of a 
+<code>matrix
+</code> when 
+<code>dims
+</code> is omitted. This is equivalent to 
 <a href="sparse_statistics.html#TanayLabUtilities.SparseStatistics.sparse_quantile">
 <code>sparse_quantile
 </code>
@@ -370,13 +374,13 @@ sparse_median(matrix; dims = Rows)
 sparse_quantile(
     matrix::AbstractMatrix{&lt;:Real},
     p::Real;
-    dims::Integer,
+    dims::Maybe{Integer} = nothing,
     positive::Bool = false,
     result::Maybe{AbstractVector{&lt;:AbstractFloat}} = nothing,
     scratch::Maybe{AbstractVector{&lt;:AbstractFloat}} = nothing,
     progress::Maybe{Progress} = nothing,
     progress_chunk::Maybe{Integer} = nothing,
-)::AbstractVector{&lt;:AbstractFloat}
+)::Union{Float64, AbstractVector{&lt;:AbstractFloat}}
 </code>
 </pre>
 <p>Compute the 
@@ -399,15 +403,25 @@ sparse_quantile(
 </code>
 </a>) of a 
 <code>matrix
-</code>. The matrix variant returns a vector of length 
+</code>, or of all the elements of a 
+<code>matrix
+</code> when 
+<code>dims
+</code> is omitted. With 
+<code>dims
+</code> given, the matrix variant returns a vector of length 
 <code>n_columns
-</code> (when 
+</code> (
 <code>dims = Rows
 </code>) or 
 <code>n_rows
-</code> (when 
+</code> (
 <code>dims = Columns
-</code>), holding one quantile value per slice.
+</code>), holding one quantile value per slice; without 
+<code>dims
+</code>, it returns a scalar 
+<code>Float64
+</code>.
 </p>
 <p>The quantile is computed via the same linear interpolation rule as 
 <code>Statistics.quantile

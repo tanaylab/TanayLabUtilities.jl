@@ -235,6 +235,21 @@ end
         end
     end
 
+    @testset "matrix scalar reduction without dims flattens" begin
+        dense_matrix = Float64[1 2 3; 4 5 6]
+        @test sparse_median(dense_matrix) ≈ median(vec(dense_matrix))
+        for p in (0.0, 0.25, 0.5, 0.75, 1.0)
+            @test sparse_quantile(dense_matrix, p) ≈ quantile(vec(dense_matrix), p)
+        end
+
+        sparse_matrix = sparse([0.0 1.0 0.0 4.0; 2.0 0.0 0.0 5.0; 0.0 3.0 0.0 6.0; 0.0 0.0 0.0 7.0])
+        flat_dense = vec(Matrix(sparse_matrix))
+        @test sparse_median(sparse_matrix) ≈ median(flat_dense)
+        for p in (0.0, 0.25, 0.5, 0.75, 1.0)
+            @test sparse_quantile(sparse_matrix, p) ≈ quantile(flat_dense, p)
+        end
+    end
+
     @testset "errors on invalid p and dims" begin
         @test_throws AssertionError sparse_quantile([1.0, 2.0], -0.1)
         @test_throws AssertionError sparse_quantile([1.0, 2.0], 1.1)
@@ -262,6 +277,9 @@ end
         dense_scratch = Vector{Float64}(undef, length(dense_matrix))
         sparse_quantile(dense_matrix, 0.5; dims = Rows, result = dense_result, scratch = dense_scratch)
         @test dense_result ≈ [quantile(view(dense_matrix, :, j), 0.5) for j in 1:size(dense_matrix, 2)]
+
+        flat_scratch = Vector{Float64}(undef, nnz(sparse_matrix))
+        @test sparse_quantile(sparse_matrix, 0.5; scratch = flat_scratch) ≈ quantile(vec(Matrix(sparse_matrix)), 0.5)
     end
 
     @testset "quickselect partition path on large shuffled inputs" begin

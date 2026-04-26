@@ -45,17 +45,18 @@ import ..MatrixLayouts.check_efficient_action
     sparse_quantile(
         matrix::AbstractMatrix{<:Real},
         p::Real;
-        dims::Integer,
+        dims::Maybe{Integer} = nothing,
         positive::Bool = false,
         result::Maybe{AbstractVector{<:AbstractFloat}} = nothing,
         scratch::Maybe{AbstractVector{<:AbstractFloat}} = nothing,
         progress::Maybe{Progress} = nothing,
         progress_chunk::Maybe{Integer} = nothing,
-    )::AbstractVector{<:AbstractFloat}
+    )::Union{Float64, AbstractVector{<:AbstractFloat}}
 
 Compute the `p`-quantile (`0 <= p <= 1`) of the values of a `vector`, or of each column (`dims = 1` / [`Rows`](@ref))
-or each row (`dims = 2` / [`Columns`](@ref)) of a `matrix`. The matrix variant returns a vector of length `n_columns`
-(when `dims = Rows`) or `n_rows` (when `dims = Columns`), holding one quantile value per slice.
+or each row (`dims = 2` / [`Columns`](@ref)) of a `matrix`, or of all the elements of a `matrix` when `dims` is omitted.
+With `dims` given, the matrix variant returns a vector of length `n_columns` (`dims = Rows`) or `n_rows`
+(`dims = Columns`), holding one quantile value per slice; without `dims`, it returns a scalar `Float64`.
 
 The quantile is computed via the same linear interpolation rule as `Statistics.quantile` (corresponding to `R`'s default
 "type 7"), so the result matches `quantile(Vector(input), p)` exactly.
@@ -130,14 +131,22 @@ end
 function sparse_quantile(
     matrix::AbstractMatrix{<:Real},
     p::Real;
-    dims::Integer,
+    dims::Maybe{Integer} = nothing,
     positive::Bool = false,
     result::Maybe{AbstractVector{<:AbstractFloat}} = nothing,
     scratch::Maybe{AbstractVector{<:AbstractFloat}} = nothing,
     progress::Maybe{Progress} = nothing,
     progress_chunk::Maybe{Integer} = nothing,
-)::AbstractVector{<:AbstractFloat}
+)::Union{Float64, AbstractVector{<:AbstractFloat}}
     @assert 0 <= p <= 1 "quantile p: $(p) is not in [0, 1]"
+    if dims === nothing
+        @assert result === nothing "result is only valid with dims"
+        @assert progress === nothing "progress is only valid with dims"
+        @assert progress_chunk === nothing "progress_chunk is only valid with dims"
+        return flame_timed("sparse_quantile") do
+            return compute_sparse_quantile_of_flat_matrix(matrix, p; positive, scratch)
+        end
+    end
     @assert dims == Rows || dims == Columns "invalid dims: $(dims)"
     return flame_timed("sparse_quantile") do
         return compute_sparse_quantile_of_matrix(matrix, p; dims, positive, result, scratch, progress, progress_chunk)
@@ -153,18 +162,18 @@ end
 
     sparse_median(
         matrix::AbstractMatrix{<:Real};
-        dims::Integer,
+        dims::Maybe{Integer} = nothing,
         positive::Bool = false,
         result::Maybe{AbstractVector{<:AbstractFloat}} = nothing,
         scratch::Maybe{AbstractVector{<:AbstractFloat}} = nothing,
         progress::Maybe{Progress} = nothing,
         progress_chunk::Maybe{Integer} = nothing,
-    )::AbstractVector{<:AbstractFloat}
+    )::Union{Float64, AbstractVector{<:AbstractFloat}}
 
 Compute the median of the values of a `vector`, or of each column (`dims = 1` / [`Rows`](@ref)) or each row
-(`dims = 2` / [`Columns`](@ref)) of a `matrix`. This is equivalent to [`sparse_quantile`](@ref) with `p = 0.5` and
-shares its calling convention, optimizations, `positive` flag, optional `result`/`scratch` buffers, and `progress` /
-`progress_chunk` reporting.
+(`dims = 2` / [`Columns`](@ref)) of a `matrix`, or of all the elements of a `matrix` when `dims` is omitted. This is
+equivalent to [`sparse_quantile`](@ref) with `p = 0.5` and shares its calling convention, optimizations, `positive`
+flag, optional `result`/`scratch` buffers, and `progress` / `progress_chunk` reporting.
 
 ```jldoctest
 using SparseArrays
@@ -205,13 +214,21 @@ end
 
 function sparse_median(
     matrix::AbstractMatrix{<:Real};
-    dims::Integer,
+    dims::Maybe{Integer} = nothing,
     positive::Bool = false,
     result::Maybe{AbstractVector{<:AbstractFloat}} = nothing,
     scratch::Maybe{AbstractVector{<:AbstractFloat}} = nothing,
     progress::Maybe{Progress} = nothing,
     progress_chunk::Maybe{Integer} = nothing,
-)::AbstractVector{<:AbstractFloat}
+)::Union{Float64, AbstractVector{<:AbstractFloat}}
+    if dims === nothing
+        @assert result === nothing "result is only valid with dims"
+        @assert progress === nothing "progress is only valid with dims"
+        @assert progress_chunk === nothing "progress_chunk is only valid with dims"
+        return flame_timed("sparse_median") do
+            return compute_sparse_quantile_of_flat_matrix(matrix, 0.5; positive, scratch)
+        end
+    end
     @assert dims == Rows || dims == Columns "invalid dims: $(dims)"
     return flame_timed("sparse_median") do
         return compute_sparse_quantile_of_matrix(matrix, 0.5; dims, positive, result, scratch, progress, progress_chunk)
@@ -231,6 +248,33 @@ function compute_sparse_quantile_of_vector(
     else
         nonzero_values = vector
         n_nonzero = length(vector)
+        n_implicit_zero = 0
+    end
+
+    if scratch === nothing
+        scratch = Vector{Float64}(undef, n_nonzero)
+    else
+        @assert length(scratch) >= n_nonzero "scratch length: $(length(scratch)) is below required: $(n_nonzero)"
+    end
+
+    @views scratch[1:n_nonzero] .= nonzero_values
+
+    return sparse_quantile_from_buffer!(scratch, n_nonzero, n_implicit_zero, p, positive)
+end
+
+function compute_sparse_quantile_of_flat_matrix(
+    matrix::AbstractMatrix{<:Real},
+    p::Real;
+    positive::Bool,
+    scratch::Maybe{AbstractVector{<:AbstractFloat}},
+)::Float64
+    if issparse(matrix)
+        nonzero_values = nzval(matrix)
+        n_nonzero = length(nonzero_values)
+        n_implicit_zero = length(matrix) - n_nonzero
+    else
+        nonzero_values = vec(matrix)
+        n_nonzero = length(nonzero_values)
         n_implicit_zero = 0
     end
 

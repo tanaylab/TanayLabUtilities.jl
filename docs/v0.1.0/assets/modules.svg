@@ -240,7 +240,7 @@
 </g>
 </g>
 <!-- ReadOnlyArrays&#45;&gt;MatrixLayouts -->
-<g id="edge20" class="edge">
+<g id="edge22" class="edge">
 <title>ReadOnlyArrays&#45;&gt;MatrixLayouts</title>
 <path fill="none" stroke="black" d="M104.28,-222.5C107.24,-222.09 110.17,-221.68 113.03,-221.28 208.06,-208.05 318.68,-193.02 383.83,-184.2"/>
 <polygon fill="black" stroke="black" points="384.12,-187.7 393.56,-182.89 383.19,-180.76 384.12,-187.7"/>
@@ -363,13 +363,13 @@
 </g>
 </g>
 <!-- Handlers&#45;&gt;MatrixLayouts -->
-<g id="edge22" class="edge">
+<g id="edge21" class="edge">
 <title>Handlers&#45;&gt;MatrixLayouts</title>
 <path fill="none" stroke="black" d="M180.46,-223.09C183.36,-222.46 186.25,-221.84 189.03,-221.28 255.78,-207.75 332.96,-194.35 383.93,-185.81"/>
 <polygon fill="black" stroke="black" points="384.24,-189.31 393.53,-184.21 383.09,-182.4 384.24,-189.31"/>
 </g>
 <!-- Documentation&#45;&gt;MatrixLayouts -->
-<g id="edge21" class="edge">
+<g id="edge20" class="edge">
 <title>Documentation&#45;&gt;MatrixLayouts</title>
 <path fill="none" stroke="black" d="M515.6,-220.89C501.87,-212.85 481.54,-200.94 465.42,-191.49"/>
 <polygon fill="black" stroke="black" points="467.25,-188.51 456.85,-186.47 463.71,-194.55 467.25,-188.51"/>
