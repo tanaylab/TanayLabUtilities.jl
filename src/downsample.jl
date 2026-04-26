@@ -22,10 +22,10 @@ using ..Documentation
 using ..MatrixFormats
 using ..MatrixLayouts
 using ..ParallelLoops
+using ..SparseStatistics
 using ..Types
 using Base.Threads
 using Random
-using Statistics
 
 import ..MatrixLayouts.check_efficient_action
 import Random.default_rng
@@ -276,8 +276,8 @@ downsamples([100, 500, 1000])
     return Int(  # NOJET
         round(
             min(
-                max(min_downsamples, quantile(samples_per_vector, min_downsamples_quantile)),
-                quantile(samples_per_vector, max_downsamples_quantile),
+                max(min_downsamples, sparse_quantile(samples_per_vector, min_downsamples_quantile)),
+                sparse_quantile(samples_per_vector, max_downsamples_quantile),
             ),
         ),
     )

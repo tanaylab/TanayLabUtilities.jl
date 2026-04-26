@@ -2,6 +2,7 @@ using Documenter
 using Logging
 using SparseArrays
 using SpecialFunctions
+using StatsBase
 using TanayLabUtilities
 using Test
 
@@ -157,6 +158,134 @@ end
 
     @testset "errors on negative counts" begin
         @test_throws AssertionError chi_squared([-1 3; 2 4])
+    end
+end
+
+@testset "sparse_statistics" begin
+    @testset "matches Statistics.quantile on dense vectors" begin
+        for vector in (Float64[1, 2, 3, 4, 5], Float64[-3, -1, 0, 0, 2, 4], Float64[7], Float64[1, 1, 1, 1])
+            for p in (0.0, 0.1, 0.25, 0.5, 0.75, 0.9, 1.0)
+                @test sparse_quantile(vector, p) ≈ quantile(vector, p)
+            end
+            @test sparse_median(vector) ≈ median(vector)
+        end
+    end
+
+    @testset "matches Statistics.quantile on sparse vectors" begin
+        for dense_vector in
+            ([0, 0, 1, 2, 3, 0, 0], [-3, 0, -1, 0, 0, 2, 4, 0], [0, 0, 0, 0, 0], [5, 5, 5, 5], [-1, 0, 1])
+            sparse_vec = sparse(dense_vector)
+            for p in (0.0, 0.1, 0.25, 0.5, 0.75, 0.9, 1.0)
+                @test sparse_quantile(sparse_vec, p) ≈ quantile(dense_vector, p)
+            end
+            @test sparse_median(sparse_vec) ≈ median(dense_vector)
+        end
+    end
+
+    @testset "positive flag matches when all values are non-negative" begin
+        sparse_vec = sparse([0, 0, 3, 0, 1, 4, 0, 1])
+        for p in (0.0, 0.25, 0.5, 0.75, 1.0)
+            @test sparse_quantile(sparse_vec, p; positive = true) ≈ sparse_quantile(sparse_vec, p)
+        end
+        @test sparse_median(sparse_vec; positive = true) ≈ sparse_median(sparse_vec)
+    end
+
+    @testset "respects explicit zeros stored in nzval" begin
+        # SparseVector with an explicit zero entry should give the same answer as the dense vector.
+        sparse_vec = SparseVector(6, [2, 4, 5], [0, 1, 2])
+        dense_vec = [0, 0, 0, 1, 2, 0]
+        for p in (0.0, 0.25, 0.5, 0.75, 1.0)
+            @test sparse_quantile(sparse_vec, p) ≈ quantile(dense_vec, p)
+        end
+    end
+
+    @testset "matrix per-column reduction matches dense" begin
+        dense_matrix = [
+            0.0 1.0 0.0 4.0
+            2.0 0.0 0.0 5.0
+            0.0 3.0 0.0 6.0
+            0.0 0.0 0.0 7.0
+        ]
+        sparse_matrix = sparse(dense_matrix)
+        for p in (0.0, 0.25, 0.5, 0.75, 1.0)
+            expected = [quantile(view(dense_matrix, :, j), p) for j in 1:4]
+            @test sparse_quantile(sparse_matrix, p; dims = Rows) ≈ expected
+            @test sparse_quantile(dense_matrix, p; dims = Rows) ≈ expected
+        end
+        expected_median = [median(view(dense_matrix, :, j)) for j in 1:4]
+        @test sparse_median(sparse_matrix; dims = Rows) ≈ expected_median
+        @test sparse_median(dense_matrix; dims = Rows) ≈ expected_median
+    end
+
+    @testset "matrix per-row reduction matches dense for row-major inputs" begin
+        dense_matrix = [
+            0.0 2.0 0.0 0.0
+            1.0 0.0 3.0 0.0
+            0.0 0.0 0.0 0.0
+            4.0 5.0 6.0 7.0
+        ]
+        # Build a row-major sparse view by transposing a column-major sparse matrix.
+        transposed_sparse = transpose(sparse(transpose(dense_matrix)))
+        # Build a row-major dense view via flip.
+        transposed_dense = flip(collect(transpose(dense_matrix)))
+        for p in (0.0, 0.25, 0.5, 0.75, 1.0)
+            expected = [quantile(view(dense_matrix, i, :), p) for i in 1:4]
+            @test sparse_quantile(transposed_sparse, p; dims = Columns) ≈ expected
+            @test sparse_quantile(transposed_dense, p; dims = Columns) ≈ expected
+        end
+    end
+
+    @testset "errors on invalid p and dims" begin
+        @test_throws AssertionError sparse_quantile([1.0, 2.0], -0.1)
+        @test_throws AssertionError sparse_quantile([1.0, 2.0], 1.1)
+        @test_throws AssertionError sparse_quantile([1.0 2.0; 3.0 4.0], 0.5; dims = 3)
+        @test_throws AssertionError sparse_median([1.0 2.0; 3.0 4.0]; dims = 0)
+    end
+
+    @testset "caller-provided result and scratch buffers" begin
+        sparse_vec = sparse([0, 0, 1, 2, 3])
+        scratch_vec = Vector{Float64}(undef, nnz(sparse_vec))
+        @test sparse_quantile(sparse_vec, 0.5; scratch = scratch_vec) ≈ quantile([0, 0, 1, 2, 3], 0.5)
+
+        dense_vec = Float64[1, 2, 3, 4, 5]
+        dense_scratch = Vector{Float64}(undef, length(dense_vec))
+        @test sparse_quantile(dense_vec, 0.5; scratch = dense_scratch) ≈ quantile(dense_vec, 0.5)
+
+        sparse_matrix = sparse([0 1 0 4; 2 0 0 5; 0 3 0 6; 0 0 0 7])
+        sparse_result = Vector{Float64}(undef, size(sparse_matrix, 2))
+        sparse_scratch = Vector{Float64}(undef, nnz(sparse_matrix))
+        sparse_quantile(sparse_matrix, 0.5; dims = Rows, result = sparse_result, scratch = sparse_scratch)
+        @test sparse_result ≈ [quantile(view(sparse_matrix, :, j), 0.5) for j in 1:size(sparse_matrix, 2)]
+
+        dense_matrix = Float64[1 2 3 4; 5 6 7 8; 9 10 11 12]
+        dense_result = Vector{Float64}(undef, size(dense_matrix, 2))
+        dense_scratch = Vector{Float64}(undef, length(dense_matrix))
+        sparse_quantile(dense_matrix, 0.5; dims = Rows, result = dense_result, scratch = dense_scratch)
+        @test dense_result ≈ [quantile(view(dense_matrix, :, j), 0.5) for j in 1:size(dense_matrix, 2)]
+    end
+
+    @testset "quickselect partition path on large shuffled inputs" begin
+        # Shuffled values with > 16 stored entries exercise median-of-three swaps and the Hoare
+        # partition swap in `quickselect!`; sorted data leaves those branches dead.
+        rng = Random.MersenneTwister(42)
+        dense_vector = Random.shuffle!(rng, vcat(collect(1.0:80.0), collect(-40.0:-1.0)))
+        @test length(dense_vector) >= 16
+        for p in (0.0, 0.05, 0.25, 0.5, 0.6, 0.75, 0.95, 1.0)
+            @test sparse_quantile(dense_vector, p) ≈ quantile(dense_vector, p)
+        end
+
+        # Sparse matrix variant where each column has > 16 stored values and few implicit zeros,
+        # so most quantile positions land on stored values and reach `quickselect!`.
+        n_rows = 130
+        column_values = Random.shuffle!(rng, vcat(collect(1.0:80.0), collect(-40.0:-1.0)))
+        rows = sort!(Random.shuffle!(rng, collect(1:n_rows))[1:length(column_values)])
+        sparse_matrix = sparse(rows, fill(1, length(column_values)), column_values, n_rows, 1)
+        @test nnz(sparse_matrix) >= 16
+        for p in (0.0, 0.05, 0.25, 0.5, 0.6, 0.75, 0.95, 1.0)
+            expected = quantile(Vector(sparse_matrix[:, 1]), p)
+            @test sparse_quantile(sparse_matrix, p; dims = Rows)[1] ≈ expected
+            @test sparse_quantile(sparse_matrix[:, 1], p) ≈ expected
+        end
     end
 end
 

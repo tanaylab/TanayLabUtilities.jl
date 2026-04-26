@@ -1,0 +1,617 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Sparse Statistics · TanayLabUtilities.jl v0.1.0
+</title>
+<meta name="title" content="Sparse Statistics · TanayLabUtilities.jl v0.1.0"/>
+<meta property="og:title" content="Sparse Statistics · TanayLabUtilities.jl v0.1.0"/>
+<meta property="twitter:title" content="Sparse Statistics · TanayLabUtilities.jl v0.1.0"/>
+<meta name="description" content="Documentation for TanayLabUtilities.jl v0.1.0."/>
+<meta property="og:description" content="Documentation for TanayLabUtilities.jl v0.1.0."/>
+<meta property="twitter:description" content="Documentation for TanayLabUtilities.jl v0.1.0."/>
+<script data-outdated-warner src="assets/warner.js">
+</script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/>
+<script>documenterBaseURL="."
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="assets/documenter.js">
+</script>
+<script src="search_index.js">
+</script>
+<script src="siteinfo.js">
+</script>
+<script src="../versions.js">
+</script>
+<link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/>
+<link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/>
+<link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/>
+<link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/>
+<link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/>
+<link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/>
+<script src="assets/themeswap.js">
+</script>
+</head>
+<body>
+<div id="documenter">
+<nav class="docs-sidebar">
+<div class="docs-package-name">
+<span class="docs-autofit">
+<a href="index.html">TanayLabUtilities.jl v0.1.0
+</a>
+</span>
+</div>
+<button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)
+</button>
+<ul class="docs-menu">
+<li>
+<a class="tocitem" href="index.html">TanayLabUtilities
+</a>
+</li>
+<li>
+<a class="tocitem" href="types.html">Types
+</a>
+</li>
+<li>
+<a class="tocitem" href="brief.html">Brief
+</a>
+</li>
+<li>
+<a class="tocitem" href="logger.html">Logger
+</a>
+</li>
+<li>
+<a class="tocitem" href="flame_time.html">Flame Time
+</a>
+</li>
+<li>
+<a class="tocitem" href="parallel_loops.html">Parallel Loops
+</a>
+</li>
+<li>
+<a class="tocitem" href="permute.html">Permute
+</a>
+</li>
+<li>
+<a class="tocitem" href="parallel_distances.html">Parallel Distances
+</a>
+</li>
+<li>
+<a class="tocitem" href="parallel_storage.html">Parallel Storage
+</a>
+</li>
+<li>
+<a class="tocitem" href="mostly_read_write_locks.html">Mostly-Read Write Locks
+</a>
+</li>
+<li>
+<a class="tocitem" href="extended_read_write_locks.html">Extended Read-Write Locks
+</a>
+</li>
+<li>
+<a class="tocitem" href="unique_names.html">Unique Names
+</a>
+</li>
+<li>
+<a class="tocitem" href="documentation.html">Documentation
+</a>
+</li>
+<li>
+<a class="tocitem" href="handlers.html">Handlers
+</a>
+</li>
+<li>
+<a class="tocitem" href="read_only_arrays.html">Read-Only Arrays
+</a>
+</li>
+<li>
+<a class="tocitem" href="downsample.html">Downsample
+</a>
+</li>
+<li>
+<a class="tocitem" href="zero_correlation.html">Zero Correlation
+</a>
+</li>
+<li>
+<a class="tocitem" href="cross_validations.html">Cross Validations
+</a>
+</li>
+<li>
+<a class="tocitem" href="global_weak_cache.html">Global Weak Cache
+</a>
+</li>
+<li>
+<a class="tocitem" href="kmeans.html">K-Means
+</a>
+</li>
+<li>
+<a class="tocitem" href="cached_ispath.html">Cached IsPath
+</a>
+</li>
+<li>
+<a class="tocitem" href="old_linux_mmap.html">Old Linux Mmap
+</a>
+</li>
+<li>
+<a class="tocitem" href="bits_loops.html">Bits Loops
+</a>
+</li>
+</ul>
+<div class="docs-version-selector field has-addons">
+<div class="control">
+<span class="docs-label button is-static is-size-7">Version
+</span>
+</div>
+<div class="docs-selector control is-expanded">
+<div class="select is-fullwidth is-size-7">
+<select id="documenter-version-selector">
+</select>
+</div>
+</div>
+</div>
+</nav>
+<div class="docs-main">
+<header class="docs-navbar">
+<a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#">
+</a>
+<nav class="breadcrumb">
+<ul class="is-hidden-mobile">
+<li class="is-active">
+<a href="sparse_statistics.html">Sparse Statistics
+</a>
+</li>
+</ul>
+<ul class="is-hidden-tablet">
+<li class="is-active">
+<a href="sparse_statistics.html">Sparse Statistics
+</a>
+</li>
+</ul>
+</nav>
+<div class="docs-right">
+<a class="docs-navbar-link" href="https://github.com/tanaylab/TanayLabUtilities.jl/blob/main{path}?plain=1#L{line}" title="View the repository on GitHub">
+<span class="docs-icon fa-brands">
+</span>
+<span class="docs-label is-hidden-touch">GitHub
+</span>
+</a>
+<a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings">
+</a>
+<a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings">
+</a>
+</div>
+</header>
+<article class="content" id="documenter-page">
+<h1 id="Sparse-Statistics">
+<a class="docs-heading-anchor" href="#Sparse-Statistics">Sparse Statistics
+</a>
+<a id="Sparse-Statistics-1">
+</a>
+<a class="docs-heading-anchor-permalink" href="#Sparse-Statistics" title="Permalink">
+</a>
+</h1>
+<article>
+<details class="docstring" open="true">
+<summary id="TanayLabUtilities.SparseStatistics">
+<a class="docstring-binding" href="#TanayLabUtilities.SparseStatistics">
+<code>TanayLabUtilities.SparseStatistics
+</code>
+</a> — 
+<span class="docstring-category">Module
+</span>
+</summary>
+<section>
+<div>
+<p>Median and quantile reductions optimized for sparse vectors and matrices.
+</p>
+<p>A quantile of a sparse vector with 
+<code>nnz
+</code> non-zero values out of 
+<code>n
+</code> total entries can be located in 
+<code>O(nnz)
+</code> expected time instead of the dense 
+<code>O(n * log(n))
+</code> time spent on a full sort. The key observation is that the values, if conceptually sorted, lay out as 
+<code>[sorted negatives... | zeros... | sorted positives...]
+</code>, where any explicit zero entries that may be stored in 
+<code>nzval
+</code> are folded together with the structural zeros. Once we know how many negatives and how many positives are stored in 
+<code>nzval
+</code>, mapping a quantile position to a value just requires running an in-place quickselect on (a copy of) 
+<code>nzval
+</code> to extract the one or two values needed. The implementation is allocation-free when the caller provides a 
+<code>scratch
+</code> buffer of the appropriate size.
+</p>
+<p>If the data is known to be non-negative (e.g., UMI counts), passing 
+<code>positive = true
+</code> skips the negativity scan entirely and yields a small additional speedup.
+</p>
+<p>The functions exposed here mirror the calling convention of 
+<code>Statistics.var
+</code> and 
+<code>Statistics.std
+</code>: they accept either an 
+<code>AbstractVector
+</code> (returning a single value) or an 
+<code>AbstractMatrix
+</code> together with a 
+<code>dims
+</code> keyword argument (returning a matrix with one of the dimensions reduced to a single entry).
+</p>
+</div>
+</section>
+</details>
+</article>
+<article>
+<details class="docstring" open="true">
+<summary id="TanayLabUtilities.SparseStatistics.sparse_median">
+<a class="docstring-binding" href="#TanayLabUtilities.SparseStatistics.sparse_median">
+<code>TanayLabUtilities.SparseStatistics.sparse_median
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+</summary>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">sparse_median(
+    vector::AbstractVector{&lt;:Real};
+    positive::Bool = false,
+    scratch::Maybe{AbstractVector{&lt;:AbstractFloat}} = nothing,
+)::Float64
+
+sparse_median(
+    matrix::AbstractMatrix{&lt;:Real};
+    dims::Integer,
+    positive::Bool = false,
+    result::Maybe{AbstractVector{&lt;:AbstractFloat}} = nothing,
+    scratch::Maybe{AbstractVector{&lt;:AbstractFloat}} = nothing,
+    progress::Maybe{Progress} = nothing,
+    progress_chunk::Maybe{Integer} = nothing,
+)::AbstractVector{&lt;:AbstractFloat}
+</code>
+</pre>
+<p>Compute the median of the values of a 
+<code>vector
+</code>, or of each column (
+<code>dims = 1
+</code> / 
+<a href="matrix_layouts.html#TanayLabUtilities.MatrixLayouts.Rows">
+<code>Rows
+</code>
+</a>) or each row (
+<code>dims = 2
+</code> / 
+<a href="matrix_layouts.html#TanayLabUtilities.MatrixLayouts.Columns">
+<code>Columns
+</code>
+</a>) of a 
+<code>matrix
+</code>. This is equivalent to 
+<a href="sparse_statistics.html#TanayLabUtilities.SparseStatistics.sparse_quantile">
+<code>sparse_quantile
+</code>
+</a> with 
+<code>p = 0.5
+</code> and shares its calling convention, optimizations, 
+<code>positive
+</code> flag, optional 
+<code>result
+</code>/
+<code>scratch
+</code> buffers, and 
+<code>progress
+</code> / 
+<code>progress_chunk
+</code> reporting.
+</p>
+<pre>
+<code class="language-julia hljs">using SparseArrays
+
+vector = sparse([0, 0, 1, 2, 3])
+println(sparse_median(vector))
+println(sparse_median(vector; positive = true))
+
+# output
+
+1.0
+1.0
+</code>
+</pre>
+<pre>
+<code class="language-julia hljs">using SparseArrays
+
+matrix = sparse([0 1 0; 2 0 3; 0 4 0; 5 0 6])
+sparse_median(matrix; dims = Rows)
+
+# output
+
+3-element Vector{Float64}:
+ 1.0
+ 0.5
+ 1.5
+</code>
+</pre>
+</div>
+</section>
+</details>
+</article>
+<article>
+<details class="docstring" open="true">
+<summary id="TanayLabUtilities.SparseStatistics.sparse_quantile">
+<a class="docstring-binding" href="#TanayLabUtilities.SparseStatistics.sparse_quantile">
+<code>TanayLabUtilities.SparseStatistics.sparse_quantile
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+</summary>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">sparse_quantile(
+    vector::AbstractVector{&lt;:Real},
+    p::Real;
+    positive::Bool = false,
+    scratch::Maybe{AbstractVector{&lt;:AbstractFloat}} = nothing,
+)::Float64
+
+sparse_quantile(
+    matrix::AbstractMatrix{&lt;:Real},
+    p::Real;
+    dims::Integer,
+    positive::Bool = false,
+    result::Maybe{AbstractVector{&lt;:AbstractFloat}} = nothing,
+    scratch::Maybe{AbstractVector{&lt;:AbstractFloat}} = nothing,
+    progress::Maybe{Progress} = nothing,
+    progress_chunk::Maybe{Integer} = nothing,
+)::AbstractVector{&lt;:AbstractFloat}
+</code>
+</pre>
+<p>Compute the 
+<code>p
+</code>-quantile (
+<code>0 &lt;= p &lt;= 1
+</code>) of the values of a 
+<code>vector
+</code>, or of each column (
+<code>dims = 1
+</code> / 
+<a href="matrix_layouts.html#TanayLabUtilities.MatrixLayouts.Rows">
+<code>Rows
+</code>
+</a>) or each row (
+<code>dims = 2
+</code> / 
+<a href="matrix_layouts.html#TanayLabUtilities.MatrixLayouts.Columns">
+<code>Columns
+</code>
+</a>) of a 
+<code>matrix
+</code>. The matrix variant returns a vector of length 
+<code>n_columns
+</code> (when 
+<code>dims = Rows
+</code>) or 
+<code>n_rows
+</code> (when 
+<code>dims = Columns
+</code>), holding one quantile value per slice.
+</p>
+<p>The quantile is computed via the same linear interpolation rule as 
+<code>Statistics.quantile
+</code> (corresponding to 
+<code>R
+</code>&#39;s default &quot;type 7&quot;), so the result matches 
+<code>quantile(Vector(input), p)
+</code> exactly. For a sparse 
+<code>vector
+</code> (or each sparse column slice of a column-major sparse 
+<code>matrix
+</code>, or each sparse row slice of a row-major sparse 
+<code>matrix
+</code>), the quantile is located in 
+<code>O(nnz)
+</code> expected time using an in-place quickselect over a copy of the stored non-zero values.
+</p>
+<p>If 
+<code>positive
+</code> is 
+<code>true
+</code>, all input values are assumed to be non-negative; this lets the implementation skip the scan that locates the boundary between negative and non-negative values. No validation is performed on this assumption.
+</p>
+<p>If 
+<code>scratch
+</code> is given, no allocation is performed. The required 
+<code>scratch
+</code> length is 
+<code>nnz(input)
+</code> for sparse data and 
+<code>length(input)
+</code> for dense vectors (or 
+<code>n_rows * n_columns
+</code> for dense matrices). If 
+<code>result
+</code> is given for the matrix variant (length 
+<code>n_columns
+</code> for 
+<code>dims = Rows
+</code>, or 
+<code>n_rows
+</code> for 
+<code>dims = Columns
+</code>), no result allocation is performed either.
+</p>
+<p>When operating on a 
+<code>matrix
+</code>, the iteration is parallelized via 
+<a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.parallel_loop_wo_rng">
+<code>parallel_loop_wo_rng
+</code>
+</a>. Operating against the 
+<a href="matrix_layouts.html#TanayLabUtilities.MatrixLayouts.major_axis">
+<code>major_axis
+</code>
+</a> of a sparse 
+<code>matrix
+</code> will trigger the 
+<a href="matrix_layouts.html#TanayLabUtilities.MatrixLayouts.GLOBAL_INEFFICIENT_ACTION_HANDLER">
+<code>GLOBAL_INEFFICIENT_ACTION_HANDLER
+</code>
+</a> and fall back to allocating per-iteration views.
+</p>
+<p>If 
+<code>progress
+</code> is given (matrix variant only), it is advanced once per processed slice; that is, by 
+<code>n_columns
+</code> ticks when 
+<code>dims = Rows
+</code>, and by 
+<code>n_rows
+</code> ticks when 
+<code>dims = Columns
+</code>. The 
+<code>progress_chunk
+</code> is passed through to 
+<a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.parallel_loop_wo_rng">
+<code>parallel_loop_wo_rng
+</code>
+</a> to throttle the rate of 
+<code>progress
+</code> updates.
+</p>
+<pre>
+<code class="language-julia hljs">println(sparse_quantile([0, 0, 1, 2, 3], 0.5))
+println(sparse_quantile([0, 0, 1, 2, 3], 0.5; positive = true))
+println(sparse_quantile([-2, 0, 0, 1, 3], 0.25))
+
+# output
+
+1.0
+1.0
+0.0
+</code>
+</pre>
+<pre>
+<code class="language-julia hljs">using SparseArrays
+
+matrix = sparse([0 1 0; 2 0 3; 0 4 0; 5 0 6])
+sparse_quantile(matrix, 0.5; dims = Rows)
+
+# output
+
+3-element Vector{Float64}:
+ 1.0
+ 0.5
+ 1.5
+</code>
+</pre>
+<pre>
+<code class="language-julia hljs">sparse_quantile([1.0 4.0; 2.0 5.0; 3.0 6.0], 0.5; dims = Rows)
+
+# output
+
+2-element Vector{Float64}:
+ 2.0
+ 5.0
+</code>
+</pre>
+</div>
+</section>
+</details>
+</article>
+<h2 id="Index">
+<a class="docs-heading-anchor" href="#Index">Index
+</a>
+<a id="Index-1">
+</a>
+<a class="docs-heading-anchor-permalink" href="#Index" title="Permalink">
+</a>
+</h2>
+<ul>
+<li>
+<a href="sparse_statistics.html#TanayLabUtilities.SparseStatistics">
+<code>TanayLabUtilities.SparseStatistics
+</code>
+</a>
+</li>
+<li>
+<a href="sparse_statistics.html#TanayLabUtilities.SparseStatistics.sparse_median">
+<code>TanayLabUtilities.SparseStatistics.sparse_median
+</code>
+</a>
+</li>
+<li>
+<a href="sparse_statistics.html#TanayLabUtilities.SparseStatistics.sparse_quantile">
+<code>TanayLabUtilities.SparseStatistics.sparse_quantile
+</code>
+</a>
+</li>
+</ul>
+</article>
+<nav class="docs-footer">
+<p class="footer-message">Powered by 
+<a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl
+</a> and the 
+<a href="https://julialang.org/">Julia Programming Language
+</a>.
+</p>
+</nav>
+</div>
+<div class="modal" id="documenter-settings">
+<div class="modal-background">
+</div>
+<div class="modal-card">
+<header class="modal-card-head">
+<p class="modal-card-title">Settings
+</p>
+<button class="delete">
+</button>
+</header>
+<section class="modal-card-body">
+<p>
+<label class="label">Theme
+</label>
+<div class="select">
+<select id="documenter-themepicker">
+<option value="auto">Automatic (OS)
+</option>
+<option value="documenter-light">documenter-light
+</option>
+<option value="documenter-dark">documenter-dark
+</option>
+<option value="catppuccin-latte">catppuccin-latte
+</option>
+<option value="catppuccin-frappe">catppuccin-frappe
+</option>
+<option value="catppuccin-macchiato">catppuccin-macchiato
+</option>
+<option value="catppuccin-mocha">catppuccin-mocha
+</option>
+</select>
+</div>
+</p>
+<hr/>
+<p>This document was generated with 
+<a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl
+</a> version 1.17.0. Using Julia version 1.12.5.
+</p>
+</section>
+<footer class="modal-card-foot">
+</footer>
+</div>
+</div>
+</div>
+</body>
+</html>

@@ -76,6 +76,9 @@ include("cached_ispath.jl")
 include("extended_read_write_locks.jl")
 @reexport using .ExtendedReadWriteLocks
 
+include("sparse_statistics.jl")
+@reexport using .SparseStatistics
+
 include("downsample.jl")
 @reexport using .Downsample
 
