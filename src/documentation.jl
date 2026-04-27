@@ -26,7 +26,7 @@ struct FunctionMetadata
     defaults::Dict{Symbol, Any}
 end
 
-function set_metadata_of_function(  # UNTESTED
+function set_metadata_of_function(
     function_module::Module,
     function_name::Symbol,
     function_metadata::FunctionMetadata,
@@ -137,7 +137,7 @@ function collect_defaults(function_module::Module, inner_definition)::Dict{Symbo
     return defaults
 end
 
-function collect_arg_default(::Module, ::Dict{Symbol, Any}, ::Symbol)::Nothing  # UNTESTED
+function collect_arg_default(::Module, ::Dict{Symbol, Any}, ::Symbol)::Nothing
     return nothing
 end
 

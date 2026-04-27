@@ -128,7 +128,7 @@ end
 Put back data into the `reusable_storage` once a task is done with it. This will allow other tasks to reuse this data
 (after going through [`reset_reusable_storage!`](@ref)).
 """
-function put_reusable!(reusable_storage::ReusableStorage{T}, data::T)::Nothing where {T}  # UNTESTED
+function put_reusable!(reusable_storage::ReusableStorage{T}, data::T)::Nothing where {T}
     lock(reusable_storage.lock) do
         push!(reusable_storage.data, data)
         return nothing
@@ -156,7 +156,7 @@ end
 
 Given `reusable_storage` that was used by a task, return it to its initial state so it can be used by another task.
 """
-function reset_reusable_storage!(::Any)::Nothing  # UNTESTED
+function reset_reusable_storage!(::Any)::Nothing
     return nothing
 end
 

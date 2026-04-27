@@ -28,7 +28,7 @@ TOTAL_MEMORY = 0
 
 Return whether we are inside a [`parallel_loop_wo_rng`](@ref) or [`parallel_loop_with_rng`](@ref).
 """
-function is_in_parallel_loop()::Bool  # UNTESTED
+function is_in_parallel_loop()::Bool
     base_private_storage = task_local_storage()
     return haskey(base_private_storage, :is_in_parallel_loop)
 end
@@ -338,7 +338,7 @@ end
 Same as `Progress` in `ProgressMeter`, but returns `nothing` if debug is not enabled for the modules calling
 `DebugProgress`.
 """
-function DebugProgress(n::Integer; group::Maybe{Symbol} = nothing, kwargs...)::Maybe{Progress}  # UNTESTED
+function DebugProgress(n::Integer; group::Maybe{Symbol} = nothing, kwargs...)::Maybe{Progress}
     if is_debug_enabled_for_caller(group)
         return Progress(n; kwargs...)
     else
@@ -353,7 +353,7 @@ Same as `ProgressUnknown` in `ProgressMeter`, but returns `nothing` if debug is 
 `DebugProgressUnknown`. Use this for progress bars where the total amount of work is not known in advance (for example,
 a planning phase that walks a data set to discover the set of properties to act on).
 """
-function DebugProgressUnknown(; group::Maybe{Symbol} = nothing, kwargs...)::Maybe{ProgressUnknown}  # UNTESTED
+function DebugProgressUnknown(; group::Maybe{Symbol} = nothing, kwargs...)::Maybe{ProgressUnknown}
     if is_debug_enabled_for_caller(group)
         return ProgressUnknown(; kwargs...)
     else

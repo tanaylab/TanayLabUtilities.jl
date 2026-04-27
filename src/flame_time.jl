@@ -145,7 +145,7 @@ mutable struct SerialMeasurement
     involuntary_context_switches::Int64
 end
 
-function Base.copy(measurement::SerialMeasurement)::SerialMeasurement  # UNTESTED
+function Base.copy(measurement::SerialMeasurement)::SerialMeasurement
     return SerialMeasurement(
         measurement.invocations,
         measurement.iterations,
@@ -186,7 +186,7 @@ function combine_measurements(  # UNTESTED
     )
 end
 
-function sort_weight(measurement::SerialMeasurement)::Int64  # UNTESTED
+function sort_weight(measurement::SerialMeasurement)::Int64
     return measurement.elapsed_ns
 end
 
@@ -197,7 +197,7 @@ mutable struct ParallelMeasurement
     scaled_elapsed_ns::Int64
 end
 
-function Base.copy(measurement::ParallelMeasurement)::ParallelMeasurement  # UNTESTED
+function Base.copy(measurement::ParallelMeasurement)::ParallelMeasurement
     return ParallelMeasurement(
         measurement.invocations,
         measurement.iterations,
@@ -237,7 +237,7 @@ function combine_measurements(  # UNTESTED
     )
 end
 
-function sort_weight(measurement::ParallelMeasurement)::Int64  # UNTESTED
+function sort_weight(measurement::ParallelMeasurement)::Int64
     return measurement.scaled_elapsed_ns
 end
 
@@ -701,7 +701,7 @@ end
 
 DID_WARN_ABOUT_EXPENSIVE_OPERATIONS_IN_PARALLEL = Set{Tuple{AbstractString, AbstractString}}()
 
-function warn_about_expensive_operation_in_parallel(name::AbstractString)::Nothing  # UNTESTED
+function warn_about_expensive_operation_in_parallel(name::AbstractString)::Nothing
     private_storage = task_local_storage()
     is_in_parallel = get(private_storage, :is_in_parallel, false)
     if is_in_parallel

@@ -47,7 +47,7 @@ function __init__()::Nothing
     return nothing
 end
 
-function is_in_linux_ramdisk(directory::AbstractString)::Bool  # UNTESTED
+function is_in_linux_ramdisk(directory::AbstractString)::Bool
     @static if Sys.islinux()
         directory = string(directory)
         buffer = zeros(UInt8, 512)  # For struct statfs

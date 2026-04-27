@@ -166,11 +166,11 @@ function do_logged(debug_group, _source_, _module_, definition)
     return esc(ExprTools.combinedef(outer_definition))
 end
 
-function parse_arg(arg::Symbol)::AbstractString  # UNTESTED
+function parse_arg(arg::Symbol)::AbstractString
     return split(string(arg), "::"; limit = 2)[1]
 end
 
-function parse_arg(arg::Expr)::AbstractString  # UNTESTED
+function parse_arg(arg::Expr)::AbstractString
     return parse_arg(arg.args[1])
 end
 

@@ -156,7 +156,7 @@ function format_brief_array(matrix::AbstractMatrix, prefixes::Vector{String}; tr
     return "$(delimited_number(n_rows)) x $(delimited_number(n_columns)) x $(eltype(matrix)) $(layout_suffix) ($(join(prefixes, ", "))$(suffix)$(mask_suffix(matrix)))"
 end
 
-function mask_suffix(::AbstractArray)::AbstractString  # UNTESTED
+function mask_suffix(::AbstractArray)::AbstractString
     return ""
 end
 
@@ -1484,19 +1484,19 @@ end
 
 # Why do we have to define these ourselves... Sigh.
 
-function SparseArrays.indtype(read_only::ReadOnlyArray)::Type  # UNTESTED
+function SparseArrays.indtype(read_only::ReadOnlyArray)::Type
     return SparseArrays.indtype(parent(read_only))
 end
 
-function SparseArrays.indtype(sub_array::SubArray)::Type  # UNTESTED
+function SparseArrays.indtype(sub_array::SubArray)::Type
     return SparseArrays.indtype(parent(sub_array))
 end
 
-function SparseArrays.nnz(read_only::ReadOnlyArray)::Integer  # UNTESTED
+function SparseArrays.nnz(read_only::ReadOnlyArray)::Integer
     return SparseArrays.nnz(parent(read_only))
 end
 
-function SparseArrays.nnz(sub_read_only::SubArray{T, N, ReadOnlyArray{T, N, R}, I, L})::Integer where {T, N, R, I, L}  # UNTESTED
+function SparseArrays.nnz(sub_read_only::SubArray{T, N, ReadOnlyArray{T, N, R}, I, L})::Integer where {T, N, R, I, L}
     return nnz(
         SubArray{T, N, R, I, L}(
             parent(parent(sub_read_only)),
@@ -1509,11 +1509,11 @@ end
 
 # These we can excuse...
 
-function SparseArrays.indtype(named::NamedArray)::Type  # UNTESTED
+function SparseArrays.indtype(named::NamedArray)::Type
     return SparseArrays.indtype(named.array)
 end
 
-function SparseArrays.nnz(named::NamedArray)::Integer  # UNTESTED
+function SparseArrays.nnz(named::NamedArray)::Integer
     return SparseArrays.nnz(named.array)
 end
 

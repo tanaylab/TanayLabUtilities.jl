@@ -33,7 +33,7 @@ end
 const MAX_SPINS = 100
 const PAUSE_CYCLES = 10
 
-@inline function cpu_pause()::Nothing  # UNTESTED
+@inline function cpu_pause()::Nothing
     # x86 PAUSE instruction equivalent
     ccall(:jl_cpu_pause, Cvoid, ())
     return nothing
@@ -67,7 +67,7 @@ function Base.lock(lock::MostlyReadWriteLock)::Nothing
     return nothing
 end
 
-function Base.unlock(lock::MostlyReadWriteLock)::Nothing  # UNTESTED
+function Base.unlock(lock::MostlyReadWriteLock)::Nothing
     lock.writer_active[] = false
     flame_timed("ReentrantLock.unlock") do
         return Base.unlock(lock.write_mutex)
@@ -75,7 +75,7 @@ function Base.unlock(lock::MostlyReadWriteLock)::Nothing  # UNTESTED
     return nothing
 end
 
-function Base.trylock(lock::MostlyReadWriteLock)::Bool  # UNTESTED
+function Base.trylock(lock::MostlyReadWriteLock)::Bool
     if lock.readers[] > 0
         return false
     end
@@ -131,7 +131,7 @@ function ConcurrentUtils.lock_read(action::Function, lock::MostlyReadWriteLock):
     end
 end
 
-function ConcurrentUtils.trylock_read(lock::MostlyReadWriteLock)::Bool  # UNTESTED
+function ConcurrentUtils.trylock_read(lock::MostlyReadWriteLock)::Bool
     if lock.writer_active[] || lock.writers_waiting[] > 0
         return false
     end
@@ -146,7 +146,7 @@ function ConcurrentUtils.trylock_read(lock::MostlyReadWriteLock)::Bool  # UNTEST
     return true
 end
 
-function ConcurrentUtils.trylock_read(action::Function, lock::MostlyReadWriteLock)::Maybe{Some{Any}}  # NOLINT # UNTESTED
+function ConcurrentUtils.trylock_read(action::Function, lock::MostlyReadWriteLock)::Maybe{Some{Any}}  # NOLINT
     if trylock_read(lock)
         try
             return Some(action())
@@ -158,7 +158,7 @@ function ConcurrentUtils.trylock_read(action::Function, lock::MostlyReadWriteLoc
     end
 end
 
-function ConcurrentUtils.unlock_read(lock::MostlyReadWriteLock)::Nothing  # UNTESTED
+function ConcurrentUtils.unlock_read(lock::MostlyReadWriteLock)::Nothing
     atomic_sub!(lock.readers, 1)
     return nothing
 end

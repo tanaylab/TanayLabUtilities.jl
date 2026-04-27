@@ -1,5 +1,5 @@
 """
-Median and quantile reductions optimized for sparse vectors and matrices.
+Median, quantile, variance and standard-deviation reductions optimized for sparse vectors and matrices.
 
 A quantile of a sparse vector with `nnz` non-zero values out of `n` total entries can be located in `O(nnz)` expected
 time instead of the dense `O(n * log(n))` time spent on a full sort. The key observation is that the values, if
@@ -9,17 +9,23 @@ many positives are stored in `nzval`, mapping a quantile position to a value jus
 quickselect on (a copy of) `nzval` to extract the one or two values needed.
 The implementation is allocation-free when the caller provides a `scratch` buffer of the appropriate size.
 
-If the data is known to be non-negative (e.g., UMI counts), passing `positive = true` skips the negativity scan entirely
-and yields a small additional speedup.
+The variance is computed in `O(nnz)` by running Welford's algorithm over `nzval` and merging the resulting stream stats
+`(n, mean, M2)` with the all-zeros stream `(n_zero, 0, 0)` via the standard pairwise variance combiner; this is exact
+and numerically stable, with no scratch buffer needed. The standard deviation is just the square root of the variance.
+
+If the data is known to be non-negative (e.g., UMI counts), passing `positive = true` to the median/quantile functions
+skips the negativity scan entirely and yields a small additional speedup.
 
 The functions exposed here mirror the calling convention of `Statistics.var` and `Statistics.std`: they accept either an
 `AbstractVector` (returning a single value) or an `AbstractMatrix` together with a `dims` keyword argument (returning a
-matrix with one of the dimensions reduced to a single entry).
+vector with one of the dimensions reduced to a single entry, or a scalar when `dims` is omitted).
 """
 module SparseStatistics
 
 export sparse_median
 export sparse_quantile
+export sparse_std
+export sparse_var
 
 using LinearAlgebra
 using ProgressMeter
@@ -232,6 +238,290 @@ function sparse_median(
     @assert dims == Rows || dims == Columns "invalid dims: $(dims)"
     return flame_timed("sparse_median") do
         return compute_sparse_quantile_of_matrix(matrix, 0.5; dims, positive, result, scratch, progress, progress_chunk)
+    end
+end
+
+"""
+    sparse_var(
+        vector::AbstractVector{<:Real};
+        corrected::Bool = true,
+    )::Float64
+
+    sparse_var(
+        matrix::AbstractMatrix{<:Real};
+        dims::Maybe{Integer} = nothing,
+        corrected::Bool = true,
+        result::Maybe{AbstractVector{<:AbstractFloat}} = nothing,
+        progress::Maybe{Progress} = nothing,
+        progress_chunk::Maybe{Integer} = nothing,
+    )::Union{Float64, AbstractVector{<:AbstractFloat}}
+
+Compute the variance of the values of a `vector`, or of each column (`dims = 1` / [`Rows`](@ref)) or each row
+(`dims = 2` / [`Columns`](@ref)) of a `matrix`, or of all the elements of a `matrix` when `dims` is omitted. The shape
+conventions match `Statistics.var`: with `dims` the matrix variant returns a vector of length `n_columns` (`dims = Rows`)
+or `n_rows` (`dims = Columns`); without `dims` it returns a scalar `Float64`.
+
+If `corrected` is `true` (the default), the bias-corrected sample variance is returned (sum of squared deviations
+divided by `n - 1`); otherwise the population variance is returned (divided by `n`).
+
+The implementation runs Welford's algorithm over the stored non-zero values and merges the result with the all-zeros
+stream `(n_zero, 0, 0)` using the standard pairwise variance combiner. This is `O(nnz)` for sparse inputs, numerically
+stable, and allocation-free apart from the result vector. No `scratch` buffer is needed.
+
+When operating on a `matrix`, the iteration is parallelized via [`parallel_loop_wo_rng`](@ref). Operating against the
+[`major_axis`](@ref) of a sparse `matrix` will trigger the [`GLOBAL_INEFFICIENT_ACTION_HANDLER`](@ref).
+
+If `progress` is given (matrix variant only), it is advanced once per processed slice (`n_columns` ticks for
+`dims = Rows`, `n_rows` for `dims = Columns`). The `progress_chunk` is passed through to [`parallel_loop_wo_rng`](@ref).
+
+```jldoctest
+println(sparse_var([1.0, 2.0, 3.0, 4.0]))
+println(sparse_var([1.0, 2.0, 3.0, 4.0]; corrected = false))
+
+# output
+
+1.6666666666666667
+1.25
+```
+
+```jldoctest
+using SparseArrays
+
+matrix = sparse([0 1 0; 2 0 3; 0 4 0; 5 0 6])
+sparse_var(matrix; dims = Rows)
+
+# output
+
+3-element Vector{Float64}:
+ 5.583333333333333
+ 3.5833333333333335
+ 8.25
+```
+"""
+function sparse_var(vector::AbstractVector{<:Real}; corrected::Bool = true)::Float64
+    return flame_timed("sparse_var") do
+        return compute_sparse_var_of_vector(vector, corrected)
+    end
+end
+
+function sparse_var(
+    matrix::AbstractMatrix{<:Real};
+    dims::Maybe{Integer} = nothing,
+    corrected::Bool = true,
+    result::Maybe{AbstractVector{<:AbstractFloat}} = nothing,
+    progress::Maybe{Progress} = nothing,
+    progress_chunk::Maybe{Integer} = nothing,
+)::Union{Float64, AbstractVector{<:AbstractFloat}}
+    if dims === nothing
+        @assert result === nothing "result is only valid with dims"
+        @assert progress === nothing "progress is only valid with dims"
+        @assert progress_chunk === nothing "progress_chunk is only valid with dims"
+        return flame_timed("sparse_var") do
+            return compute_sparse_var_of_flat_matrix(matrix, corrected)
+        end
+    end
+    @assert dims == Rows || dims == Columns "invalid dims: $(dims)"
+    return flame_timed("sparse_var") do
+        return compute_sparse_var_of_matrix(matrix, corrected; dims, result, progress, progress_chunk)
+    end
+end
+
+"""
+    sparse_std(
+        vector::AbstractVector{<:Real};
+        corrected::Bool = true,
+    )::Float64
+
+    sparse_std(
+        matrix::AbstractMatrix{<:Real};
+        dims::Maybe{Integer} = nothing,
+        corrected::Bool = true,
+        result::Maybe{AbstractVector{<:AbstractFloat}} = nothing,
+        progress::Maybe{Progress} = nothing,
+        progress_chunk::Maybe{Integer} = nothing,
+    )::Union{Float64, AbstractVector{<:AbstractFloat}}
+
+Compute the standard deviation of the values; equivalent to taking `sqrt` of [`sparse_var`](@ref). Shares the
+calling convention, `corrected` flag, and optional `result` / `progress` / `progress_chunk` parameters of
+[`sparse_var`](@ref).
+
+```jldoctest
+using SparseArrays
+
+matrix = sparse([0 1 0; 2 0 3; 0 4 0; 5 0 6])
+sparse_std(matrix; dims = Rows)
+
+# output
+
+3-element Vector{Float64}:
+ 2.362907813126304
+ 1.8929694486000912
+ 2.8722813232690143
+```
+"""
+function sparse_std(vector::AbstractVector{<:Real}; corrected::Bool = true)::Float64
+    return flame_timed("sparse_std") do
+        return sqrt(compute_sparse_var_of_vector(vector, corrected))
+    end
+end
+
+function sparse_std(
+    matrix::AbstractMatrix{<:Real};
+    dims::Maybe{Integer} = nothing,
+    corrected::Bool = true,
+    result::Maybe{AbstractVector{<:AbstractFloat}} = nothing,
+    progress::Maybe{Progress} = nothing,
+    progress_chunk::Maybe{Integer} = nothing,
+)::Union{Float64, AbstractVector{<:AbstractFloat}}
+    if dims === nothing
+        @assert result === nothing "result is only valid with dims"
+        @assert progress === nothing "progress is only valid with dims"
+        @assert progress_chunk === nothing "progress_chunk is only valid with dims"
+        return flame_timed("sparse_std") do
+            return sqrt(compute_sparse_var_of_flat_matrix(matrix, corrected))
+        end
+    end
+    @assert dims == Rows || dims == Columns "invalid dims: $(dims)"
+    return flame_timed("sparse_std") do
+        variances = compute_sparse_var_of_matrix(matrix, corrected; dims, result, progress, progress_chunk)
+        variances .= sqrt.(variances)
+        return variances
+    end
+end
+
+function compute_sparse_var_of_vector(vector::AbstractVector{<:Real}, corrected::Bool)::Float64
+    if issparse(vector)
+        return welford_variance(nzval(vector), length(vector), corrected)
+    else
+        return welford_variance(vector, length(vector), corrected)
+    end
+end
+
+function compute_sparse_var_of_flat_matrix(matrix::AbstractMatrix{<:Real}, corrected::Bool)::Float64
+    if issparse(matrix)
+        return welford_variance(nzval(matrix), length(matrix), corrected)
+    else
+        return welford_variance(vec(matrix), length(matrix), corrected)
+    end
+end
+
+function compute_sparse_var_of_matrix(
+    matrix::AbstractMatrix{<:Real},
+    corrected::Bool;
+    dims::Integer,
+    result::Maybe{AbstractVector{<:AbstractFloat}},
+    progress::Maybe{Progress},
+    progress_chunk::Maybe{Integer},
+)::AbstractVector{<:AbstractFloat}
+    n_rows, n_columns = size(matrix)
+    process_axis = other_axis(dims)
+    if major_axis(matrix) !== nothing
+        check_efficient_action(@source_location()..., "matrix", matrix, process_axis)
+    end
+
+    result_length = dims == Rows ? n_columns : n_rows
+    if result === nothing
+        result = Vector{Float64}(undef, result_length)
+    else
+        @assert length(result) == result_length "result length: $(length(result)) is not the expected: $(result_length)"
+    end
+
+    if issparse(matrix) && major_axis(matrix) == process_axis
+        compute_sparse_var_of_sparse_matrix!(result, matrix, corrected; dims, progress, progress_chunk)
+    else
+        compute_sparse_var_of_dense_matrix!(result, matrix, corrected; dims, progress, progress_chunk)
+    end
+
+    return result
+end
+
+function compute_sparse_var_of_sparse_matrix!(
+    result::AbstractVector{<:AbstractFloat},
+    matrix::AbstractMatrix{<:Real},
+    corrected::Bool;
+    dims::Integer,
+    progress::Maybe{Progress},
+    progress_chunk::Maybe{Integer},
+)::Nothing
+    n_rows, n_columns = size(matrix)
+    if dims == Rows
+        column_major_matrix = matrix
+        n_iterations = n_columns
+        n_total_per_iteration = n_rows
+    else
+        column_major_matrix = flip(matrix)
+        n_iterations = n_rows
+        n_total_per_iteration = n_columns
+    end
+
+    column_offsets = colptr(column_major_matrix)
+    nonzero_values = nzval(column_major_matrix)
+
+    parallel_loop_wo_rng(1:n_iterations; name = "sparse_var", progress, progress_chunk) do iteration_index
+        slice_first = Int(column_offsets[iteration_index])
+        slice_last = Int(column_offsets[iteration_index + 1]) - 1
+        @views slice = nonzero_values[slice_first:slice_last]
+        result[iteration_index] = welford_variance(slice, n_total_per_iteration, corrected)
+        return nothing
+    end
+
+    return nothing
+end
+
+function compute_sparse_var_of_dense_matrix!(
+    result::AbstractVector{<:AbstractFloat},
+    matrix::AbstractMatrix{<:Real},
+    corrected::Bool;
+    dims::Integer,
+    progress::Maybe{Progress},
+    progress_chunk::Maybe{Integer},
+)::Nothing
+    n_rows, n_columns = size(matrix)
+    if dims == Rows
+        parallel_loop_wo_rng(1:n_columns; name = "sparse_var", progress, progress_chunk) do column_index
+            @views slice = matrix[:, column_index]
+            result[column_index] = welford_variance(slice, n_rows, corrected)
+            return nothing
+        end
+    else
+        parallel_loop_wo_rng(1:n_rows; name = "sparse_var", progress, progress_chunk) do row_index
+            @views slice = matrix[row_index, :]
+            result[row_index] = welford_variance(slice, n_columns, corrected)
+            return nothing
+        end
+    end
+    return nothing
+end
+
+function welford_variance(values, n_total::Integer, corrected::Bool)::Float64
+    n_a = 0
+    mean_a = 0.0
+    m2_a = 0.0
+    @inbounds for value in values
+        x = Float64(value)
+        n_a += 1
+        delta = x - mean_a
+        mean_a += delta / n_a
+        m2_a += delta * (x - mean_a)
+    end
+    n_zero = n_total - n_a
+    @assert n_zero >= 0
+    n = n_total
+
+    # Pairwise merge of stream A = `(n_a, mean_a, m2_a)` over the stored values with stream B
+    # `(n_zero, 0, 0)` (the implicit zeros). The Chan/Golub/LeVeque combiner gives:
+    #   M2 = M2_A + M2_B + (mean_B - mean_A)^2 * n_A * n_B / n
+    # Here `mean_B = 0` and `M2_B = 0`, so this collapses to `m2_a + mean_a^2 * n_a * n_zero / n`.
+    if n_a > 0 && n_zero > 0
+        m2 = m2_a + mean_a^2 * n_a * n_zero / n
+    else
+        m2 = m2_a
+    end
+
+    if corrected
+        return n < 2 ? NaN : m2 / (n - 1)
+    else
+        return n < 1 ? NaN : m2 / n
     end
 end
 

@@ -4,6 +4,8 @@
 TanayLabUtilities.SparseStatistics
 TanayLabUtilities.SparseStatistics.sparse_median
 TanayLabUtilities.SparseStatistics.sparse_quantile
+TanayLabUtilities.SparseStatistics.sparse_std
+TanayLabUtilities.SparseStatistics.sparse_var
 ```
 
 ## Index

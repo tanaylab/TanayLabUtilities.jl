@@ -48,9 +48,9 @@
 <polygon fill="black" stroke="black" points="420.2,-298.1 409.67,-297 417.22,-304.43 420.2,-298.1"/>
 </g>
 <!-- ParallelLoops -->
-<g id="node7" class="node">
+<g id="node6" class="node">
 <title>ParallelLoops</title>
-<g id="a_node7"><a xlink:href="../parallel_loops.html" xlink:title="ParallelLoops" target="_top">
+<g id="a_node6"><a xlink:href="../parallel_loops.html" xlink:title="ParallelLoops" target="_top">
 <polygon fill="none" stroke="white" points="683.07,-240.6 597,-240.6 597,-221.28 683.07,-221.28 683.07,-240.6"/>
 <text xml:space="preserve" text-anchor="middle" x="640.03" y="-225.14" font-family="Sans-Serif" font-size="14.00">ParallelLoops</text>
 </a>
@@ -146,38 +146,8 @@
 <path fill="none" stroke="black" d="M588.03,-55.18C588.03,-48.58 588.03,-39.28 588.03,-30.89"/>
 <polygon fill="black" stroke="black" points="591.54,-31.17 588.04,-21.17 584.54,-31.17 591.54,-31.17"/>
 </g>
-<!-- MatrixFormats -->
-<g id="node6" class="node">
-<title>MatrixFormats</title>
-<g id="a_node6"><a xlink:href="../matrix_formats.html" xlink:title="MatrixFormats" target="_top">
-<polygon fill="none" stroke="white" points="486.07,-129.96 394,-129.96 394,-110.64 486.07,-110.64 486.07,-129.96"/>
-<text xml:space="preserve" text-anchor="middle" x="440.03" y="-114.5" font-family="Sans-Serif" font-size="14.00">MatrixFormats</text>
-</a>
-</g>
-</g>
-<!-- MatrixFormats&#45;&gt;SparseStatistics -->
-<g id="edge3" class="edge">
-<title>MatrixFormats&#45;&gt;SparseStatistics</title>
-<path fill="none" stroke="black" d="M465.14,-110.25C489.06,-101.64 525.32,-88.58 552.26,-78.87"/>
-<polygon fill="black" stroke="black" points="553.16,-82.26 561.38,-75.58 550.79,-75.68 553.16,-82.26"/>
-</g>
-<!-- KMeans -->
-<g id="node20" class="node">
-<title>KMeans</title>
-<g id="a_node20"><a xlink:href="../kmeans.html" xlink:title="KMeans" target="_top">
-<polygon fill="none" stroke="white" points="467.32,-74.64 412.75,-74.64 412.75,-55.32 467.32,-55.32 467.32,-74.64"/>
-<text xml:space="preserve" text-anchor="middle" x="440.03" y="-59.18" font-family="Sans-Serif" font-size="14.00">KMeans</text>
-</a>
-</g>
-</g>
-<!-- MatrixFormats&#45;&gt;KMeans -->
-<g id="edge13" class="edge">
-<title>MatrixFormats&#45;&gt;KMeans</title>
-<path fill="none" stroke="black" d="M440.03,-110.5C440.03,-103.9 440.03,-94.6 440.03,-86.21"/>
-<polygon fill="black" stroke="black" points="443.54,-86.49 440.04,-76.49 436.54,-86.49 443.54,-86.49"/>
-</g>
 <!-- ParallelLoops&#45;&gt;SparseStatistics -->
-<g id="edge4" class="edge">
+<g id="edge3" class="edge">
 <title>ParallelLoops&#45;&gt;SparseStatistics</title>
 <path fill="none" stroke="black" d="M640.03,-220.86C639.73,-200.38 637.26,-149.32 621.03,-110.64 617,-101.01 610.47,-91.54 604.28,-83.81"/>
 <polygon fill="black" stroke="black" points="606.97,-81.57 597.82,-76.23 601.65,-86.11 606.97,-81.57"/>
@@ -192,7 +162,7 @@
 </g>
 </g>
 <!-- ParallelLoops&#45;&gt;ParallelDistances -->
-<g id="edge11" class="edge">
+<g id="edge12" class="edge">
 <title>ParallelLoops&#45;&gt;ParallelDistances</title>
 <path fill="none" stroke="black" d="M633.32,-221.05C619.87,-203.22 589.37,-162.81 571.59,-139.26"/>
 <polygon fill="black" stroke="black" points="574.57,-137.39 565.75,-131.52 568.98,-141.61 574.57,-137.39"/>
@@ -211,6 +181,36 @@
 <title>ParallelLoops&#45;&gt;Permute</title>
 <path fill="none" stroke="black" d="M622.73,-220.89C607.05,-212.7 583.68,-200.48 565.46,-190.96"/>
 <polygon fill="black" stroke="black" points="567.25,-187.94 556.76,-186.41 564,-194.15 567.25,-187.94"/>
+</g>
+<!-- MatrixFormats -->
+<g id="node7" class="node">
+<title>MatrixFormats</title>
+<g id="a_node7"><a xlink:href="../matrix_formats.html" xlink:title="MatrixFormats" target="_top">
+<polygon fill="none" stroke="white" points="486.07,-129.96 394,-129.96 394,-110.64 486.07,-110.64 486.07,-129.96"/>
+<text xml:space="preserve" text-anchor="middle" x="440.03" y="-114.5" font-family="Sans-Serif" font-size="14.00">MatrixFormats</text>
+</a>
+</g>
+</g>
+<!-- MatrixFormats&#45;&gt;SparseStatistics -->
+<g id="edge4" class="edge">
+<title>MatrixFormats&#45;&gt;SparseStatistics</title>
+<path fill="none" stroke="black" d="M465.14,-110.25C489.06,-101.64 525.32,-88.58 552.26,-78.87"/>
+<polygon fill="black" stroke="black" points="553.16,-82.26 561.38,-75.58 550.79,-75.68 553.16,-82.26"/>
+</g>
+<!-- KMeans -->
+<g id="node20" class="node">
+<title>KMeans</title>
+<g id="a_node20"><a xlink:href="../kmeans.html" xlink:title="KMeans" target="_top">
+<polygon fill="none" stroke="white" points="467.32,-74.64 412.75,-74.64 412.75,-55.32 467.32,-55.32 467.32,-74.64"/>
+<text xml:space="preserve" text-anchor="middle" x="440.03" y="-59.18" font-family="Sans-Serif" font-size="14.00">KMeans</text>
+</a>
+</g>
+</g>
+<!-- MatrixFormats&#45;&gt;KMeans -->
+<g id="edge13" class="edge">
+<title>MatrixFormats&#45;&gt;KMeans</title>
+<path fill="none" stroke="black" d="M440.03,-110.5C440.03,-103.9 440.03,-94.6 440.03,-86.21"/>
+<polygon fill="black" stroke="black" points="443.54,-86.49 440.04,-76.49 436.54,-86.49 443.54,-86.49"/>
 </g>
 <!-- OldLinuxMmap -->
 <g id="node8" class="node">
@@ -240,7 +240,7 @@
 </g>
 </g>
 <!-- ReadOnlyArrays&#45;&gt;MatrixLayouts -->
-<g id="edge22" class="edge">
+<g id="edge20" class="edge">
 <title>ReadOnlyArrays&#45;&gt;MatrixLayouts</title>
 <path fill="none" stroke="black" d="M104.28,-222.5C107.24,-222.09 110.17,-221.68 113.03,-221.28 208.06,-208.05 318.68,-193.02 383.83,-184.2"/>
 <polygon fill="black" stroke="black" points="384.12,-187.7 393.56,-182.89 383.19,-180.76 384.12,-187.7"/>
@@ -309,7 +309,7 @@
 <polygon fill="black" stroke="black" points="443.54,-141.81 440.04,-131.81 436.54,-141.81 443.54,-141.81"/>
 </g>
 <!-- MatrixLayouts&#45;&gt;ParallelDistances -->
-<g id="edge12" class="edge">
+<g id="edge11" class="edge">
 <title>MatrixLayouts&#45;&gt;ParallelDistances</title>
 <path fill="none" stroke="black" d="M460.05,-165.57C478.53,-157.23 506.24,-144.7 527.48,-135.1"/>
 <polygon fill="black" stroke="black" points="528.87,-138.32 536.54,-131.01 525.99,-131.94 528.87,-138.32"/>
@@ -363,13 +363,13 @@
 </g>
 </g>
 <!-- Handlers&#45;&gt;MatrixLayouts -->
-<g id="edge21" class="edge">
+<g id="edge22" class="edge">
 <title>Handlers&#45;&gt;MatrixLayouts</title>
 <path fill="none" stroke="black" d="M180.46,-223.09C183.36,-222.46 186.25,-221.84 189.03,-221.28 255.78,-207.75 332.96,-194.35 383.93,-185.81"/>
 <polygon fill="black" stroke="black" points="384.24,-189.31 393.53,-184.21 383.09,-182.4 384.24,-189.31"/>
 </g>
 <!-- Documentation&#45;&gt;MatrixLayouts -->
-<g id="edge20" class="edge">
+<g id="edge21" class="edge">
 <title>Documentation&#45;&gt;MatrixLayouts</title>
 <path fill="none" stroke="black" d="M515.6,-220.89C501.87,-212.85 481.54,-200.94 465.42,-191.49"/>
 <polygon fill="black" stroke="black" points="467.25,-188.51 456.85,-186.47 463.71,-194.55 467.25,-188.51"/>

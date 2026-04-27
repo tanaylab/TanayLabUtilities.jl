@@ -168,7 +168,7 @@ function major_axis(::AbstractSparseMatrix)::Maybe{Int8}
     return Columns
 end
 
-function major_axis(::BitMatrix)::Maybe{Int8}  # UNTESTED
+function major_axis(::BitMatrix)::Maybe{Int8}
     return Columns
 end
 
@@ -720,7 +720,7 @@ function relayout!(destination::AbstractMatrix, source::AbstractMatrix)::Abstrac
     end
 end
 
-function named_relayout(destination::AbstractMatrix, source::NamedMatrix)::NamedArray  # UNTESTED
+function named_relayout(destination::AbstractMatrix, source::NamedMatrix)::NamedArray
     @assert named_relayout(destination, parent(source)) === destination
     result = NamedArray(destination, source.dicts, source.dimnames)
     return result
@@ -738,7 +738,7 @@ function named_relayout(destination::NamedArray, source::AbstractMatrix)::Abstra
     return destination
 end
 
-function named_relayout(destination::AbstractMatrix, source::AbstractMatrix)::AbstractMatrix  # UNTESTED
+function named_relayout(destination::AbstractMatrix, source::AbstractMatrix)::AbstractMatrix
     @assert unnamed_relayout(destination, source) === destination
     return destination
 end
@@ -767,21 +767,21 @@ function unnamed_relayout(destination::Adjoint, source::AbstractMatrix)::Abstrac
     return destination
 end
 
-function unnamed_relayout(destination::SparseMatrixCSC, source::AbstractMatrix)::SparseMatrixCSC  # UNTESTED
+function unnamed_relayout(destination::SparseMatrixCSC, source::AbstractMatrix)::SparseMatrixCSC
     @assert size(destination) == size(source)
     @assert issparse(source)
     @assert LinearAlgebra.transpose!(destination, flip(mutable_array(source))) === destination  # NOJET
     return destination
 end
 
-function unnamed_relayout(destination::DenseMatrix, source::AbstractMatrix)::DenseMatrix  # UNTESTED
+function unnamed_relayout(destination::DenseMatrix, source::AbstractMatrix)::DenseMatrix
     @assert size(destination) == size(source)
     @assert !issparse(source)
     @assert LinearAlgebra.transpose!(destination, flip(mutable_array(source))) === destination
     return destination
 end
 
-function unnamed_relayout(destination::AbstractMatrix, source::AbstractMatrix)::AbstractMatrix  # UNTESTED
+function unnamed_relayout(destination::AbstractMatrix, source::AbstractMatrix)::AbstractMatrix
     return error("""
                unsupported relayout destination: $(typeof(destination))
                and source: $(typeof(source))

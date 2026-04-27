@@ -235,6 +235,56 @@ end
         end
     end
 
+    @testset "sparse_var/sparse_std match Statistics" begin
+        for vector in (Float64[1, 2, 3, 4, 5], Float64[-3, -1, 0, 0, 2, 4], Float64[5, 5, 5, 5])
+            @test sparse_var(vector) ≈ var(vector)
+            @test sparse_var(vector; corrected = false) ≈ var(vector; corrected = false)
+            @test sparse_std(vector) ≈ std(vector)
+            @test sparse_std(vector; corrected = false) ≈ std(vector; corrected = false)
+        end
+
+        for dense_vector in ([0, 0, 1, 2, 3, 0, 0], [-3, 0, -1, 0, 0, 2, 4, 0], [0, 0, 0, 0, 0], [-1, 0, 1])
+            sparse_vec = sparse(dense_vector)
+            @test sparse_var(sparse_vec) ≈ var(dense_vector)
+            @test sparse_var(sparse_vec; corrected = false) ≈ var(dense_vector; corrected = false)
+            @test sparse_std(sparse_vec) ≈ std(dense_vector)
+        end
+
+        # Single-element edge cases
+        @test isnan(sparse_var([7.0]))
+        @test sparse_var([7.0]; corrected = false) == 0.0
+        @test isnan(sparse_var(Float64[]))
+
+        # Per-axis reductions
+        dense_matrix = Float64[0 1 0 4; 2 0 0 5; 0 3 0 6; 0 0 0 7]
+        sparse_matrix = sparse(dense_matrix)
+        for corrected in (true, false)
+            expected_per_col = [var(view(dense_matrix, :, j); corrected) for j in 1:4]
+            @test sparse_var(dense_matrix; dims = Rows, corrected) ≈ expected_per_col
+            @test sparse_var(sparse_matrix; dims = Rows, corrected) ≈ expected_per_col
+            @test sparse_std(sparse_matrix; dims = Rows, corrected) ≈ sqrt.(expected_per_col)
+        end
+
+        # Row-major dense / sparse for dims = Columns (avoids inefficient action handler)
+        transposed_dense = flip(collect(transpose(dense_matrix)))
+        transposed_sparse = transpose(sparse(transpose(dense_matrix)))
+        expected_per_row = [var(view(dense_matrix, i, :)) for i in 1:4]
+        @test sparse_var(transposed_dense; dims = Columns) ≈ expected_per_row
+        @test sparse_var(transposed_sparse; dims = Columns) ≈ expected_per_row
+
+        # Whole-matrix scalar reduction
+        @test sparse_var(dense_matrix) ≈ var(vec(dense_matrix))
+        @test sparse_var(sparse_matrix) ≈ var(vec(Matrix(sparse_matrix)))
+        @test sparse_std(sparse_matrix) ≈ std(vec(Matrix(sparse_matrix)))
+
+        @test_throws AssertionError sparse_var(dense_matrix; dims = 3)
+
+        # Caller-provided result buffer (exercises the size-check assertion).
+        provided_result = Vector{Float64}(undef, size(dense_matrix, 2))
+        sparse_var(sparse_matrix; dims = Rows, result = provided_result)
+        @test provided_result ≈ [var(view(dense_matrix, :, j)) for j in 1:size(dense_matrix, 2)]
+    end
+
     @testset "matrix scalar reduction without dims flattens" begin
         dense_matrix = Float64[1 2 3; 4 5 6]
         @test sparse_median(dense_matrix) ≈ median(vec(dense_matrix))

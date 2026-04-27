@@ -63,7 +63,7 @@ function __init__()::Nothing
     return nothing
 end
 
-function normalize_path(path::AbstractString)::AbstractString  # UNTESTED
+function normalize_path(path::AbstractString)::AbstractString
     if path == "/"
         return path
     else
@@ -86,7 +86,7 @@ function resolve_realpath(path::AbstractString)::AbstractString
     end
 end
 
-function get_if_cached_and_fresh(path::AbstractString)::Maybe{DirectoryFiles}  # UNTESTED
+function get_if_cached_and_fresh(path::AbstractString)::Maybe{DirectoryFiles}
     @assert IS_PATH_CACHE_TIMEOUT != 0
     entry = get(IS_PATH_CACHE_DICT, path, nothing)
     while entry isa DirectoryRedirect

@@ -318,11 +318,11 @@ function what_suffix(what::Function)::AbstractString
     return what_suffix(what())
 end
 
-function what_suffix(::Nothing)::AbstractString  # UNTESTED
+function what_suffix(::Nothing)::AbstractString
     return ""
 end
 
-function what_suffix(what::AbstractString)::AbstractString  # UNTESTED
+function what_suffix(what::AbstractString)::AbstractString
     return " " * what
 end
 

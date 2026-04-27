@@ -210,7 +210,7 @@
 </summary>
 <section>
 <div>
-<p>Median and quantile reductions optimized for sparse vectors and matrices.
+<p>Median, quantile, variance and standard-deviation reductions optimized for sparse vectors and matrices.
 </p>
 <p>A quantile of a sparse vector with 
 <code>nnz
@@ -232,9 +232,19 @@
 <code>scratch
 </code> buffer of the appropriate size.
 </p>
+<p>The variance is computed in 
+<code>O(nnz)
+</code> by running Welford&#39;s algorithm over 
+<code>nzval
+</code> and merging the resulting stream stats 
+<code>(n, mean, M2)
+</code> with the all-zeros stream 
+<code>(n_zero, 0, 0)
+</code> via the standard pairwise variance combiner; this is exact and numerically stable, with no scratch buffer needed. The standard deviation is just the square root of the variance.
+</p>
 <p>If the data is known to be non-negative (e.g., UMI counts), passing 
 <code>positive = true
-</code> skips the negativity scan entirely and yields a small additional speedup.
+</code> to the median/quantile functions skips the negativity scan entirely and yields a small additional speedup.
 </p>
 <p>The functions exposed here mirror the calling convention of 
 <code>Statistics.var
@@ -246,7 +256,9 @@
 <code>AbstractMatrix
 </code> together with a 
 <code>dims
-</code> keyword argument (returning a matrix with one of the dimensions reduced to a single entry).
+</code> keyword argument (returning a vector with one of the dimensions reduced to a single entry, or a scalar when 
+<code>dims
+</code> is omitted).
 </p>
 </div>
 </section>
@@ -545,6 +557,220 @@ sparse_quantile(matrix, 0.5; dims = Rows)
 </section>
 </details>
 </article>
+<article>
+<details class="docstring" open="true">
+<summary id="TanayLabUtilities.SparseStatistics.sparse_std">
+<a class="docstring-binding" href="#TanayLabUtilities.SparseStatistics.sparse_std">
+<code>TanayLabUtilities.SparseStatistics.sparse_std
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+</summary>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">sparse_std(
+    vector::AbstractVector{&lt;:Real};
+    corrected::Bool = true,
+)::Float64
+
+sparse_std(
+    matrix::AbstractMatrix{&lt;:Real};
+    dims::Maybe{Integer} = nothing,
+    corrected::Bool = true,
+    result::Maybe{AbstractVector{&lt;:AbstractFloat}} = nothing,
+    progress::Maybe{Progress} = nothing,
+    progress_chunk::Maybe{Integer} = nothing,
+)::Union{Float64, AbstractVector{&lt;:AbstractFloat}}
+</code>
+</pre>
+<p>Compute the standard deviation of the values; equivalent to taking 
+<code>sqrt
+</code> of 
+<a href="sparse_statistics.html#TanayLabUtilities.SparseStatistics.sparse_var">
+<code>sparse_var
+</code>
+</a>. Shares the calling convention, 
+<code>corrected
+</code> flag, and optional 
+<code>result
+</code> / 
+<code>progress
+</code> / 
+<code>progress_chunk
+</code> parameters of 
+<a href="sparse_statistics.html#TanayLabUtilities.SparseStatistics.sparse_var">
+<code>sparse_var
+</code>
+</a>.
+</p>
+<pre>
+<code class="language-julia hljs">using SparseArrays
+
+matrix = sparse([0 1 0; 2 0 3; 0 4 0; 5 0 6])
+sparse_std(matrix; dims = Rows)
+
+# output
+
+3-element Vector{Float64}:
+ 2.362907813126304
+ 1.8929694486000912
+ 2.8722813232690143
+</code>
+</pre>
+</div>
+</section>
+</details>
+</article>
+<article>
+<details class="docstring" open="true">
+<summary id="TanayLabUtilities.SparseStatistics.sparse_var">
+<a class="docstring-binding" href="#TanayLabUtilities.SparseStatistics.sparse_var">
+<code>TanayLabUtilities.SparseStatistics.sparse_var
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+</summary>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">sparse_var(
+    vector::AbstractVector{&lt;:Real};
+    corrected::Bool = true,
+)::Float64
+
+sparse_var(
+    matrix::AbstractMatrix{&lt;:Real};
+    dims::Maybe{Integer} = nothing,
+    corrected::Bool = true,
+    result::Maybe{AbstractVector{&lt;:AbstractFloat}} = nothing,
+    progress::Maybe{Progress} = nothing,
+    progress_chunk::Maybe{Integer} = nothing,
+)::Union{Float64, AbstractVector{&lt;:AbstractFloat}}
+</code>
+</pre>
+<p>Compute the variance of the values of a 
+<code>vector
+</code>, or of each column (
+<code>dims = 1
+</code> / 
+<a href="matrix_layouts.html#TanayLabUtilities.MatrixLayouts.Rows">
+<code>Rows
+</code>
+</a>) or each row (
+<code>dims = 2
+</code> / 
+<a href="matrix_layouts.html#TanayLabUtilities.MatrixLayouts.Columns">
+<code>Columns
+</code>
+</a>) of a 
+<code>matrix
+</code>, or of all the elements of a 
+<code>matrix
+</code> when 
+<code>dims
+</code> is omitted. The shape conventions match 
+<code>Statistics.var
+</code>: with 
+<code>dims
+</code> the matrix variant returns a vector of length 
+<code>n_columns
+</code> (
+<code>dims = Rows
+</code>) or 
+<code>n_rows
+</code> (
+<code>dims = Columns
+</code>); without 
+<code>dims
+</code> it returns a scalar 
+<code>Float64
+</code>.
+</p>
+<p>If 
+<code>corrected
+</code> is 
+<code>true
+</code> (the default), the bias-corrected sample variance is returned (sum of squared deviations divided by 
+<code>n - 1
+</code>); otherwise the population variance is returned (divided by 
+<code>n
+</code>).
+</p>
+<p>The implementation runs Welford&#39;s algorithm over the stored non-zero values and merges the result with the all-zeros stream 
+<code>(n_zero, 0, 0)
+</code> using the standard pairwise variance combiner. This is 
+<code>O(nnz)
+</code> for sparse inputs, numerically stable, and allocation-free apart from the result vector. No 
+<code>scratch
+</code> buffer is needed.
+</p>
+<p>When operating on a 
+<code>matrix
+</code>, the iteration is parallelized via 
+<a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.parallel_loop_wo_rng">
+<code>parallel_loop_wo_rng
+</code>
+</a>. Operating against the 
+<a href="matrix_layouts.html#TanayLabUtilities.MatrixLayouts.major_axis">
+<code>major_axis
+</code>
+</a> of a sparse 
+<code>matrix
+</code> will trigger the 
+<a href="matrix_layouts.html#TanayLabUtilities.MatrixLayouts.GLOBAL_INEFFICIENT_ACTION_HANDLER">
+<code>GLOBAL_INEFFICIENT_ACTION_HANDLER
+</code>
+</a>.
+</p>
+<p>If 
+<code>progress
+</code> is given (matrix variant only), it is advanced once per processed slice (
+<code>n_columns
+</code> ticks for 
+<code>dims = Rows
+</code>, 
+<code>n_rows
+</code> for 
+<code>dims = Columns
+</code>). The 
+<code>progress_chunk
+</code> is passed through to 
+<a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.parallel_loop_wo_rng">
+<code>parallel_loop_wo_rng
+</code>
+</a>.
+</p>
+<pre>
+<code class="language-julia hljs">println(sparse_var([1.0, 2.0, 3.0, 4.0]))
+println(sparse_var([1.0, 2.0, 3.0, 4.0]; corrected = false))
+
+# output
+
+1.6666666666666667
+1.25
+</code>
+</pre>
+<pre>
+<code class="language-julia hljs">using SparseArrays
+
+matrix = sparse([0 1 0; 2 0 3; 0 4 0; 5 0 6])
+sparse_var(matrix; dims = Rows)
+
+# output
+
+3-element Vector{Float64}:
+ 5.583333333333333
+ 3.5833333333333335
+ 8.25
+</code>
+</pre>
+</div>
+</section>
+</details>
+</article>
 <h2 id="Index">
 <a class="docs-heading-anchor" href="#Index">Index
 </a>
@@ -569,6 +795,18 @@ sparse_quantile(matrix, 0.5; dims = Rows)
 <li>
 <a href="sparse_statistics.html#TanayLabUtilities.SparseStatistics.sparse_quantile">
 <code>TanayLabUtilities.SparseStatistics.sparse_quantile
+</code>
+</a>
+</li>
+<li>
+<a href="sparse_statistics.html#TanayLabUtilities.SparseStatistics.sparse_std">
+<code>TanayLabUtilities.SparseStatistics.sparse_std
+</code>
+</a>
+</li>
+<li>
+<a href="sparse_statistics.html#TanayLabUtilities.SparseStatistics.sparse_var">
+<code>TanayLabUtilities.SparseStatistics.sparse_var
 </code>
 </a>
 </li>
