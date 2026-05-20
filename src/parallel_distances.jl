@@ -4,6 +4,7 @@ Parallel versions of functions from `Distances.jl`.
 module ParallelDistances
 
 export parallel_pairwise
+export parallel_pairwise_closest
 export parallel_colwise
 
 using Base.Threads
@@ -133,6 +134,115 @@ function parallel_pairwise(
     end
 
     return result
+end
+
+"""
+    parallel_pairwise_closest(
+        distance, X, Y;
+        dims::Integer,
+        closest_index::Maybe{AbstractVector{<:Integer}} = nothing,
+        closest_distance::Maybe{AbstractVector} = nothing,
+        policy::Symbol = :greedy,
+        progress::Maybe{Progress} = nothing,
+        progress_chunk::Maybe{Integer} = nothing,
+    )::Nothing
+
+For each entry of `Y`, find the closest entry of `X`. This is equivalent to computing [`parallel_pairwise`](@ref) and
+reducing each column to its minimal value and its location, except that the full distances matrix is never stored. The
+distances are computed and reduced on the fly using [`parallel_loop_wo_rng`](@ref) over the entries of `Y`, with the
+specified `policy` and `progress`.
+
+The results are written into the pre-allocated `closest_index` and/or `closest_distance` vectors (whose length must be
+the number of entries of `Y`); at least one of them must be specified. This performs no allocations of its own.
+
+```jldoctest
+using Distances
+using Random
+
+Random.seed!(123456)
+
+m1 = rand(10, 20)
+m2 = rand(10, 30)
+
+d = pairwise(Euclidean(), m1, m2; dims = 2)
+
+closest_index = Vector{Int}(undef, 30)
+closest_distance = Vector{Float64}(undef, 30)
+parallel_pairwise_closest(Euclidean(), m1, m2; dims = 2, closest_index, closest_distance)
+
+@assert closest_index == [argmin(d[:, column]) for column in 1:30]
+@assert maximum(abs.(closest_distance .- [minimum(d[:, column]) for column in 1:30])) < 1e-6
+
+# output
+
+```
+"""
+function parallel_pairwise_closest(
+    distance,
+    X::AbstractMatrix,
+    Y::AbstractMatrix;
+    dims::Integer,
+    closest_index::Maybe{AbstractVector{<:Integer}} = nothing,
+    closest_distance::Maybe{AbstractVector} = nothing,
+    policy::Symbol = :greedy,
+    progress::Maybe{Progress} = nothing,
+    progress_chunk::Maybe{Integer} = nothing,
+)::Nothing
+    @assert dims in (1, 2)
+    if dims == 1
+        parallel_pairwise_closest(  # UNTESTED
+            distance,
+            flipped(X),
+            flipped(Y);
+            dims = 2,
+            closest_index,
+            closest_distance,
+            policy,
+            progress,
+            progress_chunk,
+        )
+        return nothing  # UNTESTED
+    end
+
+    @assert closest_index !== nothing || closest_distance !== nothing "neither closest_index nor closest_distance given"
+
+    _, n_X_columns = size(X)
+    _, n_Y_columns = size(Y)
+    if closest_index !== nothing
+        @assert length(closest_index) == n_Y_columns
+    end
+    if closest_distance !== nothing
+        @assert length(closest_distance) == n_Y_columns
+    end
+
+    parallel_loop_wo_rng(
+        1:n_Y_columns;
+        name = "pairwise_closest." * string(nameof(typeof(distance))),
+        policy,
+        progress,
+        progress_chunk,
+    ) do Y_column_index
+        @views Y_column_view = Y[:, Y_column_index]
+        best_index = 1
+        @views best_distance = evaluate(distance, X[:, 1], Y_column_view)
+        for X_column_index in 2:n_X_columns
+            @views X_column_view = X[:, X_column_index]
+            current_distance = evaluate(distance, X_column_view, Y_column_view)
+            if current_distance < best_distance
+                best_index = X_column_index
+                best_distance = current_distance
+            end
+        end
+        if closest_index !== nothing
+            closest_index[Y_column_index] = best_index
+        end
+        if closest_distance !== nothing
+            closest_distance[Y_column_index] = best_distance
+        end
+        return nothing
+    end
+
+    return nothing
 end
 
 """

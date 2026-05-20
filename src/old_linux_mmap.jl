@@ -101,7 +101,7 @@ function mmap_with_small_pages(  # FLAKY TESTED
 )::ArrayT where {T, ArrayT <: Array{T}}
     array = Mmap.mmap(io, ArrayT, dims, offset; grow, shared)
     @static if Sys.islinux()
-        disable_thp(Ptr{Cvoid}(pointer(array)), length(array) * sizeof(T))
+        disable_thp(Ptr{Cvoid}(pointer(array)), length(array) * sizeof(T))  # NOJET
     end
     return array
 end

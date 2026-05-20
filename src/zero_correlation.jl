@@ -76,7 +76,7 @@ function zero_cor_between_matrix_columns(
             mean_column = sum(column) / n_rows
             normalized_column .= column .- mean_column
             column_norm = norm(normalized_column)
-            if column_norm == 0
+            if column_norm == 0 || minimum(column) == maximum(column)
                 normalized_column .= 0
                 norms[column_index] = 1
             else
@@ -181,7 +181,7 @@ function zero_cor_between_matrices_columns(
             mean_column = sum(left_column) / n_rows
             left_normalized_column .= left_column .- mean_column
             left_norm = norm(left_normalized_column)
-            if left_norm == 0
+            if left_norm == 0 || minimum(left_column) == maximum(left_column)
                 left_normalized_column .= 0
                 left_column_norms[column_index] = 1
             else
@@ -196,7 +196,7 @@ function zero_cor_between_matrices_columns(
             mean_column = sum(right_column) / n_rows
             right_normalized_column .= right_column .- mean_column
             right_norm = norm(right_normalized_column)
-            if right_norm == 0
+            if right_norm == 0 || minimum(right_column) == maximum(right_column)
                 right_normalized_column .= 0
                 right_column_norms[column_index] = 1
             else
@@ -337,7 +337,7 @@ function zero_cor_between_vector_and_matrix_columns(
         mean_left = sum(left_vector) / n_rows
         left_normalized .= left_vector .- mean_left
         left_norm = norm(left_normalized)
-        if left_norm == 0
+        if left_norm == 0 || minimum(left_vector) == maximum(left_vector)
             result .= 0
             return result
         end
@@ -349,7 +349,7 @@ function zero_cor_between_vector_and_matrix_columns(
             mean_column = sum(right_column) / n_rows
             right_normalized_column .= right_column .- mean_column
             right_norm = norm(right_normalized_column)
-            if right_norm == 0
+            if right_norm == 0 || minimum(right_column) == maximum(right_column)
                 right_normalized_column .= 0  # UNTESTED
                 right_column_norms[column_index] = 1  # UNTESTED
             else

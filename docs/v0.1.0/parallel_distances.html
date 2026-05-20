@@ -301,6 +301,84 @@ d = pairwise(Euclidean(), m1, m2; dims = 2)
 </article>
 <article>
 <details class="docstring" open="true">
+<summary id="TanayLabUtilities.ParallelDistances.parallel_pairwise_closest">
+<a class="docstring-binding" href="#TanayLabUtilities.ParallelDistances.parallel_pairwise_closest">
+<code>TanayLabUtilities.ParallelDistances.parallel_pairwise_closest
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+</summary>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">parallel_pairwise_closest(
+    distance, X, Y;
+    dims::Integer,
+    closest_index::Maybe{AbstractVector{&lt;:Integer}} = nothing,
+    closest_distance::Maybe{AbstractVector} = nothing,
+    policy::Symbol = :greedy,
+    progress::Maybe{Progress} = nothing,
+    progress_chunk::Maybe{Integer} = nothing,
+)::Nothing
+</code>
+</pre>
+<p>For each entry of 
+<code>Y
+</code>, find the closest entry of 
+<code>X
+</code>. This is equivalent to computing 
+<a href="parallel_distances.html#TanayLabUtilities.ParallelDistances.parallel_pairwise">
+<code>parallel_pairwise
+</code>
+</a> and reducing each column to its minimal value and its location, except that the full distances matrix is never stored. The distances are computed and reduced on the fly using 
+<a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.parallel_loop_wo_rng">
+<code>parallel_loop_wo_rng
+</code>
+</a> over the entries of 
+<code>Y
+</code>, with the specified 
+<code>policy
+</code> and 
+<code>progress
+</code>.
+</p>
+<p>The results are written into the pre-allocated 
+<code>closest_index
+</code> and/or 
+<code>closest_distance
+</code> vectors (whose length must be the number of entries of 
+<code>Y
+</code>); at least one of them must be specified. This performs no allocations of its own.
+</p>
+<pre>
+<code class="language-julia hljs">using Distances
+using Random
+
+Random.seed!(123456)
+
+m1 = rand(10, 20)
+m2 = rand(10, 30)
+
+d = pairwise(Euclidean(), m1, m2; dims = 2)
+
+closest_index = Vector{Int}(undef, 30)
+closest_distance = Vector{Float64}(undef, 30)
+parallel_pairwise_closest(Euclidean(), m1, m2; dims = 2, closest_index, closest_distance)
+
+@assert closest_index == [argmin(d[:, column]) for column in 1:30]
+@assert maximum(abs.(closest_distance .- [minimum(d[:, column]) for column in 1:30])) &lt; 1e-6
+
+# output
+
+</code>
+</pre>
+</div>
+</section>
+</details>
+</article>
+<article>
+<details class="docstring" open="true">
 <summary id="TanayLabUtilities.ParallelDistances.parallel_colwise">
 <a class="docstring-binding" href="#TanayLabUtilities.ParallelDistances.parallel_colwise">
 <code>TanayLabUtilities.ParallelDistances.parallel_colwise
@@ -387,6 +465,12 @@ d = pairwise(Euclidean(), m1, m2; dims = 2)
 <li>
 <a href="parallel_distances.html#TanayLabUtilities.ParallelDistances.parallel_pairwise">
 <code>TanayLabUtilities.ParallelDistances.parallel_pairwise
+</code>
+</a>
+</li>
+<li>
+<a href="parallel_distances.html#TanayLabUtilities.ParallelDistances.parallel_pairwise_closest">
+<code>TanayLabUtilities.ParallelDistances.parallel_pairwise_closest
 </code>
 </a>
 </li>

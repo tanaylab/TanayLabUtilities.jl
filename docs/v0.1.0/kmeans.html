@@ -376,6 +376,7 @@ KMeansBuffers(buffers::KMeansBuffers{T}; n_dims::Integer, k::Integer, n_points::
     centers::Maybe{AbstractMatrix{&lt;:AbstractFloat}} = ```nothing```,
     buffers::Maybe{Tuple{KMeansBuffers, KMeansBuffers}} = ```nothing```,
     rounds::Integer = ```10```,
+    min_size::Maybe{Int} = ```nothing```,
     rng::AbstractRNG = default_rng(),
 )::Union{KmeansResult, KmeansResultView}
 </code>
@@ -401,6 +402,12 @@ KMeansBuffers(buffers::KMeansBuffers{T}; n_dims::Integer, k::Integer, n_points::
 </code> / 
 <code>Clustering.kmeans!
 </code>.
+</p>
+<p>If 
+<code>min_size
+</code> is specified, rounds are ranked first by the number of clusters whose count is below 
+<code>min_size
+</code> (smaller is better) and then by the kmeans cost; otherwise rounds are ranked by the cost alone.
 </p>
 </div>
 </section>

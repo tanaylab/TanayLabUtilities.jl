@@ -435,6 +435,7 @@ end
         centers::Maybe{AbstractMatrix{<:AbstractFloat}} = $(DEFAULT.centers),
         buffers::Maybe{Tuple{KMeansBuffers, KMeansBuffers}} = $(DEFAULT.buffers),
         rounds::Integer = $(DEFAULT.rounds),
+        min_size::Maybe{Int} = $(DEFAULT.min_size),
         rng::AbstractRNG = default_rng(),
     )::Union{KmeansResult, KmeansResultView}
 
@@ -443,6 +444,9 @@ because K-Means is a heuristic and tends to occasionally get stuck in a local mi
 
 If `buffers` are specified, runs allocation-free using [`kmeans_in_buffers`](@ref) / [`kmeans_in_buffers!`](@ref).
 Otherwise (the default), falls back to using `Clustering.kmeans` / `Clustering.kmeans!`.
+
+If `min_size` is specified, rounds are ranked first by the number of clusters whose count is below `min_size`
+(smaller is better) and then by the kmeans cost; otherwise rounds are ranked by the cost alone.
 """
 @documented function kmeans_in_rounds(
     values_of_points::AbstractMatrix{<:AbstractFloat},
@@ -450,6 +454,7 @@ Otherwise (the default), falls back to using `Clustering.kmeans` / `Clustering.k
     centers::Maybe{AbstractMatrix{<:AbstractFloat}} = nothing,
     buffers::Maybe{Tuple{KMeansBuffers, KMeansBuffers}} = nothing,
     rounds::Integer = 10,
+    min_size::Maybe{Int} = nothing,
     rng::AbstractRNG = default_rng(),
 )::Union{KmeansResult, KmeansResultView}
     if buffers !== nothing
@@ -459,7 +464,7 @@ Otherwise (the default), falls back to using `Clustering.kmeans` / `Clustering.k
     end
     best_buf = buffers === nothing ? nothing : buffers[1]
     current_buf = buffers === nothing ? nothing : buffers[2]
-    best_cost = typemax(Float64)
+    best_score = (typemax(Int), typemax(Float64))
     best_kmeans_result = nothing
 
     for _ in 1:rounds
@@ -481,8 +486,10 @@ Otherwise (the default), falls back to using `Clustering.kmeans` / `Clustering.k
             end
         end
 
-        if kmeans_result.totalcost < best_cost
-            best_cost = kmeans_result.totalcost
+        n_below_min = min_size === nothing ? 0 : count(<(min_size), counts(kmeans_result))
+        score = (n_below_min, Float64(kmeans_result.totalcost))
+        if score < best_score
+            best_score = score
             best_kmeans_result = kmeans_result
             if buffers !== nothing
                 best_buf, current_buf = current_buf, best_buf
