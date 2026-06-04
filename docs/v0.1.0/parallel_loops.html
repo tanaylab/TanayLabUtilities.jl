@@ -129,6 +129,10 @@
 </a>
 </li>
 <li>
+<a class="tocitem" href="grouped_correlations.html">Grouped Correlations
+</a>
+</li>
+<li>
 <a class="tocitem" href="cross_validations.html">Cross Validations
 </a>
 </li>
@@ -242,6 +246,9 @@
     indices::AbstractVector{&lt;:Integer};
     name::AbstractString = &quot;.loop&quot;,
     policy::Symbol = :greedy,
+    order::Maybe{AbstractVector{&lt;:Integer}} = nothing,
+    weights::Maybe{AbstractVector{&lt;:Integer}} = nothing,
+    nested::Bool = false,
     progress::Maybe{Progress} = nothing,
 )::Nothing
 </code>
@@ -252,21 +259,129 @@
 <code>index
 </code>. The 
 <code>policy
-</code> is passed to 
-<code>@threads
-</code> if it is one of (the default 
+</code> is one of:
+</p>
+<ul>
+<li>
 <code>:greedy
 </code>, 
 <code>:dynamic
-</code>, or 
+</code>, 
 <code>:static
-</code>). If it is 
+</code> - passed straight to 
+<code>@threads
+</code>. Note that 
+<code>:greedy
+</code> and 
+<code>:dynamic
+</code> create 
+<em>non-sticky
+</em> tasks that may migrate across threads at yield points, so 
+<code>threadid()
+</code>-indexed scratch is unsafe under those.
+</li>
+<li>
+<code>:static_greedy
+</code> - 
+<code>nthreads()
+</code> sticky worker tasks spawned via 
+<code>@threads :static for _ in 1:nthreads()
+</code>, each pulling the next index position from an 
+<code>Atomic{Int}
+</code> counter. Combines the dynamic load balancing of 
+<code>:greedy
+</code> with the threadid stability of 
+<code>:static
+</code>: tasks never migrate, so 
+<code>threadid()
+</code>-indexed scratch is safe inside the body. Pair with a heaviest-first 
+<code>order
+</code> (or 
+<code>weights
+</code>) to attack the tail-latency problem - heavy items dispatch first, light items fill the tail.
+</li>
+<li>
 <code>:serial
-</code>, then the loop is not run in parallel (useful for debugging).
+</code> - run the loop on the calling thread (useful for debugging).
+</li>
+</ul>
+<p>If 
+<code>order
+</code> is specified, it must be a permutation of the 
+<em>positions
+</em> of 
+<code>indices
+</code> - that is, a length-
+<code>length(indices)
+</code> vector whose values are a permutation of 
+<code>1:length(indices)
+</code>. The body still receives the corresponding 
+<code>indices[order[k]]
+</code> value at each step k; only the visit order is altered. Typical usage is heaviest-work-first (so the longest items dispatch as early as possible): pass 
+<code>sortperm(weight_per_index; rev = true)
+</code>. Under 
+<code>:greedy
+</code>, 
+<code>:dynamic
+</code>, 
+<code>:static_greedy
+</code>, or 
+<code>:serial
+</code>, the iteration visits the positions in 
+<code>order
+</code> as given. Under 
+<code>:static
+</code>, 
+<code>order
+</code> is reshuffled in place in a round-robin fashion each contiguous chunk gets one item from each weight quantile, balancing the static partition. Mutates the caller&#39;s 
+<code>order
+</code> array.
 </p>
-<p>If this is nested (and the containing loop is parallel), 
+<p>If 
+<code>weights
+</code> is specified, it must be a length-
+<code>length(indices)
+</code> vector of non-negative integers giving the estimated work for each position in 
+<code>indices
+</code>. When 
+<code>order
+</code> is not given, 
+<code>weights
+</code> derives it as 
+<code>sortperm(weights; rev = true)
+</code> so the heaviest items dispatch first. When 
+<code>progress
+</code> is also given, each iteration advances the bar by the visited position&#39;s 
+<code>weights
+</code> entry instead of by 1; the caller is responsible for sizing the progress total to 
+<code>sum(weights)
+</code> so the percentage reflects work done rather than items done. 
+<code>weights
+</code> and 
+<code>order
+</code> are independent and may be combined: pass both to keep an explicit visit order while reporting work-weighted progress. Mutually exclusive with 
+<code>progress_chunk
+</code> (the unweighted-throttling alternative).
+</p>
+<p>If this is invoked from inside another parallel loop and 
+<code>nested
+</code> is 
+<code>false
+</code> (the default), 
 <code>policy
-</code> is ignored and the loop is executed serially. This allows functions to be parallel if invoked from the main thread, but become serial if invoked from inside an already parallel loop.
+</code> is ignored and the loop is executed serially. This makes functions safe to compose: parallel at the top level, serial when called from inside another parallel loop. Pass 
+<code>nested = true
+</code> to opt out of the safety demotion - the loop then uses 
+<code>policy
+</code> as if at the top level. The caller is responsible for the scratch contract: under 
+<code>:static
+</code>/
+<code>:static_greedy
+</code> each spawned sub-task has a stable 
+<code>threadid()
+</code>, but multiple outer iterations may be inside their nested loops at the same time, so per-thread scratch indexed by inner 
+<code>threadid()
+</code> must be local to the outer iteration (not a global per-thread array shared across all outer iterations).
 </p>
 <p>The 
 <code>name
@@ -284,6 +399,10 @@
 <code>indices
 </code> must be a range 
 <code>1:n
+</code>, 
+<code>order
+</code> must be 
+<code>nothing
 </code>, and we throttle calls to the progress bar update to one every 
 <code>progress_chunk
 </code>.
@@ -307,7 +426,7 @@
 
 size = 10
 
-for policy in (:serial, :greedy, :dynamic, :static)
+for policy in (:serial, :greedy, :dynamic, :static, :static_greedy)
     results = zeros(Int, size)
     parallel_loop_wo_rng(1:size; policy) do index
         results[index] = index
@@ -342,6 +461,8 @@ end
     indices::AbstractVector{&lt;:Integer};
     name::AbstractString = &quot;.loop&quot;,
     policy::Symbol = :greedy,
+    order::Maybe{AbstractVector{&lt;:Integer}} = nothing,
+    weights::Maybe{AbstractVector{&lt;:Integer}} = nothing,
     progress::Maybe{Progress} = nothing,
     seed::Maybe{Integer} = nothing,
     rng::Maybe{AbstractRNG} = nothing
@@ -382,9 +503,41 @@ end
 <code>:serial
 </code>, then the loop is not run in parallel (useful for debugging).
 </p>
-<p>If this is nested (and the containing loop is parallel), 
+<p>If 
+<code>order
+</code> and/or 
+<code>weights
+</code> are specified, they are forwarded to 
+<a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.parallel_loop_wo_rng">
+<code>parallel_loop_wo_rng
+</code>
+</a> - see there for the position-permutation semantics, the in-place round-robin shuffle under 
+<code>:static
+</code>, and the work-weighted progress accounting. The body still receives the same 
+<code>indices[order[k]]
+</code> value at each step k, and the seed is 
+<code>seed + indices[order[k]]
+</code> so reproducibility is independent of the visit order.
+</p>
+<p>If this is invoked from inside another parallel loop and 
+<code>nested
+</code> is 
+<code>false
+</code> (the default), 
 <code>policy
-</code> is ignored and the loop is executed serially. This allows functions to be parallel if invoked from the main thread, but become serial if invoked from inside an already parallel loop.
+</code> is ignored and the loop is executed serially. This makes functions safe to compose: parallel at the top level, serial when called from inside another parallel loop. Pass 
+<code>nested = true
+</code> to opt out of the safety demotion - the loop then uses 
+<code>policy
+</code> as if at the top level. The caller is responsible for the scratch contract: under 
+<code>:static
+</code>/
+<code>:static_greedy
+</code> each spawned sub-task has a stable 
+<code>threadid()
+</code>, but multiple outer iterations may be inside their nested loops at the same time, so per-thread scratch indexed by inner 
+<code>threadid()
+</code> must be local to the outer iteration (not a global per-thread array shared across all outer iterations).
 </p>
 <p>The 
 <code>name

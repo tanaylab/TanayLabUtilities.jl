@@ -274,7 +274,7 @@ d = colwise(Euclidean(), m1, m2)
 # output
 
 """
-function parallel_colwise(  # FLAKY TESTED
+function parallel_colwise(  # ONLY SEEMS UNTESTED
     distance,
     X::AbstractMatrix,
     Y::AbstractMatrix;

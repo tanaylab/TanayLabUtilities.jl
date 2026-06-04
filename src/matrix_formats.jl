@@ -133,7 +133,7 @@ function format_brief_array(matrix::AbstractMatrix, prefixes::Vector{String}; tr
         if matrix_strides != (1, matrix_sizes[1]) && matrix_strides != (matrix_sizes[2], 1)
             suffix = "; Strided"  # UNTESTED
         elseif !("Dense" in prefixes)
-            suffix = "; Dense"  # FLAKY TESTED
+            suffix = "; Dense"
         end
     catch
     end

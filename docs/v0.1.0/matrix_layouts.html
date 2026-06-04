@@ -121,6 +121,10 @@
 </a>
 </li>
 <li>
+<a class="tocitem" href="grouped_correlations.html">Grouped Correlations
+</a>
+</li>
+<li>
 <a class="tocitem" href="cross_validations.html">Cross Validations
 </a>
 </li>
@@ -1101,6 +1105,90 @@ for matrix: 2 x 3 x Int64 in Columns (Dense)
 </article>
 <article>
 <details class="docstring" open="true">
+<summary id="TanayLabUtilities.MatrixLayouts.@check_turbo_vector">
+<a class="docstring-binding" href="#TanayLabUtilities.MatrixLayouts.@check_turbo_vector">
+<code>TanayLabUtilities.MatrixLayouts.@check_turbo_vector
+</code>
+</a> — 
+<span class="docstring-category">Macro
+</span>
+</summary>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">@check_turbo_vector(vector::Any)
+</code>
+</pre>
+<p>Assert that 
+<code>vector
+</code> is an 
+<code>AbstractVector
+</code> that can be used in a 
+<code>LoopVectorization
+</code> 
+<code>@turbo
+</code> loop (a strided array of a supported element type), with a friendly error message if not. Use this just before a 
+<code>@turbo
+</code> loop instead of a verbose manual 
+<code>LoopVectorization.check_args
+</code> assertion.
+</p>
+<pre>
+<code class="language-julia hljs">vector = [1.0, 2.0, 3.0]
+@check_turbo_vector(vector)
+
+# output
+
+</code>
+</pre>
+</div>
+</section>
+</details>
+</article>
+<article>
+<details class="docstring" open="true">
+<summary id="TanayLabUtilities.MatrixLayouts.@check_turbo_matrix">
+<a class="docstring-binding" href="#TanayLabUtilities.MatrixLayouts.@check_turbo_matrix">
+<code>TanayLabUtilities.MatrixLayouts.@check_turbo_matrix
+</code>
+</a> — 
+<span class="docstring-category">Macro
+</span>
+</summary>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">@check_turbo_matrix(matrix::Any)
+</code>
+</pre>
+<p>Assert that 
+<code>matrix
+</code> is an 
+<code>AbstractMatrix
+</code> that can be used in a 
+<code>LoopVectorization
+</code> 
+<code>@turbo
+</code> loop, with a friendly error message if not. Use this just before a 
+<code>@turbo
+</code> loop instead of a verbose manual 
+<code>LoopVectorization.check_args
+</code> assertion.
+</p>
+<pre>
+<code class="language-julia hljs">matrix = [1.0 2.0; 3.0 4.0]
+@check_turbo_matrix(matrix)
+
+# output
+
+</code>
+</pre>
+</div>
+</section>
+</details>
+</article>
+<article>
+<details class="docstring" open="true">
 <summary id="TanayLabUtilities.MatrixLayouts.GLOBAL_INEFFICIENT_ACTION_HANDLER">
 <a class="docstring-binding" href="#TanayLabUtilities.MatrixLayouts.GLOBAL_INEFFICIENT_ACTION_HANDLER">
 <code>TanayLabUtilities.MatrixLayouts.GLOBAL_INEFFICIENT_ACTION_HANDLER
@@ -1225,6 +1313,18 @@ for matrix: 2 x 3 x Int64 in Columns (Dense)
 <li>
 <a href="matrix_layouts.html#TanayLabUtilities.MatrixLayouts.@assert_vector">
 <code>TanayLabUtilities.MatrixLayouts.@assert_vector
+</code>
+</a>
+</li>
+<li>
+<a href="matrix_layouts.html#TanayLabUtilities.MatrixLayouts.@check_turbo_matrix">
+<code>TanayLabUtilities.MatrixLayouts.@check_turbo_matrix
+</code>
+</a>
+</li>
+<li>
+<a href="matrix_layouts.html#TanayLabUtilities.MatrixLayouts.@check_turbo_vector">
+<code>TanayLabUtilities.MatrixLayouts.@check_turbo_vector
 </code>
 </a>
 </li>

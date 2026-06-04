@@ -22,6 +22,7 @@ using StatsBase
 using ..Documentation
 using ..FlameTime
 using ..MatrixFormats
+using ..ParallelLoops
 using ..Types
 
 import Random.default_rng
@@ -434,6 +435,7 @@ end
         k::Integer;
         centers::Maybe{AbstractMatrix{<:AbstractFloat}} = $(DEFAULT.centers),
         buffers::Maybe{Tuple{KMeansBuffers, KMeansBuffers}} = $(DEFAULT.buffers),
+        buffer_pool::Maybe{Channel} = $(DEFAULT.buffer_pool),
         rounds::Integer = $(DEFAULT.rounds),
         min_size::Maybe{Int} = $(DEFAULT.min_size),
         rng::AbstractRNG = default_rng(),
@@ -442,8 +444,17 @@ end
 Run `kmeans` multiple times with different random seeds (using `rng`) and return the best results. This is needed
 because K-Means is a heuristic and tends to occasionally get stuck in a local minimum.
 
-If `buffers` are specified, runs allocation-free using [`kmeans_in_buffers`](@ref) / [`kmeans_in_buffers!`](@ref).
-Otherwise (the default), falls back to using `Clustering.kmeans` / `Clustering.kmeans!`.
+If `buffer_pool` is specified (a `Channel{KMeansBuffers}` sized to the available concurrency), the rounds run in
+parallel via a nested [`parallel_loop_with_rng`](@ref), which seeds each round's rng reproducibly from `rng` and the
+round index. Each round takes a `KMeansBuffers` from the pool, runs allocation-free [`kmeans_in_buffers`](@ref) /
+[`kmeans_in_buffers!`](@ref), snapshots the result into owned arrays, and returns the buffer to the pool. The argmin
+over rounds picks the winner. Mutually exclusive with `buffers`.
+
+If `buffers` (the legacy swap pair) is specified, runs allocation-free serially: each round overwrites the
+`current_buf` and swaps it with `best_buf` when it improves.
+
+If neither is specified (the default), falls back to using `Clustering.kmeans` / `Clustering.kmeans!`, allocating per
+round.
 
 If `min_size` is specified, rounds are ranked first by the number of clusters whose count is below `min_size`
 (smaller is better) and then by the kmeans cost; otherwise rounds are ranked by the cost alone.
@@ -453,10 +464,15 @@ If `min_size` is specified, rounds are ranked first by the number of clusters wh
     k::Integer;
     centers::Maybe{AbstractMatrix{<:AbstractFloat}} = nothing,
     buffers::Maybe{Tuple{KMeansBuffers, KMeansBuffers}} = nothing,
+    buffer_pool::Maybe{Channel} = nothing,
     rounds::Integer = 10,
     min_size::Maybe{Int} = nothing,
     rng::AbstractRNG = default_rng(),
 )::Union{KmeansResult, KmeansResultView}
+    @assert buffers === nothing || buffer_pool === nothing
+    if buffer_pool !== nothing
+        return kmeans_in_rounds_parallel(values_of_points, k; centers, buffer_pool, rounds, min_size, rng)
+    end
     if buffers !== nothing
         n_dims = size(values_of_points, 1)
         n_points = size(values_of_points, 2)
@@ -499,6 +515,70 @@ If `min_size` is specified, rounds are ranked first by the number of clusters wh
 
     @assert best_kmeans_result !== nothing
     return best_kmeans_result
+end
+
+# Parallel implementation of `kmeans_in_rounds`: each round runs as a nested task via `parallel_loop_with_rng` (which
+# handles the reproducible per-round rng), with its own per-round buffer taken from `buffer_pool`. Snapshots the
+# per-round result into owned arrays so the buffer can be returned to the pool immediately, then picks the argmin
+# after all rounds complete.
+function kmeans_in_rounds_parallel(
+    values_of_points::AbstractMatrix{<:AbstractFloat},
+    k::Integer;
+    centers::Maybe{AbstractMatrix{<:AbstractFloat}},
+    buffer_pool::Channel,
+    rounds::Integer,
+    min_size::Maybe{Int},
+    rng::AbstractRNG,
+)::KmeansResultView
+    n_dims = size(values_of_points, 1)
+    n_points = size(values_of_points, 2)
+
+    score_per_round = Vector{Tuple{Int, Float64}}(undef, rounds)
+    result_per_round = Vector{KmeansResultView}(undef, rounds)
+
+    parallel_loop_with_rng(
+        1:rounds;
+        nested = true,
+        policy = :greedy,
+        name = "kmeans_in_rounds",
+        rng,
+    ) do round_index, round_rng
+        full_buffer = take!(buffer_pool)
+        try
+            round_buffer = KMeansBuffers(full_buffer; n_dims, k, n_points)
+            kmeans_result = if centers === nothing
+                kmeans_in_buffers(values_of_points, k; buffers = round_buffer, rng = round_rng)  # NOJET
+            else
+                copyto!(@view(round_buffer.centers[:, 1:k]), centers)
+                kmeans_in_buffers!(
+                    values_of_points,
+                    @view(round_buffer.centers[:, 1:k]);
+                    buffers = round_buffer,
+                    rng = round_rng,
+                )
+            end
+
+            # Snapshot into owned arrays so the buffer can return to the pool while this result still lives.
+            snapshot = KmeansResultView(
+                Matrix(kmeans_result.centers),
+                Vector(kmeans_result.assignments),
+                Vector(kmeans_result.costs),
+                Vector(kmeans_result.counts),
+                Vector(kmeans_result.wcounts),
+                kmeans_result.totalcost,
+                kmeans_result.iterations,
+                kmeans_result.converged,
+            )
+            n_below_min = min_size === nothing ? 0 : count(<(min_size), snapshot.counts)
+            score_per_round[round_index] = (n_below_min, Float64(snapshot.totalcost))
+            result_per_round[round_index] = snapshot
+        finally
+            put!(buffer_pool, full_buffer)
+        end
+        return nothing
+    end
+
+    return result_per_round[argmin(score_per_round)]
 end
 
 end

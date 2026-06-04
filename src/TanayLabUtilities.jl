@@ -55,11 +55,11 @@ include("cross_validations.jl")
 include("global_weak_cache.jl")
 @reexport using .GlobalWeakCache
 
-include("kmeans.jl")
-@reexport using .KMeans
-
 include("parallel_loops.jl")
 @reexport using .ParallelLoops
+
+include("kmeans.jl")
+@reexport using .KMeans
 
 include("permute.jl")
 @reexport using .Permute
@@ -84,6 +84,9 @@ include("downsample.jl")
 
 include("zero_correlation.jl")
 @reexport using .ZeroCorrelation
+
+include("grouped_correlations.jl")
+@reexport using .GroupedCorrelations
 
 include("chi_squared.jl")
 @reexport using .ChiSquared

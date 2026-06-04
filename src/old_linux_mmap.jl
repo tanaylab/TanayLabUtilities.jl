@@ -29,7 +29,7 @@ IS_OLD_LINUX_KERNEL = false
 
 function __init__()::Nothing
     global IS_OLD_LINUX_KERNEL
-    @static if Sys.islinux()  # FLAKY TESTED
+    @static if Sys.islinux()
         version_string = read("/proc/version", String)  # FLAKY TESTED
         parts = split(version_string, " ")  # FLAKY TESTED
         parts = tuple(parse.(Int, split(parts[3], ".")[1:2])...)  # FLAKY TESTED
@@ -39,9 +39,9 @@ function __init__()::Nothing
     end
 
     if IS_OLD_LINUX_KERNEL
-        @info "Old linux kernel, will pre-populate mmap into RAM disk: $(version_string)"  # FLAKY TESTED # NOJET
+        @info "Old linux kernel, will pre-populate mmap into RAM disk: $(version_string)"  # FLAKY TESTED
     else
-        @debug "New linux kernel, will not pre-populate mmap into RAM disk: $(version_string)" _group = :tlu_env  # FLAKY TESTED # NOJET
+        @debug "New linux kernel, will not pre-populate mmap into RAM disk: $(version_string)" _group = :tlu_env  # FLAKY TESTED
     end
 
     return nothing
@@ -64,7 +64,7 @@ function is_in_linux_ramdisk(directory::AbstractString)::Bool
     end
 end
 
-function disable_thp(ptr::Ptr{Cvoid}, size::Integer)::Nothing  # FLAKY TESTED
+function disable_thp(ptr::Ptr{Cvoid}, size::Integer)::Nothing
     if size > 0
         MADV_NOHUGEPAGE = 15
         ret = ccall(:madvise, Cint, (Ptr{Cvoid}, Csize_t, Cint), ptr, Csize_t(size), Cint(MADV_NOHUGEPAGE))
@@ -91,7 +91,7 @@ rely on demand paging to load only the specific bytes an access actually touches
 THP, Linux can promote consecutive 4 KiB pages into 2 MiB huge pages, turning a single-byte access
 into a 2 MiB fault and defeating the lazy-load benefit of memory mapping a large file.
 """
-function mmap_with_small_pages(  # FLAKY TESTED
+function mmap_with_small_pages(  # UNTESTED
     io::IO,
     ::Type{ArrayT},
     dims::Union{Integer, Tuple{Vararg{Integer}}},

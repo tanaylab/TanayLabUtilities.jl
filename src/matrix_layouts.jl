@@ -26,6 +26,8 @@ module MatrixLayouts
 
 export @assert_matrix
 export @assert_vector
+export @check_turbo_matrix
+export @check_turbo_vector
 export Columns
 export Rows
 export axis_name
@@ -48,6 +50,7 @@ using ..Handlers
 using ..ReadOnlyArrays
 using Distributed
 using LinearAlgebra
+using LoopVectorization
 using NamedArrays
 using SparseArrays
 
@@ -323,49 +326,46 @@ function other_axis(axis::Maybe{Integer})::Maybe{Int8}
     return error("invalid matrix axis: $(axis)")
 end
 
-macro assert_is_vector(source_file, source_line, vector)
-    vector_name = string(vector)
-    return esc(
-        :(
-            if !($vector isa AbstractVector)
-                error(
-                    "non-vector " *
-                    $vector_name *
-                    ": " *
-                    brief($vector) *
-                    "\nin: " *
-                    $(string(source_file)) *
-                    ":" *
-                    $(string(source_line)),
-                )
-            end
-        ),
-    )
+# Assert that `value` is an `AbstractVector`, with a friendly error message (naming the value and briefly describing
+# it) if not.
+function assert_is_vector_check(
+    source_file::AbstractString,
+    source_line::Integer,
+    value_name::AbstractString,
+    value::Any,
+)::Nothing
+    if !(value isa AbstractVector)
+        error("non-vector " * value_name * ": " * brief(value) * "\nin: " * source_file * ":" * string(source_line))
+    end
+    return nothing
 end
 
-macro assert_vector_size(source_file, source_line, vector, n_elements)
-    vector_name = string(vector)
-    n_elements_name = string(n_elements)
-    return esc(
-        :(
-            if length($vector) != $n_elements
-                error(
-                    "wrong size: " *
-                    string(length($vector)) *
-                    "\nof the vector: " *
-                    $vector_name *
-                    "\nis different from " *
-                    $n_elements_name *
-                    ": " *
-                    string($n_elements) *
-                    "\nin: " *
-                    $(string(source_file)) *
-                    ":" *
-                    $(string(source_line)),
-                )
-            end
-        ),
-    )
+# Assert that `vector` has `n_elements`, with a friendly error message if not.
+function assert_vector_size_check(
+    source_file::AbstractString,
+    source_line::Integer,
+    vector_name::AbstractString,
+    vector::AbstractVector,
+    n_elements_name::AbstractString,
+    n_elements::Integer,
+)::Nothing
+    if length(vector) != n_elements
+        error(
+            "wrong size: " *
+            string(length(vector)) *
+            "\nof the vector: " *
+            vector_name *
+            "\nis different from " *
+            n_elements_name *
+            ": " *
+            string(n_elements) *
+            "\nin: " *
+            source_file *
+            ":" *
+            string(source_line),
+        )
+    end
+    return nothing
 end
 
 """
@@ -400,84 +400,80 @@ ERROR: non-vector scalar: 1
 ```
 """
 macro assert_vector(vector)
-    return esc(:(TanayLabUtilities.MatrixLayouts.@assert_is_vector($(__source__.file), $(__source__.line), $vector)))
-end
-
-macro assert_vector(vector, n_elements)
     return esc(
-        :(TanayLabUtilities.MatrixLayouts.@assert_is_vector($(__source__.file), $(__source__.line), $vector);   #
-        TanayLabUtilities.MatrixLayouts.@assert_vector_size(
-            $(__source__.file),
+        :($(@__MODULE__).assert_is_vector_check(
+            $(string(__source__.file)),
             $(__source__.line),
+            $(string(vector)),
             $vector,
-            $n_elements
         )),
     )
 end
 
-macro assert_is_matrix(source_file, source_line, matrix)
-    matrix_name = string(matrix)
+macro assert_vector(vector, n_elements)
     return esc(
-        :(
-            if !($matrix isa AbstractMatrix)
-                error(
-                    "non-matrix " *
-                    $matrix_name *
-                    ": " *
-                    brief($matrix) *
-                    "\nin: " *
-                    $(string(source_file)) *
-                    ":" *
-                    $(string(source_line)),
-                )
-            end
-        ),
+        :($(@__MODULE__).assert_is_vector_check(
+            $(string(__source__.file)),
+            $(__source__.line),
+            $(string(vector)),
+            $vector,
+        );
+        $(@__MODULE__).assert_vector_size_check(
+            $(string(__source__.file)),
+            $(__source__.line),
+            $(string(vector)),
+            $vector,
+            $(string(n_elements)),
+            $n_elements,
+        )),
     )
 end
 
-macro assert_matrix_size(source_file, source_line, matrix, n_rows, n_columns)
-    matrix_name = string(matrix)
-    n_rows_name = string(n_rows)
-    n_columns_name = string(n_columns)
-    return esc(
-        :(
-            if size($matrix) != ($n_rows, $n_columns)
-                error(
-                    "wrong size: " *
-                    string(size($matrix)) *
-                    "\nof the matrix: " *
-                    $matrix_name *
-                    "\nis different from (" *
-                    $n_rows_name *
-                    ", " *
-                    $n_columns_name *
-                    "): (" *
-                    string($n_rows) *
-                    ", " *
-                    string($n_columns) *
-                    ")\nin: " *
-                    $(string(source_file)) *
-                    ":" *
-                    $(string(source_line)),
-                )
-            end
-        ),
-    )
+# Assert that `value` is an `AbstractMatrix`, with a friendly error message if not.
+function assert_is_matrix_check(
+    source_file::AbstractString,
+    source_line::Integer,
+    value_name::AbstractString,
+    value::Any,
+)::Nothing
+    if !(value isa AbstractMatrix)
+        error("non-matrix " * value_name * ": " * brief(value) * "\nin: " * source_file * ":" * string(source_line))
+    end
+    return nothing
 end
 
-macro check_matrix_layout(source_file, source_line, matrix, major_axis)
-    matrix_name = string(matrix)
-    return esc(
-        :(
-            TanayLabUtilities.MatrixLayouts.check_efficient_action(
-                $source_file,
-                $source_line,
-                $matrix_name,
-                $matrix,
-                $major_axis,
-            ),
-        ),
-    )
+# Assert that `matrix` has `(n_rows, n_columns)`, with a friendly error message if not.
+function assert_matrix_size_check(
+    source_file::AbstractString,
+    source_line::Integer,
+    matrix_name::AbstractString,
+    matrix::AbstractMatrix,
+    n_rows_name::AbstractString,
+    n_rows::Integer,
+    n_columns_name::AbstractString,
+    n_columns::Integer,
+)::Nothing
+    if size(matrix) != (n_rows, n_columns)
+        error(
+            "wrong size: " *
+            string(size(matrix)) *
+            "\nof the matrix: " *
+            matrix_name *
+            "\nis different from (" *
+            n_rows_name *
+            ", " *
+            n_columns_name *
+            "): (" *
+            string(n_rows) *
+            ", " *
+            string(n_columns) *
+            ")\nin: " *
+            source_file *
+            ":" *
+            string(source_line),
+        )
+    end
+    return nothing
 end
 
 """
@@ -529,49 +525,182 @@ for matrix: 2 x 3 x Int64 in Columns (Dense)
 ```
 """
 macro assert_matrix(matrix)
-    return esc(:(TanayLabUtilities.MatrixLayouts.@assert_is_matrix($(__source__.file), $(__source__.line), $matrix)))
+    return esc(
+        :($(@__MODULE__).assert_is_matrix_check(
+            $(string(__source__.file)),
+            $(__source__.line),
+            $(string(matrix)),
+            $matrix,
+        )),
+    )
 end
 
 macro assert_matrix(matrix, axis)
     return esc(
-        :(TanayLabUtilities.MatrixLayouts.@assert_is_matrix($(__source__.file), $(__source__.line), $matrix); #
-        TanayLabUtilities.MatrixLayouts.@check_matrix_layout(
+        :($(@__MODULE__).assert_is_matrix_check(
             $(string(__source__.file)),
             $(__source__.line),
+            $(string(matrix)),
             $matrix,
-            $axis
+        );
+        $(@__MODULE__).check_efficient_action(
+            $(string(__source__.file)),
+            $(__source__.line),
+            $(string(matrix)),
+            $matrix,
+            $axis,
         )),
     )
 end
 
 macro assert_matrix(matrix, n_rows, n_columns)
     return esc(
-        :(TanayLabUtilities.MatrixLayouts.@assert_is_matrix($(__source__.file), $(__source__.line), $matrix);  #
-        TanayLabUtilities.MatrixLayouts.@assert_matrix_size(
-            $(__source__.file),
+        :($(@__MODULE__).assert_is_matrix_check(
+            $(string(__source__.file)),
             $(__source__.line),
+            $(string(matrix)),
             $matrix,
+        );
+        $(@__MODULE__).assert_matrix_size_check(
+            $(string(__source__.file)),
+            $(__source__.line),
+            $(string(matrix)),
+            $matrix,
+            $(string(n_rows)),
             $n_rows,
-            $n_columns
+            $(string(n_columns)),
+            $n_columns,
         )),
     )
 end
 
 macro assert_matrix(matrix, n_rows, n_columns, axis)
     return esc(
-        :(TanayLabUtilities.MatrixLayouts.@assert_is_matrix($(__source__.file), $(__source__.line), $matrix); #
-        TanayLabUtilities.MatrixLayouts.@assert_matrix_size(
-            $(__source__.file),
-            $(__source__.line),
-            $matrix,
-            $n_rows,
-            $n_columns
-        ); #
-        TanayLabUtilities.MatrixLayouts.@check_matrix_layout(
+        :($(@__MODULE__).assert_is_matrix_check(
             $(string(__source__.file)),
             $(__source__.line),
+            $(string(matrix)),
             $matrix,
-            $axis
+        );
+        $(@__MODULE__).assert_matrix_size_check(
+            $(string(__source__.file)),
+            $(__source__.line),
+            $(string(matrix)),
+            $matrix,
+            $(string(n_rows)),
+            $n_rows,
+            $(string(n_columns)),
+            $n_columns,
+        );
+        $(@__MODULE__).check_efficient_action(
+            $(string(__source__.file)),
+            $(__source__.line),
+            $(string(matrix)),
+            $matrix,
+            $axis,
+        )),
+    )
+end
+
+# Assert that `value` is an `AbstractVector` and can be used in a `LoopVectorization` `@turbo` loop, with a friendly
+# error message (naming the value and briefly describing it) if either check fails.
+function check_turbo_vector_compatible(
+    source_file::AbstractString,
+    source_line::Integer,
+    value_name::AbstractString,
+    value::Any,
+)::Nothing
+    if !(value isa AbstractVector)
+        error("non-vector " * value_name * ": " * brief(value) * "\nin: " * source_file * ":" * string(source_line))
+    end
+    if !LoopVectorization.check_args(value)
+        error(
+            "not @turbo compatible: " *
+            value_name *
+            ": " *
+            brief(value) *
+            "\nin: " *
+            source_file *
+            ":" *
+            string(source_line),
+        )
+    end
+    return nothing
+end
+
+# As above for `AbstractMatrix`.
+function check_turbo_matrix_compatible(
+    source_file::AbstractString,
+    source_line::Integer,
+    value_name::AbstractString,
+    value::Any,
+)::Nothing
+    if !(value isa AbstractMatrix)
+        error("non-matrix " * value_name * ": " * brief(value) * "\nin: " * source_file * ":" * string(source_line))
+    end
+    if !LoopVectorization.check_args(value)
+        error(
+            "not @turbo compatible: " *
+            value_name *
+            ": " *
+            brief(value) *
+            "\nin: " *
+            source_file *
+            ":" *
+            string(source_line),
+        )
+    end
+    return nothing
+end
+
+"""
+    @check_turbo_vector(vector::Any)
+
+Assert that `vector` is an `AbstractVector` that can be used in a `LoopVectorization` `@turbo` loop (a strided array of a
+supported element type), with a friendly error message if not. Use this just before a `@turbo` loop instead of a
+verbose manual `LoopVectorization.check_args` assertion.
+
+```jldoctest
+vector = [1.0, 2.0, 3.0]
+@check_turbo_vector(vector)
+
+# output
+
+```
+"""
+macro check_turbo_vector(vector)
+    return esc(
+        :($(@__MODULE__).check_turbo_vector_compatible(
+            $(string(__source__.file)),
+            $(__source__.line),
+            $(string(vector)),
+            $vector,
+        )),
+    )
+end
+
+"""
+    @check_turbo_matrix(matrix::Any)
+
+Assert that `matrix` is an `AbstractMatrix` that can be used in a `LoopVectorization` `@turbo` loop, with a friendly
+error message if not. Use this just before a `@turbo` loop instead of a verbose manual `LoopVectorization.check_args`
+assertion.
+
+```jldoctest
+matrix = [1.0 2.0; 3.0 4.0]
+@check_turbo_matrix(matrix)
+
+# output
+
+```
+"""
+macro check_turbo_matrix(matrix)
+    return esc(
+        :($(@__MODULE__).check_turbo_matrix_compatible(
+            $(string(__source__.file)),
+            $(__source__.line),
+            $(string(matrix)),
+            $matrix,
         )),
     )
 end

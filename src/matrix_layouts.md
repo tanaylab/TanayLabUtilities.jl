@@ -16,6 +16,8 @@ TanayLabUtilities.MatrixLayouts.relayout!
 TanayLabUtilities.MatrixLayouts.relayout
 TanayLabUtilities.MatrixLayouts.@assert_vector
 TanayLabUtilities.MatrixLayouts.@assert_matrix
+TanayLabUtilities.MatrixLayouts.@check_turbo_vector
+TanayLabUtilities.MatrixLayouts.@check_turbo_matrix
 TanayLabUtilities.MatrixLayouts.GLOBAL_INEFFICIENT_ACTION_HANDLER
 ```
 

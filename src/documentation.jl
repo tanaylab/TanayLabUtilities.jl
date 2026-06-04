@@ -118,7 +118,7 @@ macro documented(definition)
     inner_definition[:name] = Symbol(function_name, :_compute)
     outer_definition[:body] = Expr(
         :call,
-        :(documented_wrapper($full_name, $(ExprTools.combinedef(inner_definition)))),
+        :($(@__MODULE__).documented_wrapper($full_name, $(ExprTools.combinedef(inner_definition)))),
         pass_args(false, get(outer_definition, :args, []))...,
         pass_args(true, get(outer_definition, :kwargs, []))...,
     )

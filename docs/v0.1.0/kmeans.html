@@ -121,6 +121,10 @@
 </a>
 </li>
 <li>
+<a class="tocitem" href="grouped_correlations.html">Grouped Correlations
+</a>
+</li>
+<li>
 <a class="tocitem" href="cross_validations.html">Cross Validations
 </a>
 </li>
@@ -375,6 +379,7 @@ KMeansBuffers(buffers::KMeansBuffers{T}; n_dims::Integer, k::Integer, n_points::
     k::Integer;
     centers::Maybe{AbstractMatrix{&lt;:AbstractFloat}} = ```nothing```,
     buffers::Maybe{Tuple{KMeansBuffers, KMeansBuffers}} = ```nothing```,
+    buffer_pool::Maybe{Channel} = ```nothing```,
     rounds::Integer = ```10```,
     min_size::Maybe{Int} = ```nothing```,
     rng::AbstractRNG = default_rng(),
@@ -388,8 +393,18 @@ KMeansBuffers(buffers::KMeansBuffers{T}; n_dims::Integer, k::Integer, n_points::
 </code>) and return the best results. This is needed because K-Means is a heuristic and tends to occasionally get stuck in a local minimum.
 </p>
 <p>If 
-<code>buffers
-</code> are specified, runs allocation-free using 
+<code>buffer_pool
+</code> is specified (a 
+<code>Channel{KMeansBuffers}
+</code> sized to the available concurrency), the rounds run in parallel via a nested 
+<a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.parallel_loop_with_rng">
+<code>parallel_loop_with_rng
+</code>
+</a>, which seeds each round&#39;s rng reproducibly from 
+<code>rng
+</code> and the round index. Each round takes a 
+<code>KMeansBuffers
+</code> from the pool, runs allocation-free 
 <a href="kmeans.html#TanayLabUtilities.KMeans.kmeans_in_buffers">
 <code>kmeans_in_buffers
 </code>
@@ -397,11 +412,23 @@ KMeansBuffers(buffers::KMeansBuffers{T}; n_dims::Integer, k::Integer, n_points::
 <a href="kmeans.html#TanayLabUtilities.KMeans.kmeans_in_buffers!">
 <code>kmeans_in_buffers!
 </code>
-</a>. Otherwise (the default), falls back to using 
+</a>, snapshots the result into owned arrays, and returns the buffer to the pool. The argmin over rounds picks the winner. Mutually exclusive with 
+<code>buffers
+</code>.
+</p>
+<p>If 
+<code>buffers
+</code> (the legacy swap pair) is specified, runs allocation-free serially: each round overwrites the 
+<code>current_buf
+</code> and swaps it with 
+<code>best_buf
+</code> when it improves.
+</p>
+<p>If neither is specified (the default), falls back to using 
 <code>Clustering.kmeans
 </code> / 
 <code>Clustering.kmeans!
-</code>.
+</code>, allocating per round.
 </p>
 <p>If 
 <code>min_size

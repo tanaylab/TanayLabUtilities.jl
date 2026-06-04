@@ -127,41 +127,22 @@ function do_logged(debug_group, _source_, _module_, definition)
     arg_names = [parse_arg(arg) for arg in get(outer_definition, :args, [])]
     inner_definition[:name] = Symbol(function_name, :_logged)
     function_name = string(function_name)
-    if startswith(full_name, "TanayLabUtilities.") || contains(full_name, ".TanayLabUtilities.")
-        outer_definition[:body] = Expr(  # UNTESTED
-            :call,
-            :(GenericLogging.logged_wrapper(
-                $debug_group,
-                $function_module,
-                $function_file,
-                $function_line,
-                $function_name,
-                $full_name,
-                $arg_names,
-                $has_result,
-                $(ExprTools.combinedef(inner_definition)),
-            )),
-            pass_args(false, get(outer_definition, :args, []))...,
-            pass_args(true, get(outer_definition, :kwargs, []))...,
-        )
-    else
-        outer_definition[:body] = Expr(
-            :call,
-            :(TanayLabUtilities.Logger.logged_wrapper(
-                $debug_group,
-                $function_module,
-                $function_file,
-                $function_line,
-                $function_name,
-                $full_name,
-                $arg_names,
-                $has_result,
-                $(ExprTools.combinedef(inner_definition)),
-            )),
-            pass_args(false, get(outer_definition, :args, []))...,
-            pass_args(true, get(outer_definition, :kwargs, []))...,
-        )
-    end
+    outer_definition[:body] = Expr(
+        :call,
+        :($(@__MODULE__).logged_wrapper(
+            $debug_group,
+            $function_module,
+            $function_file,
+            $function_line,
+            $function_name,
+            $full_name,
+            $arg_names,
+            $has_result,
+            $(ExprTools.combinedef(inner_definition)),
+        )),
+        pass_args(false, get(outer_definition, :args, []))...,
+        pass_args(true, get(outer_definition, :kwargs, []))...,
+    )
 
     return esc(ExprTools.combinedef(outer_definition))
 end

@@ -30,8 +30,10 @@ macro foreach_true_index(bits, index_var, body)
                 while word != 0
                     first_true_offset = trailing_zeros(word)
                     $(esc(index_var)) = base_index + first_true_offset + 1
-                    $(esc(body))
+                    # Clear the current bit before running the body so `continue` (and `break`) inside the body
+                    # behave naturally - if the body skipped this, `continue` would re-iterate on the same bit.
                     word &= word - one(UInt64)
+                    $(esc(body))
                 end
             end
         end
@@ -63,8 +65,10 @@ macro foreach_true_index_position(bits, index_var, position_var, body)
                     first_true_offset = trailing_zeros(word)
                     $(esc(index_var)) = base_index + first_true_offset + 1
                     $(esc(position_var)) += 1
-                    $(esc(body))
+                    # Clear the current bit before running the body so `continue` (and `break`) inside the body
+                    # behave naturally - if the body skipped this, `continue` would re-iterate on the same bit.
                     word &= word - one(UInt64)
+                    $(esc(body))
                 end
             end
         end

@@ -379,3 +379,302 @@ end
     @assert cached_ispath(target_real)
     @assert cached_ispath(target_alias)
 end
+
+@testset "grouped_correlations" begin
+    # Reference: per-series Pearson correlation between fixed and variable, averaged over series,
+    # using the same zero-variance-as-0 convention as the incremental code.
+    function reference_mean(fixed, variable)
+        n_series = size(fixed, 2)
+        return mean(zero_cor_between_vectors(fixed[:, s], variable[:, s]) for s in 1:n_series)
+    end
+
+    @testset "build + mean_correlation match per-series Pearson" begin
+        fixed = Float32[1 2 3; 3 1 4; 2 4 2; 5 1 3]
+        variable = Float32[2 1 4; 1 3 2; 4 2 1; 1 5 3]
+        for sizes in ([2, 2], [1, 3], [4], [1, 1, 1, 1])
+            grouped = GroupedSeriesCorrelations(fixed, variable, sizes)
+            @test mean_correlation(grouped) ≈ reference_mean(fixed, variable) atol = 1e-6
+        end
+    end
+
+    @testset "correlation_per_series! matches zero_cor per series" begin
+        fixed = Float32[1 2; 3 1; 2 4; 5 1]
+        variable = Float32[2 1; 1 3; 4 2; 1 5]
+        grouped = GroupedSeriesCorrelations(fixed, variable, [2, 2])
+        per_series = Vector{Float64}(undef, 2)
+        correlation_per_series!(grouped, per_series)
+        @test per_series[1] ≈ zero_cor_between_vectors(fixed[:, 1], variable[:, 1]) atol = 1e-6
+        @test per_series[2] ≈ zero_cor_between_vectors(fixed[:, 2], variable[:, 2]) atol = 1e-6
+    end
+
+    @testset "what-if is non-mutating and matches a fresh build" begin
+        fixed = Float32[1 2; 3 1; 2 4; 5 1]
+        variable = Float32[2 1; 1 3; 4 2; 1 5]
+        grouped = GroupedSeriesCorrelations(fixed, variable, [2, 2])
+        baseline = mean_correlation(grouped)
+        new_variable = Float32[5 5; 1 2]
+        score = mean_correlation_if_group_replaced(grouped, 1, new_variable)
+        @test mean_correlation(grouped) == baseline
+        replaced = copy(variable)
+        replaced[1:2, :] .= new_variable
+        @test score ≈ reference_mean(fixed, replaced) atol = 1e-6
+    end
+
+    @testset "replace_group! commits and matches a fresh build" begin
+        fixed = Float32[1 2; 3 1; 2 4; 5 1]
+        variable = Float32[2 1; 1 3; 4 2; 1 5]
+        grouped = GroupedSeriesCorrelations(fixed, variable, [2, 2])
+        new_variable = Float32[5 5; 1 2]
+        what_if_score = mean_correlation_if_group_replaced(grouped, 1, new_variable)
+        replace_group!(grouped, 1, new_variable)
+        @test mean_correlation(grouped) ≈ what_if_score atol = 1e-7
+        replaced = copy(variable)
+        replaced[1:2, :] .= new_variable
+        @test mean_correlation(grouped) ≈ reference_mean(fixed, replaced) atol = 1e-6
+    end
+
+    @testset "multi-group commit matches a fresh build" begin
+        n_points, n_series = 12, 5
+        sizes = [4, 4, 4]
+        fixed = rand(Float32, n_points, n_series)
+        variable = rand(Float32, n_points, n_series)
+        grouped = GroupedSeriesCorrelations(fixed, variable, sizes)
+        new_variable_1 = rand(Float32, 4, n_series)
+        new_variable_3 = rand(Float32, 4, n_series)
+        replace_group!(grouped, 1, new_variable_1)
+        replace_group!(grouped, 3, new_variable_3)
+        replaced = copy(variable)
+        replaced[1:4, :] .= new_variable_1
+        replaced[9:12, :] .= new_variable_3
+        @test mean_correlation(grouped) ≈ reference_mean(fixed, replaced) atol = 1e-5
+    end
+
+    @testset "zero-variance series returns 0" begin
+        constant_fixed = ones(Float32, 4, 2)
+        variable = Float32[2 1; 1 3; 4 2; 1 5]
+        @test mean_correlation(GroupedSeriesCorrelations(constant_fixed, variable, [2, 2])) == 0.0
+
+        fixed = Float32[2 1; 1 3; 4 2; 1 5]
+        constant_variable = ones(Float32, 4, 2)
+        @test mean_correlation(GroupedSeriesCorrelations(fixed, constant_variable, [2, 2])) == 0.0
+    end
+
+    @testset "wrong-size variable matrix is rejected" begin
+        fixed = Float32[1 2; 3 1; 2 4; 5 1]
+        variable = Float32[2 1; 1 3; 4 2; 1 5]
+        grouped = GroupedSeriesCorrelations(fixed, variable, [2, 2])
+        @test_throws ErrorException mean_correlation_if_group_replaced(grouped, 1, Float32[5 5 5; 1 2 3])
+        @test_throws ErrorException mean_correlation_if_group_replaced(grouped, 1, Float32[5 5; 1 2; 7 8])
+        @test_throws ErrorException replace_group!(grouped, 1, Float32[5 5 5; 1 2 3])
+        @test_throws ErrorException GroupedSeriesCorrelations(fixed, Float32[1 2; 3 4], [1, 1])
+    end
+
+    @testset "check_turbo macros reject non-turbo arrays" begin
+        @test_throws ErrorException @check_turbo_vector(["a", "b"])
+        @test_throws ErrorException @check_turbo_matrix(["a" "b"; "c" "d"])
+    end
+
+    @testset "check_turbo_vector rejects non-vector values" begin
+        @test_throws ErrorException @check_turbo_vector(Float32[1 2; 3 4])
+        @test_throws ErrorException @check_turbo_vector(42)
+    end
+
+    @testset "check_turbo_matrix rejects non-matrix values" begin
+        @test_throws ErrorException @check_turbo_matrix(Float32[1, 2, 3])
+        @test_throws ErrorException @check_turbo_matrix(42)
+    end
+
+    @testset "assert_matrix rejects non-matrix values" begin
+        @test_throws ErrorException @assert_matrix(Float32[1, 2, 3])
+        @test_throws ErrorException @assert_matrix(42)
+    end
+
+    @testset "mask: all-active default is identical to explicit trues" begin
+        fixed = Float32[1 2; 3 1; 2 4; 5 1]
+        variable = Float32[2 1; 1 3; 4 2; 1 5]
+        grouped_default = GroupedSeriesCorrelations(fixed, variable, [2, 2])
+        grouped_explicit = GroupedSeriesCorrelations(fixed, variable, [2, 2]; is_active_per_point = trues(4))
+        @test mean_correlation(grouped_default) == mean_correlation(grouped_explicit)
+    end
+
+    @testset "mask: build with mask matches per-series Pearson over active points only" begin
+        fixed = Float32[1 2 3; 3 1 4; 2 4 2; 5 1 3]
+        variable = Float32[2 1 4; 1 3 2; 4 2 1; 1 5 3]
+        is_active = Bool[true, false, true, true]
+        grouped = GroupedSeriesCorrelations(fixed, variable, [2, 2]; is_active_per_point = is_active)
+        active_fixed = fixed[is_active, :]
+        active_variable = variable[is_active, :]
+        @test mean_correlation(grouped) ≈ reference_mean(active_fixed, active_variable) atol = 1e-6
+    end
+
+    @testset "mask: replace_group! with new mask updates totals + active count" begin
+        fixed = Float32[1 2; 3 1; 2 4; 5 1]
+        variable = Float32[2 1; 1 3; 4 2; 1 5]
+        grouped = GroupedSeriesCorrelations(fixed, variable, [2, 2])
+        new_variable = Float32[5 5; 1 2]
+        new_mask = Bool[false, true]
+        replace_group!(grouped, 1, new_variable, new_mask)
+        replaced_variable = copy(variable)
+        replaced_variable[1:2, :] .= new_variable
+        is_active_now = Bool[false, true, true, true]
+        @test mean_correlation(grouped) ≈ reference_mean(fixed[is_active_now, :], replaced_variable[is_active_now, :]) atol =
+            1e-5
+        @test grouped.is_active_per_point == is_active_now
+        @test grouped.n_active_per_group == [1, 2]
+    end
+
+    @testset "mask: what-if with new mask is non-mutating and matches the commit" begin
+        fixed = Float32[1 2; 3 1; 2 4; 5 1]
+        variable = Float32[2 1; 1 3; 4 2; 1 5]
+        grouped = GroupedSeriesCorrelations(fixed, variable, [2, 2])
+        baseline = mean_correlation(grouped)
+        baseline_mask = copy(grouped.is_active_per_point)
+        new_variable = Float32[5 5; 1 2]
+        new_mask = Bool[false, true]
+        score_what_if = mean_correlation_if_group_replaced(grouped, 1, new_variable, new_mask)
+        @test mean_correlation(grouped) == baseline
+        @test grouped.is_active_per_point == baseline_mask
+        replace_group!(grouped, 1, new_variable, new_mask)
+        @test mean_correlation(grouped) ≈ score_what_if atol = 1e-7
+    end
+
+    @testset "mask: all points masked off returns 0" begin
+        fixed = Float32[1 2; 3 1; 2 4; 5 1]
+        variable = Float32[2 1; 1 3; 4 2; 1 5]
+        is_active = Bool[false, false, false, false]
+        grouped = GroupedSeriesCorrelations(fixed, variable, [2, 2]; is_active_per_point = is_active)
+        @test mean_correlation(grouped) == 0.0
+    end
+
+    @testset "mask: flipping points back to active restores their fixed-side contribution" begin
+        fixed = Float32[1 2; 3 1; 2 4; 5 1]
+        variable = Float32[2 1; 1 3; 4 2; 1 5]
+        baseline = GroupedSeriesCorrelations(fixed, variable, [2, 2])
+        baseline_mean = mean_correlation(baseline)
+        # Mask a point off, then mask it back on with the original variable values - should round-trip.
+        grouped = GroupedSeriesCorrelations(fixed, variable, [2, 2])
+        replace_group!(grouped, 1, variable[1:2, :], Bool[false, true])
+        replace_group!(grouped, 1, variable[1:2, :], Bool[true, true])
+        @test mean_correlation(grouped) ≈ baseline_mean atol = 1e-5
+        @test grouped.n_active_per_group == [2, 2]
+    end
+
+    @testset "indirect-gather: replace_group! and what-if match the direct variant" begin
+        fixed = Float32[1 2; 3 1; 2 4; 5 1]
+        variable = Float32[2 1; 1 3; 4 2; 1 5]
+        # The indirect-gather variants take a wider source matrix indexed via a per-point row map and a per-series
+        # column map. Build a wider source whose (row_for_point, col_for_series) cells hold the same per-point/per-
+        # series values as the direct call would use; both variants must then produce the same result.
+        wide_variable = Float32[
+            0   0   0   0
+            5   0   5   0
+            0   0   0   0
+            1   0   2   0
+        ]
+        wide_is_active = Bool[true, true, false, true]  # rows 2 and 4 active; row 3 disabled
+        source_index_per_point = [2, 4]            # group 1's two points pull from wide rows 2 and 4
+        series_position_per_series = [1, 3]        # series 1 and 2 read wide columns 1 and 3
+        is_active_per_group_point = wide_is_active[source_index_per_point]
+
+        # What-if against a reference built from the direct 4-arg variant.
+        reference = GroupedSeriesCorrelations(fixed, variable, [2, 2])
+        direct_new = Float32[5 5; 1 2]
+        direct_what_if = mean_correlation_if_group_replaced(reference, 1, direct_new, is_active_per_group_point)
+
+        indirect = GroupedSeriesCorrelations(fixed, variable, [2, 2])
+        indirect_what_if = mean_correlation_if_group_replaced(
+            indirect,
+            1,
+            wide_variable,
+            wide_is_active,
+            source_index_per_point,
+            series_position_per_series,
+        )
+        @test indirect_what_if ≈ direct_what_if atol = 1e-7
+        @test mean_correlation(indirect) == mean_correlation(reference)  # non-mutating
+
+        # Commit via the indirect-gather variant; result must match a direct commit.
+        replace_group!(reference, 1, direct_new, is_active_per_group_point)
+        replace_group!(indirect, 1, wide_variable, wide_is_active, source_index_per_point, series_position_per_series)
+        @test mean_correlation(indirect) ≈ mean_correlation(reference) atol = 1e-7
+        @test indirect.is_active_per_point == reference.is_active_per_point
+        @test indirect.n_active_per_group == reference.n_active_per_group
+    end
+end
+
+@testset "parallel_loops" begin
+    using ProgressMeter
+
+    @testset "weights derives heaviest-first order and validates inputs" begin
+        weights = [3, 1, 5, 2, 4]
+        # `:serial` deterministically iterates in derived order, so we observe the dispatch sequence.
+        visits = Int[]
+        parallel_loop_wo_rng(1:5; weights, policy = :serial) do index
+            return push!(visits, index)
+        end
+        @test visits == sortperm(weights; rev = true)
+        # Length mismatch on weights.
+        @test_throws AssertionError parallel_loop_wo_rng(_ -> nothing, 1:5; weights = [1, 2, 3])
+    end
+
+    @testset "explicit order kwarg is validated and respected" begin
+        explicit_order = [5, 4, 3, 2, 1]
+        visits = Int[]
+        parallel_loop_wo_rng(1:5; order = copy(explicit_order), policy = :serial) do index
+            return push!(visits, index)
+        end
+        @test visits == explicit_order
+        # Length mismatch on order.
+        @test_throws AssertionError parallel_loop_wo_rng(_ -> nothing, 1:5; order = [1, 2, 3])
+    end
+
+    @testset ":static_greedy degrades to :static when work fits in one chunk" begin
+        # Smaller than `nthreads()` items: the `:static_greedy → :static` path takes over.
+        n_items = max(1, Threads.nthreads() ÷ 2)
+        results = zeros(Int, n_items)
+        parallel_loop_wo_rng(1:n_items; policy = :static_greedy) do index
+            results[index] = index
+            return nothing
+        end
+        @test results == collect(1:n_items)
+    end
+
+    @testset ":static with order shuffles via round-robin" begin
+        # `:static` + `order` triggers `round_robin_for_static_chunks!` on a copy of the user's order.
+        weights = collect(10:-1:1)
+        results = zeros(Int, length(weights))
+        parallel_loop_wo_rng(1:length(weights); policy = :static, order = sortperm(weights; rev = true)) do index
+            results[index] = index
+            return nothing
+        end
+        @test results == collect(1:length(weights))
+    end
+
+    @testset "progress advances one per iteration when no weights or chunk are given" begin
+        n_items = 20
+        progress = Progress(n_items)
+        parallel_loop_wo_rng(1:n_items; policy = :serial, progress) do _
+            return nothing
+        end
+        @test progress.counter == n_items
+    end
+
+    @testset "progress weighted step matches sum(weights)" begin
+        weights = [3, 1, 5, 2, 4]
+        progress = Progress(sum(weights))
+        parallel_loop_wo_rng(1:length(weights); weights, policy = :serial, progress) do _
+            return nothing
+        end
+        @test progress.counter == sum(weights)
+    end
+
+    @testset "progress_chunk throttles to one update per chunk" begin
+        n_items = 25
+        progress_chunk = 10
+        progress = Progress(n_items)
+        parallel_loop_wo_rng(1:n_items; policy = :serial, progress, progress_chunk) do _
+            return nothing
+        end
+        @test progress.counter == n_items
+    end
+end

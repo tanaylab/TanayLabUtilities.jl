@@ -51,6 +51,7 @@ makedocs(;
         "read_only_arrays.md",
         "downsample.md",
         "zero_correlation.md",
+        "grouped_correlations.md",
         "chi_squared.md",
         "sparse_statistics.md",
         "cross_validations.md",
