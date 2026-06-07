@@ -19,6 +19,7 @@ built-in functions (for example, copying arrays). Sigh.
 """
 module MatrixFormats
 
+export base_array
 export bestify
 export colptr
 export copy_array
@@ -1785,6 +1786,23 @@ function embed_sparse_matrix_in_sparse_matrix(
     end
 
     return SparseMatrixCSC(n_rows, n_columns, new_colptr, new_rowval, matrix.nzval)
+end
+
+"""
+    base_array(array::AbstractArray)::AbstractArray
+
+Return the simple base array of an wrapped array, as long as this array is index by the same integer indices.
+"""
+function base_array(array::AbstractArray)::AbstractArray
+    return array
+end
+
+function base_array(array::SparseArrays.ReadOnly)::AbstractArray
+    return base_array(parent(array))
+end
+
+function base_array(array::NamedArray)::AbstractArray
+    return base_array(array.array)
 end
 
 end  # module
