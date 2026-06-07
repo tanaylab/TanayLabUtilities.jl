@@ -85,7 +85,7 @@
 </g>
 </g>
 <!-- MatrixFormats&#45;&gt;SparseStatistics -->
-<g id="edge4" class="edge">
+<g id="edge5" class="edge">
 <title>MatrixFormats&#45;&gt;SparseStatistics</title>
 <path fill="none" stroke="#000000" d="M383.3122,-109.9197C400.2434,-101.2973 425.3492,-88.512 444.6142,-78.7011"/>
 <polygon fill="#000000" stroke="#000000" points="446.2183,-81.812 453.541,-74.155 443.0417,-75.5742 446.2183,-81.812"/>
@@ -100,7 +100,7 @@
 </g>
 </g>
 <!-- MatrixFormats&#45;&gt;KMeans -->
-<g id="edge12" class="edge">
+<g id="edge13" class="edge">
 <title>MatrixFormats&#45;&gt;KMeans</title>
 <path fill="none" stroke="#000000" d="M409.1456,-109.9825C458.7566,-99.4065 538.0087,-82.5117 584.6803,-72.5623"/>
 <polygon fill="#000000" stroke="#000000" points="585.6332,-75.9379 594.6837,-70.4298 584.1737,-69.0918 585.6332,-75.9379"/>
@@ -130,7 +130,7 @@
 </g>
 </g>
 <!-- MatrixLayouts&#45;&gt;ParallelDistances -->
-<g id="edge6" class="edge">
+<g id="edge7" class="edge">
 <title>MatrixLayouts&#45;&gt;ParallelDistances</title>
 <path fill="none" stroke="#000000" d="M404.0477,-164.9197C418.6702,-156.4541 440.2241,-143.9755 457.0415,-134.2391"/>
 <polygon fill="#000000" stroke="#000000" points="458.9225,-137.1944 465.8231,-129.155 455.4152,-131.1364 458.9225,-137.1944"/>
@@ -223,13 +223,13 @@
 </g>
 </g>
 <!-- ParallelLoops&#45;&gt;SparseStatistics -->
-<g id="edge5" class="edge">
+<g id="edge4" class="edge">
 <title>ParallelLoops&#45;&gt;SparseStatistics</title>
 <path fill="none" stroke="#000000" d="M615.8236,-164.6967C622.4266,-151.0542 631.443,-126.1987 619.5,-110 608.8127,-95.5045 568.6094,-83.6571 532.9441,-75.6891"/>
 <polygon fill="#000000" stroke="#000000" points="533.5472,-72.2386 523.0333,-73.5456 532.0674,-79.0805 533.5472,-72.2386"/>
 </g>
 <!-- ParallelLoops&#45;&gt;ParallelDistances -->
-<g id="edge7" class="edge">
+<g id="edge6" class="edge">
 <title>ParallelLoops&#45;&gt;ParallelDistances</title>
 <path fill="none" stroke="#000000" d="M588.2041,-164.9197C567.7726,-156.1406 537.2973,-143.0457 514.3113,-133.1689"/>
 <polygon fill="#000000" stroke="#000000" points="515.5394,-129.8872 504.9699,-129.155 512.7758,-136.3186 515.5394,-129.8872"/>
@@ -250,7 +250,7 @@
 <polygon fill="#000000" stroke="#000000" points="595.1658,-136.6646 587.5099,-129.3408 588.9277,-139.8404 595.1658,-136.6646"/>
 </g>
 <!-- ParallelLoops&#45;&gt;KMeans -->
-<g id="edge13" class="edge">
+<g id="edge12" class="edge">
 <title>ParallelLoops&#45;&gt;KMeans</title>
 <path fill="none" stroke="#000000" d="M623.5248,-164.9505C633.5741,-156.7101 646.7064,-143.818 652.5,-129 658.8451,-112.7714 649.0831,-94.8387 639.0414,-82.0101"/>
 <polygon fill="#000000" stroke="#000000" points="641.7089,-79.744 632.5687,-74.3861 636.3726,-84.2745 641.7089,-79.744"/>
@@ -265,7 +265,7 @@
 </g>
 </g>
 <!-- Documentation&#45;&gt;MatrixLayouts -->
-<g id="edge17" class="edge">
+<g id="edge16" class="edge">
 <title>Documentation&#45;&gt;MatrixLayouts</title>
 <path fill="none" stroke="#000000" d="M508.8946,-219.9197C485.116,-211.023 449.4917,-197.6942 422.9774,-187.7739"/>
 <polygon fill="#000000" stroke="#000000" points="423.8977,-184.3813 413.3052,-184.155 421.4446,-190.9374 423.8977,-184.3813"/>
@@ -349,7 +349,7 @@
 </g>
 </g>
 <!-- ReadOnlyArrays&#45;&gt;MatrixLayouts -->
-<g id="edge18" class="edge">
+<g id="edge17" class="edge">
 <title>ReadOnlyArrays&#45;&gt;MatrixLayouts</title>
 <path fill="none" stroke="#000000" d="M347.0351,-219.9197C353.9063,-212.2072 363.7449,-201.1639 372.0001,-191.8978"/>
 <polygon fill="#000000" stroke="#000000" points="374.6939,-194.1357 378.7327,-184.3408 369.4673,-189.4792 374.6939,-194.1357"/>
@@ -373,7 +373,7 @@
 </g>
 </g>
 <!-- Handlers&#45;&gt;MatrixLayouts -->
-<g id="edge16" class="edge">
+<g id="edge18" class="edge">
 <title>Handlers&#45;&gt;MatrixLayouts</title>
 <path fill="none" stroke="#000000" d="M429.6165,-219.9197C422.4648,-212.2072 412.2247,-201.1639 403.6325,-191.8978"/>
 <polygon fill="#000000" stroke="#000000" points="405.991,-189.2937 396.6251,-184.3408 400.8581,-194.0533 405.991,-189.2937"/>

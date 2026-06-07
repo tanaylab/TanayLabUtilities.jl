@@ -678,3 +678,51 @@ end
         @test progress.counter == n_items
     end
 end
+
+@testset "parallel_distances" begin
+    using Distances
+
+    @testset "parallel_colwise matches colwise for every policy" begin
+        m1 = rand(10, 20)
+        m2 = rand(10, 20)
+        expected = colwise(Euclidean(), m1, m2)
+        for policy in (:serial, :greedy, :dynamic, :static)
+            @test parallel_colwise(Euclidean(), m1, m2; policy) ≈ expected atol = 1e-6
+        end
+    end
+
+    @testset "parallel_colwise works with non-Euclidean distances" begin
+        m1 = rand(8, 15)
+        m2 = rand(8, 15)
+        for distance in (Cityblock(), Chebyshev(), CosineDist())
+            expected = colwise(distance, m1, m2)
+            @test parallel_colwise(distance, m1, m2; policy = :static) ≈ expected atol = 1e-6
+        end
+    end
+
+    @testset "parallel_colwise handles a single column" begin
+        m1 = reshape(collect(1.0:5.0), 5, 1)
+        m2 = reshape(collect(2.0:6.0), 5, 1)
+        expected = colwise(Euclidean(), m1, m2)
+        @test parallel_colwise(Euclidean(), m1, m2; policy = :greedy) ≈ expected atol = 1e-6
+    end
+
+    @testset "parallel_colwise preserves element type" begin
+        m1 = rand(Float32, 6, 12)
+        m2 = rand(Float32, 6, 12)
+        result = parallel_colwise(Euclidean(), m1, m2; policy = :greedy)
+        @test eltype(result) === Float32
+        @test result ≈ colwise(Euclidean(), m1, m2) atol = 1.0f-5
+    end
+
+    @testset "parallel_colwise rejects invalid policy" begin
+        m1 = rand(4, 6)
+        m2 = rand(4, 6)
+        @test_throws AssertionError parallel_colwise(Euclidean(), m1, m2; policy = :bogus)
+    end
+
+    @testset "parallel_colwise rejects mismatched matrix sizes" begin
+        @test_throws AssertionError parallel_colwise(Euclidean(), rand(5, 4), rand(5, 6); policy = :greedy)
+        @test_throws AssertionError parallel_colwise(Euclidean(), rand(5, 4), rand(7, 4); policy = :greedy)
+    end
+end

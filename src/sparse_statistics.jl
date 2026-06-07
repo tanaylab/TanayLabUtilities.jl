@@ -768,7 +768,7 @@ function sparse_quantile_from_buffer!(
     return lower_value + (fractional_position - lower_position) * (upper_value - lower_value)
 end
 
-@inline function buffer_index_for_conceptual_position(  # ONLY SEEMS UNTESTED
+@inline function buffer_index_for_conceptual_position(
     position::Integer,
     n_negative::Integer,
     n_zero_total::Integer,
@@ -783,7 +783,7 @@ end
     end
 end
 
-function value_at_conceptual_position!(  # ONLY SEEMS UNTESTED
+function value_at_conceptual_position!(
     buffer::AbstractVector{<:AbstractFloat},
     position::Integer,
     n_in_buffer::Integer,

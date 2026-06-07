@@ -175,7 +175,7 @@ end
 
 # Pearson correlation reconstructed from the sums and the effective active-point count. Returns 0 for an undefined case
 # (fewer than 2 active points or zero variance), matching `zero_cor_between_vectors`.
-function correlation_from_sums(  # ONLY SEEMS UNTESTED
+function correlation_from_sums(
     sum_fixed::Float64,
     sum_squared_fixed::Float64,
     sum_variable::Float64,
@@ -197,7 +197,7 @@ end
 
 # Sums (Σy, Σy², Σx·y) over a group's points for one series, with each point's contribution multiplied by the mask
 # (inactive points contribute 0). Accumulated in Float32, no allocation.
-@inline function masked_group_sums(  # ONLY SEEMS UNTESTED
+@inline function masked_group_sums(
     fixed_per_point_per_series::AbstractMatrix{<:Real},
     fixed_first_point::Integer,
     variable_per_point_per_series::AbstractMatrix{<:Real},
@@ -225,7 +225,7 @@ end
 # coming from points whose activity flipped, plus the new variable-side sums `(sum_y, sum_yy, sum_xy)` over the points
 # that are active under the new mask. Mask transitions are encoded branchlessly as `transition = new - old`: positive
 # for inactive→active, negative for active→inactive, zero where the mask didn't move.
-@inline function masked_replace_sums(  # ONLY SEEMS UNTESTED
+@inline function masked_replace_sums(
     fixed_per_point_per_series::AbstractMatrix{<:Real},
     fixed_first_point::Integer,
     variable_per_point_per_series::AbstractMatrix{<:Real},
@@ -262,7 +262,7 @@ end
 # point ordering `source_index_per_point` mapping the group's canonical layout to that shared axis. Lets the caller
 # skip materializing a per-group `(n_group_points × n_series)` scratch matrix - the gather happens inline inside the
 # @turbo loop via `source_index_per_point[…]`.
-@inline function masked_replace_sums_indirect(  # ONLY SEEMS UNTESTED
+@inline function masked_replace_sums_indirect(
     fixed_per_point_per_series::AbstractMatrix{<:Real},
     fixed_first_point::Integer,
     variable_per_source_per_series::AbstractMatrix{<:Real},
@@ -306,7 +306,7 @@ end
 end
 
 # Active count in a slice of a per-point mask.
-@inline function count_active_in_group(  # ONLY SEEMS UNTESTED
+@inline function count_active_in_group(
     is_active_per_point::AbstractVector{Bool},
     first_point::Integer,
     n_group_points::Integer,

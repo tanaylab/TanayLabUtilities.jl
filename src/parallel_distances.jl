@@ -273,8 +273,9 @@ d = colwise(Euclidean(), m1, m2)
 
 # output
 
+```
 """
-function parallel_colwise(  # ONLY SEEMS UNTESTED
+function parallel_colwise(
     distance,
     X::AbstractMatrix,
     Y::AbstractMatrix;
