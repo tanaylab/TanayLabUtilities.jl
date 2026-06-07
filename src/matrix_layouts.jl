@@ -48,6 +48,8 @@ using ..Brief
 using ..FlameTime
 using ..Handlers
 using ..ReadOnlyArrays
+
+using DiskArrays
 using Distributed
 using LinearAlgebra
 using LoopVectorization
@@ -193,6 +195,10 @@ end
 
 function major_axis(matrix::SubArray)::Maybe{Int8}
     return major_axis(matrix.parent)
+end
+
+function major_axis(matrix::DiskArrays.CachedDiskArray)::Maybe{Int8}
+    return major_axis(matrix.parent)  # UNTESTED
 end
 
 """

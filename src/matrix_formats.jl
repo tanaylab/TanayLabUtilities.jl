@@ -399,7 +399,7 @@ function copy_array(
     eltype::Maybe{Type} = nothing,
     indtype::Maybe{Type} = nothing,
 )::PermutedDimsArray where {T, P, IP, A}
-    return PermutedDimsArray(copy_array(parent(matrix); eltype, indtype), P)
+    return PermutedDimsArray(copy_array(parent(matrix); eltype, indtype), P)  # NOJET
 end
 
 function copy_array(matrix::Transpose; eltype::Maybe{Type} = nothing, indtype::Maybe{Type} = nothing)::Transpose
@@ -1803,6 +1803,14 @@ end
 
 function base_array(array::NamedArray)::AbstractArray
     return base_array(array.array)
+end
+
+function base_array(array::SubArray)::AbstractArray
+    parent_base = base_array(parent(array))
+    if parent_base === parent(array)
+        return array
+    end
+    return view(parent_base, parentindices(array)...)
 end
 
 end  # module

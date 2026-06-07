@@ -136,7 +136,7 @@ function read_only_array(array::PermutedDimsArray{T, 2, P, IP, A})::PermutedDims
     if read_only_parent_array === parent_array
         return array
     else
-        return PermutedDimsArray(read_only_parent_array, P)
+        return PermutedDimsArray(read_only_parent_array, P)  # NOJET
     end
 end
 
@@ -258,7 +258,7 @@ function mutable_array(array::PermutedDimsArray{T, 2, P, IP, A})::PermutedDimsAr
     if mutable_parent_array === parent_array
         return array
     else
-        return PermutedDimsArray(mutable_parent_array, P)
+        return PermutedDimsArray(mutable_parent_array, P)  # NOJET
     end
 end
 
