@@ -198,7 +198,7 @@ function major_axis(matrix::SubArray)::Maybe{Int8}
 end
 
 function major_axis(matrix::DiskArrays.CachedDiskArray)::Maybe{Int8}
-    return major_axis(matrix.parent)  # UNTESTED
+    return major_axis(matrix.parent)
 end
 
 """

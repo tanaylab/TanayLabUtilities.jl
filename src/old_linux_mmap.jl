@@ -29,19 +29,18 @@ IS_OLD_LINUX_KERNEL = false
 
 function __init__()::Nothing
     global IS_OLD_LINUX_KERNEL
-    @static if Sys.islinux()
+    @static if !Sys.islinux()
+        IS_OLD_LINUX_KERNEL = false  # FLAKY TESTED
+    else
         version_string = read("/proc/version", String)  # FLAKY TESTED
         parts = split(version_string, " ")  # FLAKY TESTED
         parts = tuple(parse.(Int, split(parts[3], ".")[1:2])...)  # FLAKY TESTED
         IS_OLD_LINUX_KERNEL = parts <= (5, 7)  # FLAKY TESTED
-    else
-        IS_OLD_LINUX_KERNEL = false  # FLAKY TESTED
-    end
-
-    if IS_OLD_LINUX_KERNEL
-        @info "Old linux kernel, will pre-populate mmap into RAM disk: $(version_string)"  # FLAKY TESTED
-    else
-        @debug "New linux kernel, will not pre-populate mmap into RAM disk: $(version_string)" _group = :tlu_env  # FLAKY TESTED
+        if IS_OLD_LINUX_KERNEL  # FLAKY TESTED
+            @info "Old linux kernel, will pre-populate mmap into RAM disk: $(version_string)"  # FLAKY TESTED
+        else
+            @debug "New linux kernel, will not pre-populate mmap into RAM disk: $(version_string)" _group = :tlu_env  # FLAKY TESTED
+        end
     end
 
     return nothing
