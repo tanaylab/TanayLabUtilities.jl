@@ -20,7 +20,7 @@ using ..Types
     parallel_pairwise(
         distance, X[, Y];
         dims::Integer,
-        policy::Symbol = :greedy,
+        policy::Symbol = :greedy_sticky,
         progress::Maybe{Progress} = nothing
         progress_chunk::Maybe{Integer} = nothing,
     )::AbstractMatrix
@@ -43,12 +43,14 @@ d = pairwise(Euclidean(), m1; dims = 2)
 @assert maximum(abs.(d .- parallel_pairwise(Euclidean(), m1; dims = 2, policy = :greedy))) < 1e-6
 @assert maximum(abs.(d .- parallel_pairwise(Euclidean(), m1; dims = 2, policy = :dynamic))) < 1e-6
 @assert maximum(abs.(d .- parallel_pairwise(Euclidean(), m1; dims = 2, policy = :static))) < 1e-6
+@assert maximum(abs.(d .- parallel_pairwise(Euclidean(), m1; dims = 2, policy = :greedy_sticky))) < 1e-6
 
 d = pairwise(Euclidean(), m1, m2; dims = 2)
 @assert maximum(abs.(d .- parallel_pairwise(Euclidean(), m1, m2; dims = 2, policy = :serial))) < 1e-6
 @assert maximum(abs.(d .- parallel_pairwise(Euclidean(), m1, m2; dims = 2, policy = :greedy))) < 1e-6
 @assert maximum(abs.(d .- parallel_pairwise(Euclidean(), m1, m2; dims = 2, policy = :dynamic))) < 1e-6
 @assert maximum(abs.(d .- parallel_pairwise(Euclidean(), m1, m2; dims = 2, policy = :static))) < 1e-6
+@assert maximum(abs.(d .- parallel_pairwise(Euclidean(), m1, m2; dims = 2, policy = :greedy_sticky))) < 1e-6
 
 # output
 
@@ -59,7 +61,7 @@ function parallel_pairwise(
     X::AbstractMatrix,
     Y::AbstractMatrix;
     dims::Integer,
-    policy::Symbol = :greedy,
+    policy::Symbol = :greedy_sticky,
     progress::Maybe{Progress} = nothing,
     progress_chunk::Maybe{Integer} = nothing,
 )::AbstractMatrix
@@ -68,7 +70,7 @@ function parallel_pairwise(
         return flipped(parallel_pairwise(distance, flipped(X), flipped(Y); dims = 2, policy, progress, progress_chunk))  # UNTESTED
     end
 
-    @assert policy in (:serial, :greedy, :dynamic, :static)
+    @assert policy in (:serial, :greedy, :dynamic, :static, :greedy_sticky)
     if policy == :serial
         return flame_timed("pairwise." * string(nameof(typeof(distance)))) do
             return pairwise(distance, X, Y; dims)
@@ -99,7 +101,7 @@ function parallel_pairwise(
     distance,
     X::AbstractMatrix;
     dims::Integer,
-    policy::Symbol = :greedy,
+    policy::Symbol = :greedy_sticky,
     progress::Maybe{Progress} = nothing,
     progress_chunk::Maybe{Integer} = nothing,
 )::AbstractMatrix
@@ -108,7 +110,7 @@ function parallel_pairwise(
         return flipped(parallel_pairwise(distance, flipped(X); dims = 2, policy))  # UNTESTED
     end
 
-    @assert policy in (:serial, :greedy, :dynamic, :static)
+    @assert policy in (:serial, :greedy, :dynamic, :static, :greedy_sticky)
     if policy == :serial
         return flame_timed("pairwise." * string(nameof(typeof(distance)))) do
             return pairwise(distance, X; dims)
@@ -184,7 +186,7 @@ function parallel_pairwise_closest(
     dims::Integer,
     closest_index::Maybe{AbstractVector{<:Integer}} = nothing,
     closest_distance::Maybe{AbstractVector} = nothing,
-    policy::Symbol = :greedy,
+    policy::Symbol = :greedy_sticky,
     progress::Maybe{Progress} = nothing,
     progress_chunk::Maybe{Integer} = nothing,
 )::Nothing
@@ -248,7 +250,7 @@ end
 """
     parallel_colwise(
         distance, X, Y;
-        policy::Symbol = :greedy,
+        policy::Symbol = :greedy_sticky,
         progress::Maybe{Progress} = nothing,
     )::AbstractVector
 
@@ -270,6 +272,7 @@ d = colwise(Euclidean(), m1, m2)
 @assert maximum(abs.(d .- parallel_colwise(Euclidean(), m1, m2; policy = :greedy))) < 1e-6
 @assert maximum(abs.(d .- parallel_colwise(Euclidean(), m1, m2; policy = :dynamic))) < 1e-6
 @assert maximum(abs.(d .- parallel_colwise(Euclidean(), m1, m2; policy = :static))) < 1e-6
+@assert maximum(abs.(d .- parallel_colwise(Euclidean(), m1, m2; policy = :greedy_sticky))) < 1e-6
 
 # output
 
@@ -279,10 +282,10 @@ function parallel_colwise(
     distance,
     X::AbstractMatrix,
     Y::AbstractMatrix;
-    policy::Symbol = :greedy,
+    policy::Symbol = :greedy_sticky,
     progress::Maybe{Progress} = nothing,
 )::AbstractVector
-    @assert policy in (:serial, :greedy, :dynamic, :static);
+    @assert policy in (:serial, :greedy, :dynamic, :static, :greedy_sticky);
     if policy == :serial
         return flame_timed("colwise." * string(nameof(typeof(distance)))) do
             return colwise(distance, X, Y)

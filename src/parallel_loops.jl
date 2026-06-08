@@ -86,7 +86,7 @@ end
         body::Function,
         indices::AbstractVector{<:Integer};
         name::AbstractString = ".loop",
-        policy::Symbol = :greedy,
+        policy::Symbol = :greedy_sticky,
         order::Maybe{AbstractVector{<:Integer}} = nothing,
         weights::Maybe{AbstractVector{<:Integer}} = nothing,
         nested::Bool = false,
@@ -95,39 +95,39 @@ end
 
 Run the `body` in parallel, passing it the iteration `index`. The `policy` is one of:
 
-  * `:greedy`, `:dynamic`, `:static` - passed straight to `@threads`. Note that `:greedy` and `:dynamic` create
-    *non-sticky* tasks that may migrate across threads at yield points, so `threadid()`-indexed scratch is unsafe
-    under those.
-  * `:static_greedy` - `nthreads()` sticky worker tasks spawned via `@threads :static for _ in 1:nthreads()`, each
+  * `:greedy_sticky` - `nthreads()` sticky worker tasks spawned via `@threads :static for _ in 1:nthreads()`, each
     pulling the next index position from an `Atomic{Int}` counter. Combines the dynamic load balancing of `:greedy`
     with the threadid stability of `:static`: tasks never migrate, so `threadid()`-indexed scratch is safe inside the
     body. Pair with a heaviest-first `order` (or `weights`) to attack the tail-latency problem - heavy items dispatch
     first, light items fill the tail.
+  * `:greedy`, `:dynamic`, `:static` - passed straight to `@threads`. Note that `:greedy` and `:dynamic` create
+    *non-sticky* tasks that may migrate across threads at yield points, so `threadid()`-indexed scratch is unsafe
+    under those.
   * `:serial` - run the loop on the calling thread (useful for debugging).
 
 If `order` is specified, it must be a permutation of the *positions* of `indices` - that is, a length-`length(indices)`
 vector whose values are a permutation of `1:length(indices)`. The body still receives the corresponding
 `indices[order[k]]` value at each step k; only the visit order is altered. Typical usage is heaviest-work-first (so the
 longest items dispatch as early as possible): pass `sortperm(weight_per_index; rev = true)`. Under `:greedy`,
-`:dynamic`, `:static_greedy`, or `:serial`, the iteration visits the positions in `order` as given. Under `:static`,
+`:dynamic`, `:greedy_sticky`, or `:serial`, the iteration visits the positions in `order` as given. Under `:static`,
 `order` is reshuffled in place in a round-robin fashion each contiguous chunk gets one item from each weight quantile,
 balancing the static partition. Mutates the caller's `order` array.
 
 If `weights` is specified, it must be a length-`length(indices)` vector of non-negative integers giving the estimated
-work for each position in `indices`. When `order` is not given, `weights` derives it as `sortperm(weights; rev = true)`
-so the heaviest items dispatch first. When `progress` is also given, each iteration advances the bar by the visited
-position's `weights` entry instead of by 1; the caller is responsible for sizing the progress total to `sum(weights)`
-so the percentage reflects work done rather than items done. `weights` and `order` are independent and may be combined:
-pass both to keep an explicit visit order while reporting work-weighted progress. Mutually exclusive with
-`progress_chunk` (the unweighted-throttling alternative).
+work for each position in `indices`. When `order` is not given, `weights` computes it to be `sortperm(weights; rev =
+true)` so the heaviest items dispatch first. When `progress` is also given, each iteration advances the bar by the
+visited position's `weights` entry instead of by 1; the caller is responsible for sizing the progress total to
+`sum(weights)` so the percentage reflects work done rather than items done. `weights` and `order` are independent and
+may be combined: pass both to keep an explicit visit order while reporting work-weighted progress. Mutually exclusive
+with `progress_chunk` (the unweighted-throttling alternative).
 
-If this is invoked from inside another parallel loop and `nested` is `false` (the default), `policy` is ignored and
-the loop is executed serially. This makes functions safe to compose: parallel at the top level, serial when called
-from inside another parallel loop. Pass `nested = true` to opt out of the safety demotion - the loop then uses
-`policy` as if at the top level. The caller is responsible for the scratch contract: under `:static`/`:static_greedy`
-each spawned sub-task has a stable `threadid()`, but multiple outer iterations may be inside their nested loops at
-the same time, so per-thread scratch indexed by inner `threadid()` must be local to the outer iteration (not a global
-per-thread array shared across all outer iterations).
+If this is invoked from inside another parallel loop and `nested` is `false` (the default), `policy` is ignored and the
+loop is executed serially. This makes functions safe to compose: parallel at the top level, serial when called from
+inside another parallel loop. Pass `nested = true` to opt out of the safety demotion - the loop then uses `policy` as if
+at the top level. The caller is responsible for the scratch contract: under `:static`/`:greedy_sticky` each spawned
+sub-task has a stable `threadid()`, but multiple outer iterations may be inside their nested loops at the same time, so
+per-thread scratch indexed by inner `threadid()` must be local to the outer iteration (not a global per-thread array
+shared across all outer iterations).
 
 The `name` is used for [`flame_timed`](@ref) for the whole loop. If the loop is parallel, the whole loop is a line in
 the serial flame file, and each iteration is a line in the parallel flame file. The serial file therefore gives a view
@@ -148,7 +148,7 @@ using Random
 
 size = 10
 
-for policy in (:serial, :greedy, :dynamic, :static, :static_greedy)
+for policy in (:serial, :greedy, :dynamic, :static, :greedy_sticky)
     results = zeros(Int, size)
     parallel_loop_wo_rng(1:size; policy) do index
         results[index] = index
@@ -165,14 +165,14 @@ function parallel_loop_wo_rng(  # NOJET
     body::Function,
     indices::AbstractVector{<:Integer};
     name::AbstractString = ".loop",
-    policy::Symbol = :greedy,
+    policy::Symbol = :greedy_sticky,
     order::Maybe{AbstractVector{<:Integer}} = nothing,
     weights::Maybe{AbstractVector{<:Integer}} = nothing,
     nested::Bool = false,
     progress::Maybe{Progress} = nothing,  # NOLINT
     progress_chunk::Maybe{Integer} = nothing,
 )::Nothing
-    @assert policy in (:greedy, :static, :dynamic, :static_greedy, :serial)
+    @assert policy in (:greedy, :static, :dynamic, :greedy_sticky, :serial)
 
     if weights !== nothing
         @assert length(weights) == length(indices)
@@ -215,9 +215,9 @@ function parallel_loop_wo_rng(  # NOJET
         end
     end
 
-    # When `:static_greedy` would have at most one iteration per thread, the atomic counter buys nothing - degrade to
+    # When `:greedy_sticky` would have at most one iteration per thread, the atomic counter buys nothing - degrade to
     # `:static` (which gives each iteration its own thread directly).
-    if policy == :static_greedy && length(indices) <= nthreads()
+    if policy == :greedy_sticky && length(indices) <= nthreads()
         policy = :static
     end
 
@@ -301,7 +301,7 @@ function parallel_loop_wo_rng(  # NOJET
                             iteration_body(position)
                         end
 
-                    elseif policy == :static_greedy
+                    elseif policy == :greedy_sticky
                         # `nthreads()` sticky workers (one per thread) pull positions from a shared atomic counter.
                         # Each iteration runs on its starting thread for the duration of the body, so
                         # `threadid()`-indexed scratch is safe - unlike `:greedy` / `:dynamic` which create
@@ -369,7 +369,7 @@ accounting. The body still receives the same `indices[order[k]]` value at each s
 If this is invoked from inside another parallel loop and `nested` is `false` (the default), `policy` is ignored and
 the loop is executed serially. This makes functions safe to compose: parallel at the top level, serial when called
 from inside another parallel loop. Pass `nested = true` to opt out of the safety demotion - the loop then uses
-`policy` as if at the top level. The caller is responsible for the scratch contract: under `:static`/`:static_greedy`
+`policy` as if at the top level. The caller is responsible for the scratch contract: under `:static`/`:greedy_sticky`
 each spawned sub-task has a stable `threadid()`, but multiple outer iterations may be inside their nested loops at
 the same time, so per-thread scratch indexed by inner `threadid()` must be local to the outer iteration (not a global
 per-thread array shared across all outer iterations).
@@ -422,7 +422,7 @@ function parallel_loop_with_rng(  # NOJET
     body::Function,
     indices::AbstractVector{<:Integer};
     name::AbstractString = ".loop",
-    policy::Symbol = :greedy,
+    policy::Symbol = :greedy_sticky,
     order::Maybe{AbstractVector{<:Integer}} = nothing,
     weights::Maybe{AbstractVector{<:Integer}} = nothing,
     nested::Bool = false,
@@ -430,7 +430,7 @@ function parallel_loop_with_rng(  # NOJET
     seed::Maybe{Integer} = nothing,
     rng::Maybe{AbstractRNG} = nothing,
 )::Nothing
-    @assert policy in (:greedy, :static, :dynamic, :static_greedy, :serial)
+    @assert policy in (:greedy, :static, :dynamic, :greedy_sticky, :serial)
 
     if seed === nothing
         seed = rand(copy(rng === nothing ? default_rng() : rng), Int64)

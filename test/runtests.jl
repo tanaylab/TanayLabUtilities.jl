@@ -628,11 +628,11 @@ end
         @test_throws AssertionError parallel_loop_wo_rng(_ -> nothing, 1:5; order = [1, 2, 3])
     end
 
-    @testset ":static_greedy degrades to :static when work fits in one chunk" begin
-        # Smaller than `nthreads()` items: the `:static_greedy → :static` path takes over.
+    @testset ":greedy_sticky degrades to :static when work fits in one chunk" begin
+        # Smaller than `nthreads()` items: the `:greedy_sticky → :static` path takes over.
         n_items = max(1, Threads.nthreads() ÷ 2)
         results = zeros(Int, n_items)
-        parallel_loop_wo_rng(1:n_items; policy = :static_greedy) do index
+        parallel_loop_wo_rng(1:n_items; policy = :greedy_sticky) do index
             results[index] = index
             return nothing
         end

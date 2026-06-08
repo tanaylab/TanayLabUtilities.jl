@@ -246,7 +246,7 @@
 <code class="language-julia hljs">parallel_pairwise(
     distance, X[, Y];
     dims::Integer,
-    policy::Symbol = :greedy,
+    policy::Symbol = :greedy_sticky,
     progress::Maybe{Progress} = nothing
     progress_chunk::Maybe{Integer} = nothing,
 )::AbstractMatrix
@@ -288,12 +288,14 @@ d = pairwise(Euclidean(), m1; dims = 2)
 @assert maximum(abs.(d .- parallel_pairwise(Euclidean(), m1; dims = 2, policy = :greedy))) &lt; 1e-6
 @assert maximum(abs.(d .- parallel_pairwise(Euclidean(), m1; dims = 2, policy = :dynamic))) &lt; 1e-6
 @assert maximum(abs.(d .- parallel_pairwise(Euclidean(), m1; dims = 2, policy = :static))) &lt; 1e-6
+@assert maximum(abs.(d .- parallel_pairwise(Euclidean(), m1; dims = 2, policy = :greedy_sticky))) &lt; 1e-6
 
 d = pairwise(Euclidean(), m1, m2; dims = 2)
 @assert maximum(abs.(d .- parallel_pairwise(Euclidean(), m1, m2; dims = 2, policy = :serial))) &lt; 1e-6
 @assert maximum(abs.(d .- parallel_pairwise(Euclidean(), m1, m2; dims = 2, policy = :greedy))) &lt; 1e-6
 @assert maximum(abs.(d .- parallel_pairwise(Euclidean(), m1, m2; dims = 2, policy = :dynamic))) &lt; 1e-6
 @assert maximum(abs.(d .- parallel_pairwise(Euclidean(), m1, m2; dims = 2, policy = :static))) &lt; 1e-6
+@assert maximum(abs.(d .- parallel_pairwise(Euclidean(), m1, m2; dims = 2, policy = :greedy_sticky))) &lt; 1e-6
 
 # output
 
@@ -396,7 +398,7 @@ parallel_pairwise_closest(Euclidean(), m1, m2; dims = 2, closest_index, closest_
 <pre>
 <code class="language-julia hljs">parallel_colwise(
     distance, X, Y;
-    policy::Symbol = :greedy,
+    policy::Symbol = :greedy_sticky,
     progress::Maybe{Progress} = nothing,
 )::AbstractVector
 </code>
@@ -439,6 +441,7 @@ d = colwise(Euclidean(), m1, m2)
 @assert maximum(abs.(d .- parallel_colwise(Euclidean(), m1, m2; policy = :greedy))) &lt; 1e-6
 @assert maximum(abs.(d .- parallel_colwise(Euclidean(), m1, m2; policy = :dynamic))) &lt; 1e-6
 @assert maximum(abs.(d .- parallel_colwise(Euclidean(), m1, m2; policy = :static))) &lt; 1e-6
+@assert maximum(abs.(d .- parallel_colwise(Euclidean(), m1, m2; policy = :greedy_sticky))) &lt; 1e-6
 
 # output
 

@@ -245,7 +245,7 @@
     body::Function,
     indices::AbstractVector{&lt;:Integer};
     name::AbstractString = &quot;.loop&quot;,
-    policy::Symbol = :greedy,
+    policy::Symbol = :greedy_sticky,
     order::Maybe{AbstractVector{&lt;:Integer}} = nothing,
     weights::Maybe{AbstractVector{&lt;:Integer}} = nothing,
     nested::Bool = false,
@@ -263,25 +263,7 @@
 </p>
 <ul>
 <li>
-<code>:greedy
-</code>, 
-<code>:dynamic
-</code>, 
-<code>:static
-</code> - passed straight to 
-<code>@threads
-</code>. Note that 
-<code>:greedy
-</code> and 
-<code>:dynamic
-</code> create 
-<em>non-sticky
-</em> tasks that may migrate across threads at yield points, so 
-<code>threadid()
-</code>-indexed scratch is unsafe under those.
-</li>
-<li>
-<code>:static_greedy
+<code>:greedy_sticky
 </code> - 
 <code>nthreads()
 </code> sticky worker tasks spawned via 
@@ -299,6 +281,24 @@
 </code> (or 
 <code>weights
 </code>) to attack the tail-latency problem - heavy items dispatch first, light items fill the tail.
+</li>
+<li>
+<code>:greedy
+</code>, 
+<code>:dynamic
+</code>, 
+<code>:static
+</code> - passed straight to 
+<code>@threads
+</code>. Note that 
+<code>:greedy
+</code> and 
+<code>:dynamic
+</code> create 
+<em>non-sticky
+</em> tasks that may migrate across threads at yield points, so 
+<code>threadid()
+</code>-indexed scratch is unsafe under those.
 </li>
 <li>
 <code>:serial
@@ -324,7 +324,7 @@
 </code>, 
 <code>:dynamic
 </code>, 
-<code>:static_greedy
+<code>:greedy_sticky
 </code>, or 
 <code>:serial
 </code>, the iteration visits the positions in 
@@ -347,7 +347,7 @@
 <code>order
 </code> is not given, 
 <code>weights
-</code> derives it as 
+</code> computes it to be 
 <code>sortperm(weights; rev = true)
 </code> so the heaviest items dispatch first. When 
 <code>progress
@@ -376,7 +376,7 @@
 </code> as if at the top level. The caller is responsible for the scratch contract: under 
 <code>:static
 </code>/
-<code>:static_greedy
+<code>:greedy_sticky
 </code> each spawned sub-task has a stable 
 <code>threadid()
 </code>, but multiple outer iterations may be inside their nested loops at the same time, so per-thread scratch indexed by inner 
@@ -426,7 +426,7 @@
 
 size = 10
 
-for policy in (:serial, :greedy, :dynamic, :static, :static_greedy)
+for policy in (:serial, :greedy, :dynamic, :static, :greedy_sticky)
     results = zeros(Int, size)
     parallel_loop_wo_rng(1:size; policy) do index
         results[index] = index
@@ -532,7 +532,7 @@ end
 </code> as if at the top level. The caller is responsible for the scratch contract: under 
 <code>:static
 </code>/
-<code>:static_greedy
+<code>:greedy_sticky
 </code> each spawned sub-task has a stable 
 <code>threadid()
 </code>, but multiple outer iterations may be inside their nested loops at the same time, so per-thread scratch indexed by inner 
