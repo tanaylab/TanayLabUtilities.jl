@@ -22,6 +22,7 @@ using StatsBase
 using ..Documentation
 using ..FlameTime
 using ..MatrixFormats
+using ..MatrixLayouts
 using ..ParallelLoops
 using ..Types
 
@@ -221,6 +222,7 @@ Implementation is otherwise identical to `Clustering.kmeans.
 end
 
 function _kmpp_seed!(X::AbstractMatrix{<:Real}, k::Integer, buffers::KMeansBuffers, rng::AbstractRNG)::Nothing
+    @check_turbo_matrix(X)
     n = size(X, 2)
     iseeds = buffers.seed_indices
     mincosts = buffers.ds
@@ -256,6 +258,8 @@ function _kmeans_buffered!(
     rng::AbstractRNG,
 )::Union{KmeansResult, KmeansResultView}
     k = size(centers, 2)
+    @check_turbo_matrix(X)
+    @check_turbo_matrix(centers)
 
     assignments = buffers.assignments
     costs = buffers.costs

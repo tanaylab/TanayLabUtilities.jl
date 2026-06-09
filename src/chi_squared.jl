@@ -9,6 +9,7 @@ using LoopVectorization
 using SpecialFunctions
 
 using ..FlameTime
+using ..MatrixLayouts
 using ..Types
 
 """
@@ -94,6 +95,10 @@ function chi_squared(
         @views result_p_values = result[:, 2]
         @views result_fdr = result[:, 3]
 
+        @check_turbo_vector(first_values)
+        @check_turbo_vector(second_values)
+        @check_turbo_vector(result_chi_squared)
+
         if yates
             @turbo for row_index in 1:n_rows
                 first_count = first_values[row_index]
@@ -135,6 +140,7 @@ function chi_squared(
             sorted_fdr[rank] = result_p_values[order[rank]]
         end
 
+        @check_turbo_vector(sorted_fdr)
         @turbo for rank in 1:n_rows
             sorted_fdr[rank] = min(sorted_fdr[rank] * n_rows_float / rank, 1.0)
         end
