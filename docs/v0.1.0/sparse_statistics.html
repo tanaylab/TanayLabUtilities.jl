@@ -264,6 +264,133 @@
 <code>dims
 </code> is omitted).
 </p>
+<p>The same 
+<code>[negatives... | zeros... | positives...]
+</code> layout also speeds up the one-vs-rest AUC (area under the ROC curve) of a feature across labeled samples: only the stored non-zero values need to be ranked, the many zero samples sharing a single tied rank. See 
+<a href="sparse_statistics.html#TanayLabUtilities.SparseStatistics.auc_per_group!">
+<code>auc_per_group!
+</code>
+</a> and 
+<a href="sparse_statistics.html#TanayLabUtilities.SparseStatistics.auc_per_category">
+<code>auc_per_category
+</code>
+</a>.
+</p>
+</div>
+</section>
+</details>
+</article>
+<article>
+<details class="docstring" open="true">
+<summary id="TanayLabUtilities.SparseStatistics.auc_per_category">
+<a class="docstring-binding" href="#TanayLabUtilities.SparseStatistics.auc_per_category">
+<code>TanayLabUtilities.SparseStatistics.auc_per_category
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+</summary>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">auc_per_category(
+    feature_per_sample::AbstractVector{&lt;:Real},
+    category_per_sample::AbstractVector;
+    positive::Bool = false,
+)::Tuple{Vector, Vector{Float64}}
+</code>
+</pre>
+<p>Compute the one-vs-rest AUC of the 
+<code>feature_per_sample
+</code> for each distinct value of 
+<code>category_per_sample
+</code> (an integer or string label per sample). Returns the distinct categories (in order of first appearance) aligned with their AUCs. See 
+<a href="sparse_statistics.html#TanayLabUtilities.SparseStatistics.auc_per_group!">
+<code>auc_per_group!
+</code>
+</a> for the definition and the sparse-feature optimization; use it directly to avoid re-deriving the categories when scoring many features against the same categories.
+</p>
+<pre>
+<code class="language-julia hljs">using SparseArrays
+
+feature = sparse([0, 0, 0, 1, 2, 3])
+category = [1, 2, 3, 1, 2, 3]
+categories, aucs = auc_per_category(feature, category)
+println(categories)
+println(aucs)
+
+# output
+
+[1, 2, 3]
+[0.625, 0.5, 0.625]
+</code>
+</pre>
+</div>
+</section>
+</details>
+</article>
+<article>
+<details class="docstring" open="true">
+<summary id="TanayLabUtilities.SparseStatistics.auc_per_group!">
+<a class="docstring-binding" href="#TanayLabUtilities.SparseStatistics.auc_per_group!">
+<code>TanayLabUtilities.SparseStatistics.auc_per_group!
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+</summary>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">auc_per_group!(;
+    auc_per_group::AbstractVector{Float64},
+    feature_per_sample::AbstractVector{&lt;:Real},
+    group_index_per_sample::AbstractVector{&lt;:Integer},
+    n_samples_per_group::AbstractVector{&lt;:Integer},
+    positive::Bool = false,
+)::AbstractVector{Float64}
+</code>
+</pre>
+<p>Fill 
+<code>auc_per_group
+</code> with the one-vs-rest AUC of the 
+<code>feature_per_sample
+</code>, distinguishing each group (the samples whose 
+<code>group_index_per_sample
+</code> holds that group&#39;s 
+<code>1
+</code>-based index) from the rest of the included samples. Samples with a group index of 
+<code>0
+</code> are excluded from the population. 
+<code>n_samples_per_group[group]
+</code> is the number of samples in each group, supplied by the caller so that scoring many features against the same grouping computes it just once.
+</p>
+<p>The AUC measures how predictive the feature is of membership in the group, regardless of direction: it is 
+<code>max(a, 1 - a)
+</code> of the Mann-Whitney statistic 
+<code>a = (rank_sum - n * (n + 1) / 2) / (n * (N - n))
+</code> (tie-averaged ranks), where 
+<code>n
+</code> is the group size and 
+<code>N
+</code> the number of included samples. It is thus always 
+<code>&gt;= 0.5
+</code>, so a group covering none or all of the included samples - where the AUC is undefined - is reported as 
+<code>0
+</code>. Being rank based, any monotonic transform of the feature (e.g. a logarithm) yields the same result.
+</p>
+<p>When 
+<code>feature_per_sample
+</code> is sparse this costs 
+<code>O(nnz * log(nnz))
+</code> rather than the dense 
+<code>O(N * log(N))
+</code>: the many zero samples share the single tied rank of the 
+<code>[negatives... | zeros... | positives...]
+</code> layout, so only the stored non-zero values are ranked. Pass 
+<code>positive = true
+</code> when the feature is known to be non-negative (e.g. UMI counts) to skip the negative-value handling.
+</p>
 </div>
 </section>
 </details>
@@ -293,7 +420,7 @@ sparse_median(
     positive::Bool = false,
     result::Maybe{AbstractVector{&lt;:AbstractFloat}} = nothing,
     scratch::Maybe{AbstractVector{&lt;:AbstractFloat}} = nothing,
-    progress::Maybe{Progress} = nothing,
+    progress::Maybe{AbstractProgress} = nothing,
     progress_chunk::Maybe{Integer} = nothing,
 )::Union{Float64, AbstractVector{&lt;:AbstractFloat}}
 </code>
@@ -394,7 +521,7 @@ sparse_quantile(
     positive::Bool = false,
     result::Maybe{AbstractVector{&lt;:AbstractFloat}} = nothing,
     scratch::Maybe{AbstractVector{&lt;:AbstractFloat}} = nothing,
-    progress::Maybe{Progress} = nothing,
+    progress::Maybe{AbstractProgress} = nothing,
     progress_chunk::Maybe{Integer} = nothing,
 )::Union{Float64, AbstractVector{&lt;:AbstractFloat}}
 </code>
@@ -584,7 +711,7 @@ sparse_std(
     dims::Maybe{Integer} = nothing,
     corrected::Bool = true,
     result::Maybe{AbstractVector{&lt;:AbstractFloat}} = nothing,
-    progress::Maybe{Progress} = nothing,
+    progress::Maybe{AbstractProgress} = nothing,
     progress_chunk::Maybe{Integer} = nothing,
 )::Union{Float64, AbstractVector{&lt;:AbstractFloat}}
 </code>
@@ -650,7 +777,7 @@ sparse_var(
     dims::Maybe{Integer} = nothing,
     corrected::Bool = true,
     result::Maybe{AbstractVector{&lt;:AbstractFloat}} = nothing,
-    progress::Maybe{Progress} = nothing,
+    progress::Maybe{AbstractProgress} = nothing,
     progress_chunk::Maybe{Integer} = nothing,
 )::Union{Float64, AbstractVector{&lt;:AbstractFloat}}
 </code>
@@ -787,6 +914,18 @@ sparse_var(matrix; dims = Rows)
 <li>
 <a href="sparse_statistics.html#TanayLabUtilities.SparseStatistics">
 <code>TanayLabUtilities.SparseStatistics
+</code>
+</a>
+</li>
+<li>
+<a href="sparse_statistics.html#TanayLabUtilities.SparseStatistics.auc_per_category">
+<code>TanayLabUtilities.SparseStatistics.auc_per_category
+</code>
+</a>
+</li>
+<li>
+<a href="sparse_statistics.html#TanayLabUtilities.SparseStatistics.auc_per_group!">
+<code>TanayLabUtilities.SparseStatistics.auc_per_group!
 </code>
 </a>
 </li>

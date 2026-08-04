@@ -17,6 +17,8 @@ using Base.Threads
 using LinearAlgebra
 using Logging
 using ProgressMeter
+
+import ProgressMeter.AbstractProgress  # NOLINT
 using Random
 
 import Random.default_rng
@@ -90,7 +92,7 @@ end
         order::Maybe{AbstractVector{<:Integer}} = nothing,
         weights::Maybe{AbstractVector{<:Integer}} = nothing,
         nested::Bool = false,
-        progress::Maybe{Progress} = nothing,
+        progress::Maybe{AbstractProgress} = nothing,
     )::Nothing
 
 Run the `body` in parallel, passing it the iteration `index`. The `policy` is one of:
@@ -169,7 +171,7 @@ function parallel_loop_wo_rng(  # NOJET
     order::Maybe{AbstractVector{<:Integer}} = nothing,
     weights::Maybe{AbstractVector{<:Integer}} = nothing,
     nested::Bool = false,
-    progress::Maybe{Progress} = nothing,  # NOLINT
+    progress::Maybe{AbstractProgress} = nothing,  # NOLINT
     progress_chunk::Maybe{Integer} = nothing,
 )::Nothing
     @assert policy in (:greedy, :static, :dynamic, :greedy_sticky, :serial)
@@ -347,7 +349,7 @@ end
         policy::Symbol = :greedy,
         order::Maybe{AbstractVector{<:Integer}} = nothing,
         weights::Maybe{AbstractVector{<:Integer}} = nothing,
-        progress::Maybe{Progress} = nothing,
+        progress::Maybe{AbstractProgress} = nothing,
         seed::Maybe{Integer} = nothing,
         rng::Maybe{AbstractRNG} = nothing
     )::Nothing
@@ -426,7 +428,7 @@ function parallel_loop_with_rng(  # NOJET
     order::Maybe{AbstractVector{<:Integer}} = nothing,
     weights::Maybe{AbstractVector{<:Integer}} = nothing,
     nested::Bool = false,
-    progress::Maybe{Progress} = nothing,
+    progress::Maybe{AbstractProgress} = nothing,
     seed::Maybe{Integer} = nothing,
     rng::Maybe{AbstractRNG} = nothing,
 )::Nothing

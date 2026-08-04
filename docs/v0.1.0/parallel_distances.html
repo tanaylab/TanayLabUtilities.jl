@@ -247,7 +247,7 @@
     distance, X[, Y];
     dims::Integer,
     policy::Symbol = :greedy_sticky,
-    progress::Maybe{Progress} = nothing
+    progress::Maybe{AbstractProgress} = nothing
     progress_chunk::Maybe{Integer} = nothing,
 )::AbstractMatrix
 </code>
@@ -324,7 +324,7 @@ d = pairwise(Euclidean(), m1, m2; dims = 2)
     closest_index::Maybe{AbstractVector{&lt;:Integer}} = nothing,
     closest_distance::Maybe{AbstractVector} = nothing,
     policy::Symbol = :greedy,
-    progress::Maybe{Progress} = nothing,
+    progress::Maybe{AbstractProgress} = nothing,
     progress_chunk::Maybe{Integer} = nothing,
 )::Nothing
 </code>
@@ -399,7 +399,7 @@ parallel_pairwise_closest(Euclidean(), m1, m2; dims = 2, closest_index, closest_
 <code class="language-julia hljs">parallel_colwise(
     distance, X, Y;
     policy::Symbol = :greedy_sticky,
-    progress::Maybe{Progress} = nothing,
+    progress::Maybe{AbstractProgress} = nothing,
 )::AbstractVector
 </code>
 </pre>

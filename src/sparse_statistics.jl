@@ -19,9 +19,15 @@ skips the negativity scan entirely and yields a small additional speedup.
 The functions exposed here mirror the calling convention of `Statistics.var` and `Statistics.std`: they accept either an
 `AbstractVector` (returning a single value) or an `AbstractMatrix` together with a `dims` keyword argument (returning a
 vector with one of the dimensions reduced to a single entry, or a scalar when `dims` is omitted).
+
+The same `[negatives... | zeros... | positives...]` layout also speeds up the one-vs-rest AUC (area under the ROC curve)
+of a feature across labeled samples: only the stored non-zero values need to be ranked, the many zero samples sharing a
+single tied rank. See [`auc_per_group!`](@ref) and [`auc_per_category`](@ref).
 """
 module SparseStatistics
 
+export auc_per_category
+export auc_per_group!
 export sparse_median
 export sparse_quantile
 export sparse_std
@@ -29,7 +35,10 @@ export sparse_var
 
 using LinearAlgebra
 using ProgressMeter
+
+import ProgressMeter.AbstractProgress  # NOLINT
 using SparseArrays
+using StatsBase
 
 using ..Documentation
 using ..FlameTime
@@ -55,7 +64,7 @@ import ..MatrixLayouts.check_efficient_action
         positive::Bool = false,
         result::Maybe{AbstractVector{<:AbstractFloat}} = nothing,
         scratch::Maybe{AbstractVector{<:AbstractFloat}} = nothing,
-        progress::Maybe{Progress} = nothing,
+        progress::Maybe{AbstractProgress} = nothing,
         progress_chunk::Maybe{Integer} = nothing,
     )::Union{Float64, AbstractVector{<:AbstractFloat}}
 
@@ -141,7 +150,7 @@ function sparse_quantile(
     positive::Bool = false,
     result::Maybe{AbstractVector{<:AbstractFloat}} = nothing,
     scratch::Maybe{AbstractVector{<:AbstractFloat}} = nothing,
-    progress::Maybe{Progress} = nothing,
+    progress::Maybe{AbstractProgress} = nothing,
     progress_chunk::Maybe{Integer} = nothing,
 )::Union{Float64, AbstractVector{<:AbstractFloat}}
     @assert 0 <= p <= 1 "quantile p: $(p) is not in [0, 1]"
@@ -172,7 +181,7 @@ end
         positive::Bool = false,
         result::Maybe{AbstractVector{<:AbstractFloat}} = nothing,
         scratch::Maybe{AbstractVector{<:AbstractFloat}} = nothing,
-        progress::Maybe{Progress} = nothing,
+        progress::Maybe{AbstractProgress} = nothing,
         progress_chunk::Maybe{Integer} = nothing,
     )::Union{Float64, AbstractVector{<:AbstractFloat}}
 
@@ -224,7 +233,7 @@ function sparse_median(
     positive::Bool = false,
     result::Maybe{AbstractVector{<:AbstractFloat}} = nothing,
     scratch::Maybe{AbstractVector{<:AbstractFloat}} = nothing,
-    progress::Maybe{Progress} = nothing,
+    progress::Maybe{AbstractProgress} = nothing,
     progress_chunk::Maybe{Integer} = nothing,
 )::Union{Float64, AbstractVector{<:AbstractFloat}}
     if dims === nothing
@@ -252,7 +261,7 @@ end
         dims::Maybe{Integer} = nothing,
         corrected::Bool = true,
         result::Maybe{AbstractVector{<:AbstractFloat}} = nothing,
-        progress::Maybe{Progress} = nothing,
+        progress::Maybe{AbstractProgress} = nothing,
         progress_chunk::Maybe{Integer} = nothing,
     )::Union{Float64, AbstractVector{<:AbstractFloat}}
 
@@ -309,7 +318,7 @@ function sparse_var(
     dims::Maybe{Integer} = nothing,
     corrected::Bool = true,
     result::Maybe{AbstractVector{<:AbstractFloat}} = nothing,
-    progress::Maybe{Progress} = nothing,
+    progress::Maybe{AbstractProgress} = nothing,
     progress_chunk::Maybe{Integer} = nothing,
 )::Union{Float64, AbstractVector{<:AbstractFloat}}
     if dims === nothing
@@ -337,7 +346,7 @@ end
         dims::Maybe{Integer} = nothing,
         corrected::Bool = true,
         result::Maybe{AbstractVector{<:AbstractFloat}} = nothing,
-        progress::Maybe{Progress} = nothing,
+        progress::Maybe{AbstractProgress} = nothing,
         progress_chunk::Maybe{Integer} = nothing,
     )::Union{Float64, AbstractVector{<:AbstractFloat}}
 
@@ -370,7 +379,7 @@ function sparse_std(
     dims::Maybe{Integer} = nothing,
     corrected::Bool = true,
     result::Maybe{AbstractVector{<:AbstractFloat}} = nothing,
-    progress::Maybe{Progress} = nothing,
+    progress::Maybe{AbstractProgress} = nothing,
     progress_chunk::Maybe{Integer} = nothing,
 )::Union{Float64, AbstractVector{<:AbstractFloat}}
     if dims === nothing
@@ -410,7 +419,7 @@ function compute_sparse_var_of_matrix(
     corrected::Bool;
     dims::Integer,
     result::Maybe{AbstractVector{<:AbstractFloat}},
-    progress::Maybe{Progress},
+    progress::Maybe{AbstractProgress},
     progress_chunk::Maybe{Integer},
 )::AbstractVector{<:AbstractFloat}
     n_rows, n_columns = size(matrix)
@@ -440,7 +449,7 @@ function compute_sparse_var_of_sparse_matrix!(
     matrix::AbstractMatrix{<:Real},
     corrected::Bool;
     dims::Integer,
-    progress::Maybe{Progress},
+    progress::Maybe{AbstractProgress},
     progress_chunk::Maybe{Integer},
 )::Nothing
     n_rows, n_columns = size(matrix)
@@ -473,7 +482,7 @@ function compute_sparse_var_of_dense_matrix!(
     matrix::AbstractMatrix{<:Real},
     corrected::Bool;
     dims::Integer,
-    progress::Maybe{Progress},
+    progress::Maybe{AbstractProgress},
     progress_chunk::Maybe{Integer},
 )::Nothing
     n_rows, n_columns = size(matrix)
@@ -586,7 +595,7 @@ function compute_sparse_quantile_of_matrix(
     positive::Bool,
     result::Maybe{AbstractVector{<:AbstractFloat}},
     scratch::Maybe{AbstractVector{<:AbstractFloat}},
-    progress::Maybe{Progress},
+    progress::Maybe{AbstractProgress},
     progress_chunk::Maybe{Integer},
 )::AbstractVector{<:AbstractFloat}
     n_rows, n_columns = size(matrix)
@@ -618,7 +627,7 @@ function compute_sparse_quantile_of_sparse_matrix!(
     dims::Integer,
     positive::Bool,
     scratch::Maybe{AbstractVector{<:AbstractFloat}},
-    progress::Maybe{Progress},
+    progress::Maybe{AbstractProgress},
     progress_chunk::Maybe{Integer},
 )::Nothing
     n_rows, n_columns = size(matrix)
@@ -664,7 +673,7 @@ function compute_sparse_quantile_of_dense_matrix!(
     dims::Integer,
     positive::Bool,
     scratch::Maybe{AbstractVector{<:AbstractFloat}},
-    progress::Maybe{Progress},
+    progress::Maybe{AbstractProgress},
     progress_chunk::Maybe{Integer},
 )::Nothing
     n_rows, n_columns = size(matrix)
@@ -896,6 +905,217 @@ function insertion_sort!(buffer::AbstractVector{<:AbstractFloat}, low::Integer, 
             inner_index -= 1
         end
         buffer[inner_index + 1] = value
+    end
+    return nothing
+end
+
+"""
+    auc_per_group!(;
+        auc_per_group::AbstractVector{Float64},
+        feature_per_sample::AbstractVector{<:Real},
+        group_index_per_sample::AbstractVector{<:Integer},
+        n_samples_per_group::AbstractVector{<:Integer},
+        positive::Bool = false,
+    )::AbstractVector{Float64}
+
+Fill `auc_per_group` with the one-vs-rest AUC of the `feature_per_sample`, distinguishing each group (the samples whose
+`group_index_per_sample` holds that group's `1`-based index) from the rest of the included samples. Samples with a group
+index of `0` are excluded from the population. `n_samples_per_group[group]` is the number of samples in each group,
+supplied by the caller so that scoring many features against the same grouping computes it just once.
+
+The AUC measures how predictive the feature is of membership in the group, regardless of direction: it is
+`max(a, 1 - a)` of the Mann-Whitney statistic `a = (rank_sum - n * (n + 1) / 2) / (n * (N - n))` (tie-averaged ranks),
+where `n` is the group size and `N` the number of included samples. It is thus always `>= 0.5`, so a group covering none
+or all of the included samples - where the AUC is undefined - is reported as `0`. Being rank based, any monotonic
+transform of the feature (e.g. a logarithm) yields the same result.
+
+When `feature_per_sample` is sparse this costs `O(nnz * log(nnz))` rather than the dense `O(N * log(N))`: the many zero
+samples share the single tied rank of the `[negatives... | zeros... | positives...]` layout, so only the stored non-zero
+values are ranked. Pass `positive = true` when the feature is known to be non-negative (e.g. UMI counts) to skip the
+negative-value handling.
+"""
+function auc_per_group!(;
+    auc_per_group::AbstractVector{Float64},
+    feature_per_sample::AbstractVector{<:Real},
+    group_index_per_sample::AbstractVector{<:Integer},
+    n_samples_per_group::AbstractVector{<:Integer},
+    positive::Bool = false,
+)::AbstractVector{Float64}
+    n_groups = length(n_samples_per_group)
+    @assert length(auc_per_group) == n_groups "auc_per_group length: $(length(auc_per_group)) is not the number of groups: $(n_groups)"
+    @assert length(group_index_per_sample) == length(feature_per_sample) "group_index_per_sample length: $(length(group_index_per_sample)) is not the feature length: $(length(feature_per_sample))"
+    return flame_timed("auc_per_group") do
+        n_included_samples = sum(n_samples_per_group)
+        rank_sum_per_group = zeros(Float64, n_groups)
+        if issparse(feature_per_sample)
+            sparse_rank_sum_per_group!(;
+                rank_sum_per_group,
+                feature_per_sample,
+                group_index_per_sample,
+                n_samples_per_group,
+                n_included_samples,
+                positive,
+            )
+        else
+            dense_rank_sum_per_group!(; rank_sum_per_group, feature_per_sample, group_index_per_sample)
+        end
+        finalize_auc_per_group!(; auc_per_group, rank_sum_per_group, n_samples_per_group, n_included_samples)
+        return auc_per_group
+    end
+end
+
+"""
+    auc_per_category(
+        feature_per_sample::AbstractVector{<:Real},
+        category_per_sample::AbstractVector;
+        positive::Bool = false,
+    )::Tuple{Vector, Vector{Float64}}
+
+Compute the one-vs-rest AUC of the `feature_per_sample` for each distinct value of `category_per_sample` (an integer or
+string label per sample). Returns the distinct categories (in order of first appearance) aligned with their AUCs. See
+[`auc_per_group!`](@ref) for the definition and the sparse-feature optimization; use it directly to avoid re-deriving the
+categories when scoring many features against the same categories.
+
+```jldoctest
+using SparseArrays
+
+feature = sparse([0, 0, 0, 1, 2, 3])
+category = [1, 2, 3, 1, 2, 3]
+categories, aucs = auc_per_category(feature, category)
+println(categories)
+println(aucs)
+
+# output
+
+[1, 2, 3]
+[0.625, 0.5, 0.625]
+```
+"""
+function auc_per_category(
+    feature_per_sample::AbstractVector{<:Real},
+    category_per_sample::AbstractVector;
+    positive::Bool = false,
+)::Tuple{Vector, Vector{Float64}}
+    @assert length(feature_per_sample) == length(category_per_sample) "feature length: $(length(feature_per_sample)) is not the category length: $(length(category_per_sample))"
+    category_per_group = unique(category_per_sample)
+    n_groups = length(category_per_group)
+    group_index_per_category =
+        Dict(category => group_index for (group_index, category) in enumerate(category_per_group))
+    group_index_per_sample = [group_index_per_category[category] for category in category_per_sample]
+    n_samples_per_group = zeros(Int, n_groups)
+    for group_index in group_index_per_sample
+        n_samples_per_group[group_index] += 1
+    end
+    auc_per_group = Vector{Float64}(undef, n_groups)
+    auc_per_group!(; auc_per_group, feature_per_sample, group_index_per_sample, n_samples_per_group, positive)
+    return (category_per_group, auc_per_group)
+end
+
+# Gather the included samples (group index above zero), rank the feature over them, and sum the ranks per group.
+function dense_rank_sum_per_group!(;
+    rank_sum_per_group::AbstractVector{Float64},
+    feature_per_sample::AbstractVector{<:Real},
+    group_index_per_sample::AbstractVector{<:Integer},
+)::Nothing
+    n_included = count(>(0), group_index_per_sample)
+    feature_per_included = Vector{Float64}(undef, n_included)
+    group_index_per_included = Vector{Int}(undef, n_included)
+    included = 0
+    for sample in eachindex(feature_per_sample)
+        group_index = group_index_per_sample[sample]
+        if group_index > 0
+            included += 1
+            feature_per_included[included] = feature_per_sample[sample]
+            group_index_per_included[included] = group_index
+        end
+    end
+    rank_per_included = tiedrank(feature_per_included)
+    for included in 1:n_included
+        rank_sum_per_group[group_index_per_included[included]] += rank_per_included[included]
+    end
+    return nothing
+end
+
+# Sum the ranks per group for a sparse feature: rank only the stored non-zero values (negatives and positives ranked
+# separately), while the zero samples share the tied rank of the `[negatives... | zeros... | positives...]` block.
+function sparse_rank_sum_per_group!(;
+    rank_sum_per_group::AbstractVector{Float64},
+    feature_per_sample::AbstractVector{<:Real},
+    group_index_per_sample::AbstractVector{<:Integer},
+    n_samples_per_group::AbstractVector{<:Integer},
+    n_included_samples::Integer,
+    positive::Bool,
+)::Nothing
+    n_groups = length(n_samples_per_group)
+    stored_sample_per_stored = nzind(feature_per_sample)
+    stored_value_per_stored = nzval(feature_per_sample)
+
+    negative_value_per_negative = Float64[]
+    group_index_per_negative = Int[]
+    positive_value_per_positive = Float64[]
+    group_index_per_positive = Int[]
+    nonzero_count_per_group = zeros(Int, n_groups)
+
+    for stored in eachindex(stored_sample_per_stored)
+        group_index = group_index_per_sample[stored_sample_per_stored[stored]]
+        if group_index == 0
+            continue  # UNTESTED
+        end
+        value = Float64(stored_value_per_stored[stored])
+        if value > 0
+            push!(positive_value_per_positive, value)
+            push!(group_index_per_positive, group_index)
+            nonzero_count_per_group[group_index] += 1
+        elseif value < 0 && !positive
+            push!(negative_value_per_negative, value)
+            push!(group_index_per_negative, group_index)
+            nonzero_count_per_group[group_index] += 1
+        end
+        # A value of zero (an explicitly stored zero) is folded into the zeros block, like a structural zero.
+    end
+
+    n_negative = length(negative_value_per_negative)
+    n_positive = length(positive_value_per_positive)
+    n_zero = n_included_samples - n_negative - n_positive
+    average_zero_rank = n_negative + (n_zero + 1) / 2
+
+    if n_negative > 0
+        rank_per_negative = tiedrank(negative_value_per_negative)
+        for negative in 1:n_negative
+            rank_sum_per_group[group_index_per_negative[negative]] += rank_per_negative[negative]
+        end
+    end
+    if n_positive > 0
+        rank_per_positive = tiedrank(positive_value_per_positive)
+        positive_rank_offset = n_negative + n_zero
+        for positive in 1:n_positive
+            rank_sum_per_group[group_index_per_positive[positive]] += rank_per_positive[positive] + positive_rank_offset
+        end
+    end
+    for group_index in 1:n_groups
+        n_zero_in_group = n_samples_per_group[group_index] - nonzero_count_per_group[group_index]
+        rank_sum_per_group[group_index] += n_zero_in_group * average_zero_rank
+    end
+    return nothing
+end
+
+# Turn the per-group rank-sums into AUCs, folded to `max(a, 1 - a)` so they are always `>= 0.5` (`0` for a group
+# covering none or all of the population, where the AUC is undefined).
+function finalize_auc_per_group!(;
+    auc_per_group::AbstractVector{Float64},
+    rank_sum_per_group::AbstractVector{Float64},
+    n_samples_per_group::AbstractVector{<:Integer},
+    n_included_samples::Integer,
+)::Nothing
+    for group_index in eachindex(n_samples_per_group)
+        n_in_group = n_samples_per_group[group_index]
+        n_out_of_group = n_included_samples - n_in_group
+        if n_in_group == 0 || n_out_of_group == 0
+            auc_per_group[group_index] = 0.0
+        else
+            auc = (rank_sum_per_group[group_index] - n_in_group * (n_in_group + 1) / 2) / (n_in_group * n_out_of_group)
+            auc_per_group[group_index] = max(auc, 1 - auc)
+        end
     end
     return nothing
 end

@@ -20,6 +20,8 @@ using ..Documentation
 using ..ParallelLoops
 using ..Types
 using ProgressMeter
+
+import ProgressMeter.AbstractProgress  # NOLINT
 using SparseArrays
 
 """
@@ -27,7 +29,7 @@ using SparseArrays
         destination::AbstractVector,
         source::AbstractVector,
         permutation::AbstractVector{<:Integer},
-        progress::Maybe{Progress} = nothing,
+        progress::Maybe{AbstractProgress} = nothing,
     )::Nothing
 
 Fill `destination` such that `destination[index] == source[permutation[index]]` for every `index`. If `progress` is
@@ -51,7 +53,7 @@ function permute_vector!(;
     destination::AbstractVector,
     source::AbstractVector,
     permutation::AbstractVector{<:Integer},
-    progress::Maybe{Progress} = nothing,
+    progress::Maybe{AbstractProgress} = nothing,
 )::Nothing
     source_length = length(source)
     @assert length(destination) == source_length
@@ -71,7 +73,7 @@ end
         destination_nzval::AbstractVector,
         source::SparseVector,
         inverse_permutation::AbstractVector{<:Integer},
-        progress::Maybe{Progress} = nothing,
+        progress::Maybe{AbstractProgress} = nothing,
     )::Nothing
 
 Fill the `(nzind, nzval)` backing pair of a sparse vector destination such that
@@ -102,7 +104,7 @@ function permute_sparse_vector!(;
     destination_nzval::AbstractVector,
     source::SparseVector,
     inverse_permutation::AbstractVector{<:Integer},
-    progress::Maybe{Progress} = nothing,
+    progress::Maybe{AbstractProgress} = nothing,
 )::Nothing
     return permute_sparse_vector_buffers!(;
         destination_nzind,
@@ -123,7 +125,7 @@ end
         source_nzind::AbstractVector{<:Integer},
         source_nzval::Maybe{AbstractVector},
         inverse_permutation::AbstractVector{<:Integer},
-        progress::Maybe{Progress} = nothing,
+        progress::Maybe{AbstractProgress} = nothing,
     )::Nothing
 
 Like [`permute_sparse_vector!`](@ref), but takes the source `(nzind, nzval)` backing pair and the dense `source_length`
@@ -137,7 +139,7 @@ function permute_sparse_vector_buffers!(;
     source_nzind::AbstractVector{<:Integer},
     source_nzval::Maybe{AbstractVector},
     inverse_permutation::AbstractVector{<:Integer},
-    progress::Maybe{Progress} = nothing,
+    progress::Maybe{AbstractProgress} = nothing,
 )::Nothing
     source_nnz = length(source_nzind)
     @assert (source_nzval === nothing) == (destination_nzval === nothing)
@@ -175,7 +177,7 @@ end
         destination::AbstractMatrix,
         source::AbstractMatrix,
         columns_permutation::AbstractVector{<:Integer},
-        progress::Maybe{Progress} = nothing,
+        progress::Maybe{AbstractProgress} = nothing,
     )::Nothing
 
 Fill `destination` such that `destination[:, destination_column] == source[:, columns_permutation[destination_column]]`
@@ -197,7 +199,7 @@ function permute_dense_matrix_columns!(;
     destination::AbstractMatrix,
     source::AbstractMatrix,
     columns_permutation::AbstractVector{<:Integer},
-    progress::Maybe{Progress} = nothing,
+    progress::Maybe{AbstractProgress} = nothing,
 )::Nothing
     n_rows, n_columns = size(source)
     @assert size(destination) == (n_rows, n_columns)
@@ -219,7 +221,7 @@ end
         destination::AbstractMatrix,
         source::AbstractMatrix,
         rows_permutation::AbstractVector{<:Integer},
-        progress::Maybe{Progress} = nothing,
+        progress::Maybe{AbstractProgress} = nothing,
     )::Nothing
 
 Fill `destination` such that `destination[destination_row, :] == source[rows_permutation[destination_row], :]` for every
@@ -241,7 +243,7 @@ function permute_dense_matrix_rows!(;
     destination::AbstractMatrix,
     source::AbstractMatrix,
     rows_permutation::AbstractVector{<:Integer},
-    progress::Maybe{Progress} = nothing,
+    progress::Maybe{AbstractProgress} = nothing,
 )::Nothing
     n_rows, n_columns = size(source)
     @assert size(destination) == (n_rows, n_columns)
@@ -265,7 +267,7 @@ end
         source::AbstractMatrix,
         rows_permutation::AbstractVector{<:Integer},
         columns_permutation::AbstractVector{<:Integer},
-        progress::Maybe{Progress} = nothing,
+        progress::Maybe{AbstractProgress} = nothing,
     )::Nothing
 
 Fill `destination` such that `destination[destination_row, destination_column] ==
@@ -290,7 +292,7 @@ function permute_dense_matrix_both!(;
     source::AbstractMatrix,
     rows_permutation::AbstractVector{<:Integer},
     columns_permutation::AbstractVector{<:Integer},
-    progress::Maybe{Progress} = nothing,
+    progress::Maybe{AbstractProgress} = nothing,
 )::Nothing
     n_rows, n_columns = size(source)
     @assert size(destination) == (n_rows, n_columns)
@@ -317,7 +319,7 @@ end
         destination_nzval::AbstractVector,
         source::SparseMatrixCSC,
         columns_permutation::AbstractVector{<:Integer},
-        progress::Maybe{Progress} = nothing,
+        progress::Maybe{AbstractProgress} = nothing,
     )::Nothing
 
 Fill the `(colptr, rowval, nzval)` backing triplet of a sparse destination such that `destination[:, destination_column]
@@ -361,7 +363,7 @@ function permute_sparse_matrix_columns!(;
     destination_nzval::AbstractVector,
     source::SparseMatrixCSC,
     columns_permutation::AbstractVector{<:Integer},
-    progress::Maybe{Progress} = nothing,
+    progress::Maybe{AbstractProgress} = nothing,
 )::Nothing
     return permute_sparse_matrix_columns_buffers!(;
         destination_colptr,
@@ -386,7 +388,7 @@ end
         source_rowval::AbstractVector{<:Integer},
         source_nzval::Maybe{AbstractVector},
         columns_permutation::AbstractVector{<:Integer},
-        progress::Maybe{Progress} = nothing,
+        progress::Maybe{AbstractProgress} = nothing,
     )::Nothing
 
 Like [`permute_sparse_matrix_columns!`](@ref), but takes the source `(colptr, rowval, nzval)` backing triplet and the
@@ -402,7 +404,7 @@ function permute_sparse_matrix_columns_buffers!(;
     source_rowval::AbstractVector{<:Integer},
     source_nzval::Maybe{AbstractVector},
     columns_permutation::AbstractVector{<:Integer},
-    progress::Maybe{Progress} = nothing,
+    progress::Maybe{AbstractProgress} = nothing,
 )::Nothing
     n_columns = length(source_colptr) - 1
     source_nnz = length(source_rowval)
@@ -452,7 +454,7 @@ end
         destination_nzval::AbstractVector,
         source::SparseMatrixCSC,
         inverse_rows_permutation::AbstractVector{<:Integer},
-        progress::Maybe{Progress} = nothing,
+        progress::Maybe{AbstractProgress} = nothing,
     )::Nothing
 
 Fill the `(colptr, rowval, nzval)` backing triplet of a sparse destination such that
@@ -497,7 +499,7 @@ function permute_sparse_matrix_rows!(;
     destination_nzval::AbstractVector,
     source::SparseMatrixCSC,
     inverse_rows_permutation::AbstractVector{<:Integer},
-    progress::Maybe{Progress} = nothing,
+    progress::Maybe{AbstractProgress} = nothing,
 )::Nothing
     return permute_sparse_matrix_rows_buffers!(;
         destination_colptr,
@@ -522,7 +524,7 @@ end
         source_rowval::AbstractVector{<:Integer},
         source_nzval::Maybe{AbstractVector},
         inverse_rows_permutation::AbstractVector{<:Integer},
-        progress::Maybe{Progress} = nothing,
+        progress::Maybe{AbstractProgress} = nothing,
     )::Nothing
 
 Like [`permute_sparse_matrix_rows!`](@ref), but takes the source `(colptr, rowval, nzval)` backing triplet and the
@@ -538,7 +540,7 @@ function permute_sparse_matrix_rows_buffers!(;
     source_rowval::AbstractVector{<:Integer},
     source_nzval::Maybe{AbstractVector},
     inverse_rows_permutation::AbstractVector{<:Integer},
-    progress::Maybe{Progress} = nothing,
+    progress::Maybe{AbstractProgress} = nothing,
 )::Nothing
     n_columns = length(source_colptr) - 1
     source_nnz = length(source_rowval)
@@ -595,7 +597,7 @@ end
         source::SparseMatrixCSC,
         inverse_rows_permutation::AbstractVector{<:Integer},
         columns_permutation::AbstractVector{<:Integer},
-        progress::Maybe{Progress} = nothing,
+        progress::Maybe{AbstractProgress} = nothing,
     )::Nothing
 
 Fill the `(colptr, rowval, nzval)` backing triplet of a sparse destination such that
@@ -643,7 +645,7 @@ function permute_sparse_matrix_both!(;
     source::SparseMatrixCSC,
     inverse_rows_permutation::AbstractVector{<:Integer},
     columns_permutation::AbstractVector{<:Integer},
-    progress::Maybe{Progress} = nothing,
+    progress::Maybe{AbstractProgress} = nothing,
 )::Nothing
     return permute_sparse_matrix_both_buffers!(;
         destination_colptr,
@@ -670,7 +672,7 @@ end
         source_nzval::Maybe{AbstractVector},
         inverse_rows_permutation::AbstractVector{<:Integer},
         columns_permutation::AbstractVector{<:Integer},
-        progress::Maybe{Progress} = nothing,
+        progress::Maybe{AbstractProgress} = nothing,
     )::Nothing
 
 Like [`permute_sparse_matrix_both!`](@ref), but takes the source `(colptr, rowval, nzval)` backing triplet and the
@@ -687,7 +689,7 @@ function permute_sparse_matrix_both_buffers!(;
     source_nzval::Maybe{AbstractVector},
     inverse_rows_permutation::AbstractVector{<:Integer},
     columns_permutation::AbstractVector{<:Integer},
-    progress::Maybe{Progress} = nothing,
+    progress::Maybe{AbstractProgress} = nothing,
 )::Nothing
     n_columns = length(source_colptr) - 1
     source_nnz = length(source_rowval)

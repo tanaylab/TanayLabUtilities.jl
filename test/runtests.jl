@@ -357,6 +357,98 @@ end
     end
 end
 
+@testset "auc" begin
+    function reference_folded_auc(feature::AbstractVector{<:Real}, is_in_group::AbstractVector{Bool})::Float64
+        in_group = feature[is_in_group]
+        out_group = feature[.!is_in_group]
+        if isempty(in_group) || isempty(out_group)
+            return 0.0  # UNTESTED
+        end
+        wins = 0.0
+        for value_in in in_group, value_out in out_group
+            wins += value_in > value_out ? 1.0 : (value_in == value_out ? 0.5 : 0.0)
+        end
+        auc = wins / (length(in_group) * length(out_group))
+        return max(auc, 1 - auc)
+    end
+
+    @testset "matches a brute-force AUC" begin
+        rng = Random.MersenneTwister(1234)
+        for _ in 1:20
+            n = rand(rng, 5:40)
+            feature = round.(rand(rng, n) .* 6 .- 2)  # includes negatives, zeros and ties
+            category = rand(rng, 1:4, n)
+            categories, aucs = auc_per_category(feature, category)
+            for (group, value) in enumerate(categories)
+                @test aucs[group] ≈ reference_folded_auc(feature, category .== value)
+            end
+        end
+    end
+
+    @testset "sparse matches dense" begin
+        rng = Random.MersenneTwister(5678)
+        for _ in 1:20
+            n = rand(rng, 5:60)
+            dense_feature = Float64.(rand(rng, -2:4, n))  # many zeros, some negatives
+            category = rand(rng, 1:5, n)
+            _, dense_aucs = auc_per_category(dense_feature, category)
+            _, sparse_aucs = auc_per_category(sparse(dense_feature), category)
+            @test sparse_aucs ≈ dense_aucs
+        end
+    end
+
+    @testset "positive flag matches for non-negative features" begin
+        feature = sparse(Float64[0, 0, 3, 1, 0, 4, 2, 0])
+        group_index_per_sample = [1, 2, 1, 2, 1, 2, 1, 2]
+        n_samples_per_group = [4, 4]
+        with_flag = auc_per_group!(;
+            auc_per_group = zeros(2),
+            feature_per_sample = feature,
+            group_index_per_sample,
+            n_samples_per_group,
+            positive = true,
+        )
+        without_flag = auc_per_group!(;
+            auc_per_group = zeros(2),
+            feature_per_sample = feature,
+            group_index_per_sample,
+            n_samples_per_group,
+        )
+        @test with_flag ≈ without_flag
+    end
+
+    @testset "excluded samples and undefined groups" begin
+        # Group 0 excludes samples 4, 5; the population is samples 1..3 across groups 1 and 2.
+        feature = Float64[1, 2, 3, 4, 5]
+        auc = auc_per_group!(;
+            auc_per_group = zeros(2),
+            feature_per_sample = feature,
+            group_index_per_sample = [1, 1, 2, 0, 0],
+            n_samples_per_group = [2, 1],
+        )
+        @test auc[1] ≈ reference_folded_auc(feature[1:3], [true, true, false])
+        @test auc[2] ≈ reference_folded_auc(feature[1:3], [false, false, true])
+
+        # A group covering the whole population is undefined, reported as 0.
+        one_group = auc_per_group!(;
+            auc_per_group = zeros(1),
+            feature_per_sample = Float64[1, 2, 3],
+            group_index_per_sample = [1, 1, 1],
+            n_samples_per_group = [3],
+        )
+        @test one_group[1] == 0.0
+
+        # An all-zero feature cannot distinguish anything, so its folded AUC is 0.5 (not the undefined 0).
+        flat = auc_per_group!(;
+            auc_per_group = zeros(2),
+            feature_per_sample = sparse(zeros(6)),
+            group_index_per_sample = [1, 1, 1, 2, 2, 2],
+            n_samples_per_group = [3, 3],
+        )
+        @test all(flat .== 0.5)
+    end
+end
+
 @testset "cached_ispath" begin
     base = mktempdir()
 

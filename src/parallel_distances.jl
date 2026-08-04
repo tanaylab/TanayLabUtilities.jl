@@ -11,6 +11,8 @@ using Base.Threads
 using Distances
 using ProgressMeter
 
+import ProgressMeter.AbstractProgress  # NOLINT
+
 using ..FlameTime
 using ..MatrixLayouts
 using ..ParallelLoops
@@ -21,7 +23,7 @@ using ..Types
         distance, X[, Y];
         dims::Integer,
         policy::Symbol = :greedy_sticky,
-        progress::Maybe{Progress} = nothing
+        progress::Maybe{AbstractProgress} = nothing
         progress_chunk::Maybe{Integer} = nothing,
     )::AbstractMatrix
 
@@ -62,7 +64,7 @@ function parallel_pairwise(
     Y::AbstractMatrix;
     dims::Integer,
     policy::Symbol = :greedy_sticky,
-    progress::Maybe{Progress} = nothing,
+    progress::Maybe{AbstractProgress} = nothing,
     progress_chunk::Maybe{Integer} = nothing,
 )::AbstractMatrix
     @assert dims in (1, 2)
@@ -102,7 +104,7 @@ function parallel_pairwise(
     X::AbstractMatrix;
     dims::Integer,
     policy::Symbol = :greedy_sticky,
-    progress::Maybe{Progress} = nothing,
+    progress::Maybe{AbstractProgress} = nothing,
     progress_chunk::Maybe{Integer} = nothing,
 )::AbstractMatrix
     @assert dims in (1, 2)
@@ -145,7 +147,7 @@ end
         closest_index::Maybe{AbstractVector{<:Integer}} = nothing,
         closest_distance::Maybe{AbstractVector} = nothing,
         policy::Symbol = :greedy,
-        progress::Maybe{Progress} = nothing,
+        progress::Maybe{AbstractProgress} = nothing,
         progress_chunk::Maybe{Integer} = nothing,
     )::Nothing
 
@@ -187,7 +189,7 @@ function parallel_pairwise_closest(
     closest_index::Maybe{AbstractVector{<:Integer}} = nothing,
     closest_distance::Maybe{AbstractVector} = nothing,
     policy::Symbol = :greedy_sticky,
-    progress::Maybe{Progress} = nothing,
+    progress::Maybe{AbstractProgress} = nothing,
     progress_chunk::Maybe{Integer} = nothing,
 )::Nothing
     @assert dims in (1, 2)
@@ -251,7 +253,7 @@ end
     parallel_colwise(
         distance, X, Y;
         policy::Symbol = :greedy_sticky,
-        progress::Maybe{Progress} = nothing,
+        progress::Maybe{AbstractProgress} = nothing,
     )::AbstractVector
 
 A parallel version of `colwise`. This will use [`parallel_loop_wo_rng`](@ref) over the columns of `X` and `Y`, using the
@@ -283,7 +285,7 @@ function parallel_colwise(
     X::AbstractMatrix,
     Y::AbstractMatrix;
     policy::Symbol = :greedy_sticky,
-    progress::Maybe{Progress} = nothing,
+    progress::Maybe{AbstractProgress} = nothing,
 )::AbstractVector
     @assert policy in (:serial, :greedy, :dynamic, :static, :greedy_sticky);
     if policy == :serial

@@ -245,7 +245,7 @@
     destination::AbstractVector,
     source::AbstractVector,
     permutation::AbstractVector{&lt;:Integer},
-    progress::Maybe{Progress} = nothing,
+    progress::Maybe{AbstractProgress} = nothing,
 )::Nothing
 </code>
 </pre>
@@ -300,7 +300,7 @@ permute_vector!(; destination, source, permutation)
     destination_nzval::AbstractVector,
     source::SparseVector,
     inverse_permutation::AbstractVector{&lt;:Integer},
-    progress::Maybe{Progress} = nothing,
+    progress::Maybe{AbstractProgress} = nothing,
 )::Nothing
 </code>
 </pre>
@@ -369,7 +369,7 @@ destination = SparseVector(length(source), destination_nzind, destination_nzval)
     source_nzind::AbstractVector{&lt;:Integer},
     source_nzval::Maybe{AbstractVector},
     inverse_permutation::AbstractVector{&lt;:Integer},
-    progress::Maybe{Progress} = nothing,
+    progress::Maybe{AbstractProgress} = nothing,
 )::Nothing
 </code>
 </pre>
@@ -410,7 +410,7 @@ destination = SparseVector(length(source), destination_nzind, destination_nzval)
     destination::AbstractMatrix,
     source::AbstractMatrix,
     rows_permutation::AbstractVector{&lt;:Integer},
-    progress::Maybe{Progress} = nothing,
+    progress::Maybe{AbstractProgress} = nothing,
 )::Nothing
 </code>
 </pre>
@@ -458,7 +458,7 @@ permute_dense_matrix_rows!(; destination, source, rows_permutation)
     destination::AbstractMatrix,
     source::AbstractMatrix,
     columns_permutation::AbstractVector{&lt;:Integer},
-    progress::Maybe{Progress} = nothing,
+    progress::Maybe{AbstractProgress} = nothing,
 )::Nothing
 </code>
 </pre>
@@ -507,7 +507,7 @@ permute_dense_matrix_columns!(; destination, source, columns_permutation)
     source::AbstractMatrix,
     rows_permutation::AbstractVector{&lt;:Integer},
     columns_permutation::AbstractVector{&lt;:Integer},
-    progress::Maybe{Progress} = nothing,
+    progress::Maybe{AbstractProgress} = nothing,
 )::Nothing
 </code>
 </pre>
@@ -558,7 +558,7 @@ permute_dense_matrix_both!(; destination, source, rows_permutation, columns_perm
     destination_nzval::AbstractVector,
     source::SparseMatrixCSC,
     inverse_rows_permutation::AbstractVector{&lt;:Integer},
-    progress::Maybe{Progress} = nothing,
+    progress::Maybe{AbstractProgress} = nothing,
 )::Nothing
 </code>
 </pre>
@@ -638,7 +638,7 @@ destination = SparseMatrixCSC(
     source_rowval::AbstractVector{&lt;:Integer},
     source_nzval::Maybe{AbstractVector},
     inverse_rows_permutation::AbstractVector{&lt;:Integer},
-    progress::Maybe{Progress} = nothing,
+    progress::Maybe{AbstractProgress} = nothing,
 )::Nothing
 </code>
 </pre>
@@ -681,7 +681,7 @@ destination = SparseMatrixCSC(
     destination_nzval::AbstractVector,
     source::SparseMatrixCSC,
     columns_permutation::AbstractVector{&lt;:Integer},
-    progress::Maybe{Progress} = nothing,
+    progress::Maybe{AbstractProgress} = nothing,
 )::Nothing
 </code>
 </pre>
@@ -759,7 +759,7 @@ destination = SparseMatrixCSC(
     source_rowval::AbstractVector{&lt;:Integer},
     source_nzval::Maybe{AbstractVector},
     columns_permutation::AbstractVector{&lt;:Integer},
-    progress::Maybe{Progress} = nothing,
+    progress::Maybe{AbstractProgress} = nothing,
 )::Nothing
 </code>
 </pre>
@@ -803,7 +803,7 @@ destination = SparseMatrixCSC(
     source::SparseMatrixCSC,
     inverse_rows_permutation::AbstractVector{&lt;:Integer},
     columns_permutation::AbstractVector{&lt;:Integer},
-    progress::Maybe{Progress} = nothing,
+    progress::Maybe{AbstractProgress} = nothing,
 )::Nothing
 </code>
 </pre>
@@ -884,7 +884,7 @@ destination = SparseMatrixCSC(
     source_nzval::Maybe{AbstractVector},
     inverse_rows_permutation::AbstractVector{&lt;:Integer},
     columns_permutation::AbstractVector{&lt;:Integer},
-    progress::Maybe{Progress} = nothing,
+    progress::Maybe{AbstractProgress} = nothing,
 )::Nothing
 </code>
 </pre>

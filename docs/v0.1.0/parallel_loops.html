@@ -249,7 +249,7 @@
     order::Maybe{AbstractVector{&lt;:Integer}} = nothing,
     weights::Maybe{AbstractVector{&lt;:Integer}} = nothing,
     nested::Bool = false,
-    progress::Maybe{Progress} = nothing,
+    progress::Maybe{AbstractProgress} = nothing,
 )::Nothing
 </code>
 </pre>
@@ -463,7 +463,7 @@ end
     policy::Symbol = :greedy,
     order::Maybe{AbstractVector{&lt;:Integer}} = nothing,
     weights::Maybe{AbstractVector{&lt;:Integer}} = nothing,
-    progress::Maybe{Progress} = nothing,
+    progress::Maybe{AbstractProgress} = nothing,
     seed::Maybe{Integer} = nothing,
     rng::Maybe{AbstractRNG} = nothing
 )::Nothing
