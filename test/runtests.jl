@@ -818,3 +818,132 @@ end
         @test_throws AssertionError parallel_colwise(Euclidean(), rand(5, 4), rand(7, 4); policy = :greedy)
     end
 end
+
+@testset "downsample" begin
+    @testset "dense vector matches sparse" begin
+        dense = [0, 5, 0, 0, 3, 7, 0, 1]
+        @test downsample(dense, 10; rng = Random.Xoshiro(7)) == downsample(sparse(dense), 10; rng = Random.Xoshiro(7))
+    end
+
+    @testset "sparse vector keeps zeros and the total" begin
+        dense = [0, 5, 0, 0, 3, 7, 0, 1]
+        for _ in 1:100
+            downsampled = downsample(sparse(dense), 10)
+            @test downsampled isa Vector{Int}
+            @test sum(downsampled) == 10
+            @test all(0 .<= downsampled .<= dense)
+        end
+        @test downsample(sparse(dense), 100) == dense
+        @test downsample(sparse([0, 4, 0]), 2) == [0, 2, 0]
+        @test downsample(sparse([0, 0, 0]), 2) == [0, 0, 0]
+    end
+
+    @testset "sparse vector samples with the counts as weights" begin
+        dense = [0, 1, 0, 3]
+        n_draws = 20_000
+        total_per_value = zeros(Int, 4)
+        for _ in 1:n_draws
+            total_per_value .+= downsample(sparse(dense), 1)
+        end
+        @test all(abs.(total_per_value ./ n_draws .- dense ./ 4) .< 0.02)
+    end
+
+    @testset "sparse matrix keeps zeros and the totals" begin
+        dense = [0 5 0; 2 0 3; 0 4 0; 6 0 9]
+        for (matrix, dims, samples_per_slice) in (
+            (sparse(dense), Columns, vec(sum(dense; dims = 1))),
+            (flip(sparse(flip(dense))), Rows, vec(sum(dense; dims = 2))),
+        )
+            downsampled = downsample(matrix, 4; dims)
+            @test all(0 .<= downsampled .<= dense)
+            @test vec(sum(downsampled; dims = other_axis(dims))) == min.(samples_per_slice, 4)
+        end
+    end
+end
+
+@testset "round_counts" begin
+    n_draws = 20_000
+
+    @testset "a single unit is placed with the fractions as probabilities" begin
+        values = [0.25, 0.25, 0.5]
+        total_per_value = zeros(Int, 3)
+        for _ in 1:n_draws
+            rounded = round_counts(values)
+            @test sum(rounded) == 1
+            @test all((rounded .== 0) .| (rounded .== 1))
+            total_per_value .+= rounded
+        end
+        @test all(abs.(total_per_value ./ n_draws .- values) .< 0.02)
+    end
+
+    @testset "expected values hold when the fractions sum to more than one" begin
+        values = [0.9, 0.9, 0.2]
+        total_per_value = zeros(Int, 3)
+        for _ in 1:n_draws
+            rounded = round_counts(values)
+            @test sum(rounded) == 2
+            total_per_value .+= rounded
+        end
+        @test all(abs.(total_per_value ./ n_draws .- values) .< 0.02)
+    end
+
+    @testset "integer parts are kept and the total is preserved" begin
+        values = [1.5, 2.25, 0.25, 3.0]
+        for _ in 1:100
+            rounded = round_counts(values)
+            @test sum(rounded) == 7
+            @test all((rounded .== floor.(values)) .| (rounded .== ceil.(values)))
+        end
+    end
+
+    @testset "a fractional total rounds to its floor or ceil" begin
+        values = [0.3, 0.4]
+        total = 0
+        for _ in 1:n_draws
+            rounded_total = sum(round_counts(values))
+            @test rounded_total in (0, 1)
+            total += rounded_total
+        end
+        @test abs(total / n_draws - 0.7) < 0.02
+    end
+
+    @testset "integer input is copied" begin
+        values = [3, 0, 5, 1]
+        @test round_counts(values) == values
+        @test round_counts([2.0, 0.0, 4.0]) == [2, 0, 4]
+    end
+
+    @testset "trivial inputs" begin
+        @test round_counts(Float64[]) == Int[]
+        @test round_counts([0.0, 0.0]) == [0, 0]
+        @test round_counts([3.0]) == [3]
+        @test round_counts([0.5]) in ([0], [1])
+    end
+
+    @testset "negative input is rejected" begin
+        @test_throws AssertionError round_counts([1.5, -0.5])
+    end
+
+    @testset "given output is filled" begin
+        output = fill(-1, 3)
+        @test round_counts([1.0, 2.0, 3.0]; output) === output
+        @test output == [1, 2, 3]
+
+        output = fill(-1, 2, 2)
+        @test round_counts([1.0 2.0; 3.0 4.0]; dims = Columns, output) === output
+        @test output == [1 2; 3 4]
+    end
+
+    @testset "sparse vector matches dense" begin
+        dense = [0.0, 1.5, 0.0, 0.25, 2.75, 0.0, 0.5]
+        @test round_counts(sparse(dense); rng = Random.Xoshiro(7)) == round_counts(dense; rng = Random.Xoshiro(7))
+    end
+
+    @testset "sparse matrix matches dense" begin
+        dense = [0.0 1.5 0.0; 0.25 0.0 2.75; 0.5 0.0 0.0; 0.0 3.25 0.75]
+        @test round_counts(sparse(dense); dims = Columns, rng = Random.Xoshiro(7)) ==
+              round_counts(dense; dims = Columns, rng = Random.Xoshiro(7))
+        @test round_counts(flip(sparse(dense)); dims = Rows, rng = Random.Xoshiro(7)) ==
+              round_counts(flip(dense); dims = Rows, rng = Random.Xoshiro(7))
+    end
+end

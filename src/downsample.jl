@@ -11,11 +11,15 @@ with deeper (higher total samples) vectors will tend to be higher.
 Downsampling discards data so we'd like the target `k` to be as large as possible. Typically this isn't the minimal
 `K(j)` to avoid a few shallow sampled vectors from ruining the quality of the results; we accept that a small fraction
 of the vectors will keep their original `K(j)` samples when this is less than the chosen `k`.
+
+Downsampling only works on integer data. If given fractional data, one should first use [`round_counts`](@ref) to
+convert it to integers.
 """
 module Downsample
 
 export downsample
 export downsamples
+export round_counts
 
 using ..Brief
 using ..Documentation
@@ -26,6 +30,7 @@ using ..SparseStatistics
 using ..Types
 using Base.Threads
 using Random
+using SparseArrays
 
 import ..MatrixLayouts.check_efficient_action
 import Random.default_rng
@@ -52,7 +57,8 @@ marbles from this vector; each time we pick a marble we take it out of the origi
 position in the result.
 
 If the sum of the entries of a vector is less than `samples`, it is copied to the output. If `output` is not specified,
-it is allocated automatically using the same element type as the input.
+it is allocated automatically using the same element type as the input. For sparse data, it only examines the non-zero
+entries.
 
 When downsampling a `matrix`, then `dims` must be specified to be `1`/`Rows` to separately downsample each row, or
 `2`/`Columns` to separately downsample each column.
@@ -94,33 +100,17 @@ function downsample(
     rng::AbstractRNG = default_rng(),
     output::Maybe{AbstractVector} = nothing,
 )::AbstractVector
-    n_values = length(vector)
-
     if output === nothing
-        output = similar_array(vector)  # UNTESTED
+        output = similar_array(vector)
     end
 
     @assert length(output) == length(vector)
 
-    if n_values > 0
-        @assert minimum(vector) >= 0 "Downsampling a vector with negative values"
-    end
-
-    if n_values == 1
-        output[1] = min(samples, vector[1])  # UNTESTED
-
-    elseif n_values > 1
-        tree = initialize_tree(vector)
-
-        if tree[end] <= samples
-            output .= vector
-
-        else
-            output .= 0
-            for _ in 1:samples
-                output[random_sample!(tree, rand(rng, 1:tree[end]))] += 1
-            end
-        end
+    if issparse(vector)
+        output .= 0
+        downsample_values!(output, nzind(vector), nzval(vector), samples, rng)
+    else
+        downsample_values!(output, eachindex(vector), vector, samples, rng)
     end
 
     return output
@@ -134,7 +124,6 @@ function downsample(
     output::Maybe{AbstractMatrix} = nothing,
 )::AbstractMatrix
     @assert 1 <= dims <= 2
-    n_rows, n_columns = size(matrix)
 
     if major_axis(matrix) !== nothing
         check_efficient_action(@source_location()..., "matrix", matrix, dims)
@@ -149,24 +138,267 @@ function downsample(
         end
     end
 
-    if dims == Rows
-        parallel_loop_with_rng(1:n_rows; name = "downsample", rng) do row_index, rng
+    parallel_loop_on_slices(output, matrix; dims, name = "downsample", rng) do output_vector, positions, values, rng
+        downsample_values!(output_vector, positions, values, samples, rng)
+        return nothing
+    end
+
+    return output
+end
+
+# Downsample the `values` into the `positions` of the `output`. Other entries of the `output` are not modified.
+function downsample_values!(
+    output::AbstractVector,
+    positions::AbstractVector{<:Integer},
+    values::AbstractVector{<:Integer},
+    samples::Integer,
+    rng::AbstractRNG,
+)::Nothing
+    n_values = length(values)
+
+    if n_values > 0
+        @assert minimum(values) >= 0 "Downsampling a vector with negative values"
+    end
+
+    if n_values == 1
+        output[positions[1]] = min(samples, values[1])
+
+    elseif n_values > 1
+        tree = initialize_tree(values)
+
+        if tree[end] <= samples
+            @views output[positions] .= values
+
+        else
+            @views output[positions] .= 0
+            for _ in 1:samples
+                output[positions[random_sample!(tree, rand(rng, 1:tree[end]))]] += 1
+            end
+        end
+    end
+
+    return nothing
+end
+
+"""
+    round_counts(
+        vector::AbstractVector{<:Real};
+        rng::AbstractRNG = default_rng(),
+        output::Maybe{AbstractVector{<:Integer}} = nothing,
+    )::AbstractVector
+
+    round_counts(
+        matrix::AbstractMatrix{<:Real};
+        dims::Integer,
+        rng::AbstractRNG = default_rng(),
+        output::Maybe{AbstractMatrix{<:Integer}} = nothing,
+    )::AbstractMatrix
+
+Given a `vector` of non-negative, possibly fractional, counts, return a new vector of integer counts. Each entry is
+randomly rounded to either the `floor` or the `ceil` of its value. The expected value of each entry is its original
+value. If the total of the original vector is an integer, the result has exactly this total. Otherwise, the total of
+the result is either the `floor` or the `ceil` of the original total.
+
+This allows downsampling fractional counts, by first rounding them and then calling [`downsample`](@ref). Integer
+counts are copied as-is, so for them this is identical to calling [`downsample`](@ref) directly.
+
+This uses the ordered pivotal method (Deville and Tillé, 1998). It takes `O(N)` time and uses one random number per
+fractional entry. For sparse data, it only examines the non-zero entries. If `output` is not specified, it is
+allocated automatically with an `Int` element type.
+
+When rounding a `matrix`, then `dims` must be specified to be `1`/`Rows` to separately round each row, or `2`/`Columns`
+to separately round each column.
+
+```jldoctest
+# Columns
+
+data = rand(10, 5) .* 10
+rounded = round_counts(data; dims = 2)
+@assert all((rounded .== floor.(data)) .| (rounded .== ceil.(data)))
+
+sums_per_column = vec(sum(data; dims = 1))
+rounded_sums_per_column = vec(sum(rounded; dims = 1))
+@assert all(
+    (rounded_sums_per_column .== floor.(sums_per_column)) .| (rounded_sums_per_column .== ceil.(sums_per_column))
+)
+
+integers = rand(0:10, 10, 5)
+@assert round_counts(integers; dims = 2) == integers
+
+# Rows
+
+data = flip(data)
+rounded = round_counts(data; dims = 1)
+@assert all((rounded .== floor.(data)) .| (rounded .== ceil.(data)))
+
+sums_per_row = vec(sum(data; dims = 2))
+rounded_sums_per_row = vec(sum(rounded; dims = 2))
+@assert all((rounded_sums_per_row .== floor.(sums_per_row)) .| (rounded_sums_per_row .== ceil.(sums_per_row)))
+
+integers = flip(integers)
+@assert round_counts(integers; dims = 1) == integers
+
+# output
+
+```
+"""
+function round_counts(
+    vector::AbstractVector{<:Real};
+    rng::AbstractRNG = default_rng(),
+    output::Maybe{AbstractVector{<:Integer}} = nothing,
+)::AbstractVector
+    if output === nothing
+        output = similar_array(vector; eltype = Int)
+    end
+
+    @assert length(output) == length(vector)
+
+    if issparse(vector)
+        output .= 0
+        round_counts_of_values!(output, nzind(vector), nzval(vector), rng)
+    else
+        round_counts_of_values!(output, eachindex(vector), vector, rng)
+    end
+
+    return output
+end
+
+function round_counts(
+    matrix::AbstractMatrix{<:Real};
+    dims::Integer,
+    rng::AbstractRNG = default_rng(),
+    output::Maybe{AbstractMatrix{<:Integer}} = nothing,
+)::AbstractMatrix
+    @assert 1 <= dims <= 2
+
+    if major_axis(matrix) !== nothing
+        check_efficient_action(@source_location()..., "matrix", matrix, dims)
+    end
+
+    if output === nothing
+        output = similar_array(matrix; eltype = Int, default_major_axis = dims)
+    else
+        @assert size(output) == size(matrix)
+        if major_axis(output) !== nothing
+            check_efficient_action(@source_location()..., "output", output, dims)
+        end
+    end
+
+    parallel_loop_on_slices(round_counts_of_values!, output, matrix; dims, name = "round_counts", rng)
+
+    return output
+end
+
+# Call `body(output_vector, positions, values, rng)` in parallel for each row (`dims = Rows`) or column
+# (`dims = Columns`) of the `matrix`. If the `matrix` is sparse with a major axis of `dims`, the `output_vector` is
+# zero-filled and the `positions` and `values` are only of the non-zero entries. Otherwise, they are of all the entries.
+function parallel_loop_on_slices(
+    body::Function,
+    output::AbstractMatrix,
+    matrix::AbstractMatrix;
+    dims::Integer,
+    name::AbstractString,
+    rng::AbstractRNG,
+)::Nothing
+    n_rows, n_columns = size(matrix)
+
+    if issparse(matrix) && major_axis(matrix) == dims
+        if dims == Columns
+            column_major_matrix = matrix
+            column_major_output = output
+        else
+            column_major_matrix = flip(matrix)
+            column_major_output = flip(output)
+        end
+
+        column_offsets = colptr(column_major_matrix)
+        row_indices = rowval(column_major_matrix)
+        nonzero_values = nzval(column_major_matrix)
+        n_iterations = size(column_major_matrix, 2)
+
+        parallel_loop_with_rng(1:n_iterations; name, rng) do iteration_index, rng
+            slice_first = Int(column_offsets[iteration_index])
+            slice_last = Int(column_offsets[iteration_index + 1]) - 1
+            @views output_vector = column_major_output[:, iteration_index]
+            output_vector .= 0
+            @views body(output_vector, row_indices[slice_first:slice_last], nonzero_values[slice_first:slice_last], rng)
+            return nothing
+        end
+
+    elseif dims == Rows
+        parallel_loop_with_rng(1:n_rows; name, rng) do row_index, rng
             @views row_vector = matrix[row_index, :]
             @views output_vector = output[row_index, :]
-            return downsample(row_vector, samples; rng, output = output_vector)
+            body(output_vector, eachindex(row_vector), row_vector, rng)
+            return nothing
         end
 
     elseif dims == Columns
-        parallel_loop_with_rng(1:n_columns; name = "downsample", rng) do column_index, rng
+        parallel_loop_with_rng(1:n_columns; name, rng) do column_index, rng
             @views column_vector = matrix[:, column_index]
             @views output_vector = output[:, column_index]
-            return downsample(column_vector, samples; rng, output = output_vector)
+            body(output_vector, eachindex(column_vector), column_vector, rng)
+            return nothing
         end
+
     else
         @assert false
     end
 
-    return output
+    return nothing
+end
+
+# Ordered pivotal method. The fractional parts are paired one by one with a single carried fraction. Each pairing moves
+# the fractional mass between the two so that one of them becomes an integer, while preserving the expected values.
+function round_counts_of_values!(
+    output::AbstractVector{<:Integer},
+    positions::AbstractVector{<:Integer},
+    values::AbstractVector{<:Real},
+    rng::AbstractRNG,
+)::Nothing
+    carry_position = 0
+    carry_fraction = zero(eltype(values))
+
+    for (position, value) in zip(positions, values)
+        @assert value >= 0 "Rounding a vector with negative values"
+        integer_part = floor(value)
+        fraction = value - integer_part
+        output[position] = integer_part
+
+        if fraction > 0
+            if carry_position == 0
+                carry_position = position
+                carry_fraction = fraction
+
+            else
+                total_fraction = carry_fraction + fraction
+                if total_fraction < 1
+                    if rand(rng) >= carry_fraction / total_fraction
+                        carry_position = position
+                    end
+                    carry_fraction = total_fraction
+
+                else
+                    if rand(rng) < (1 - fraction) / (2 - total_fraction)
+                        output[carry_position] += 1
+                        carry_position = position
+                    else
+                        output[position] += 1
+                    end
+                    carry_fraction = total_fraction - 1
+                    if carry_fraction == 0
+                        carry_position = 0
+                    end
+                end
+            end
+        end
+    end
+
+    if carry_position > 0 && rand(rng) < carry_fraction
+        output[carry_position] += 1
+    end
+
+    return nothing
 end
 
 function initialize_tree(input::AbstractVector{T})::AbstractVector{T} where {T <: Integer}

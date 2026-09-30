@@ -250,6 +250,12 @@
 <code>k
 </code>.
 </p>
+<p>Downsampling only works on integer data. If given fractional data, one should first use 
+<a href="downsample.html#TanayLabUtilities.Downsample.round_counts">
+<code>round_counts
+</code>
+</a> to convert it to integers.
+</p>
 </div>
 </section>
 </details>
@@ -295,7 +301,7 @@ downsample(
 <code>samples
 </code>, it is copied to the output. If 
 <code>output
-</code> is not specified, it is allocated automatically using the same element type as the input.
+</code> is not specified, it is allocated automatically using the same element type as the input. For sparse data, it only examines the non-zero entries.
 </p>
 <p>When downsampling a 
 <code>matrix
@@ -405,6 +411,114 @@ end
 </section>
 </details>
 </article>
+<article>
+<details class="docstring" open="true">
+<summary id="TanayLabUtilities.Downsample.round_counts">
+<a class="docstring-binding" href="#TanayLabUtilities.Downsample.round_counts">
+<code>TanayLabUtilities.Downsample.round_counts
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+</summary>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">round_counts(
+    vector::AbstractVector{&lt;:Real};
+    rng::AbstractRNG = default_rng(),
+    output::Maybe{AbstractVector{&lt;:Integer}} = nothing,
+)::AbstractVector
+
+round_counts(
+    matrix::AbstractMatrix{&lt;:Real};
+    dims::Integer,
+    rng::AbstractRNG = default_rng(),
+    output::Maybe{AbstractMatrix{&lt;:Integer}} = nothing,
+)::AbstractMatrix
+</code>
+</pre>
+<p>Given a 
+<code>vector
+</code> of non-negative, possibly fractional, counts, return a new vector of integer counts. Each entry is randomly rounded to either the 
+<code>floor
+</code> or the 
+<code>ceil
+</code> of its value. The expected value of each entry is its original value. If the total of the original vector is an integer, the result has exactly this total. Otherwise, the total of the result is either the 
+<code>floor
+</code> or the 
+<code>ceil
+</code> of the original total.
+</p>
+<p>This allows downsampling fractional counts, by first rounding them and then calling 
+<a href="downsample.html#TanayLabUtilities.Downsample.downsample">
+<code>downsample
+</code>
+</a>. Integer counts are copied as-is, so for them this is identical to calling 
+<a href="downsample.html#TanayLabUtilities.Downsample.downsample">
+<code>downsample
+</code>
+</a> directly.
+</p>
+<p>This uses the ordered pivotal method (Deville and Tillé, 1998). It takes 
+<code>O(N)
+</code> time and uses one random number per fractional entry. For sparse data, it only examines the non-zero entries. If 
+<code>output
+</code> is not specified, it is allocated automatically with an 
+<code>Int
+</code> element type.
+</p>
+<p>When rounding a 
+<code>matrix
+</code>, then 
+<code>dims
+</code> must be specified to be 
+<code>1
+</code>/
+<code>Rows
+</code> to separately round each row, or 
+<code>2
+</code>/
+<code>Columns
+</code> to separately round each column.
+</p>
+<pre>
+<code class="language-julia hljs"># Columns
+
+data = rand(10, 5) .* 10
+rounded = round_counts(data; dims = 2)
+@assert all((rounded .== floor.(data)) .| (rounded .== ceil.(data)))
+
+sums_per_column = vec(sum(data; dims = 1))
+rounded_sums_per_column = vec(sum(rounded; dims = 1))
+@assert all(
+    (rounded_sums_per_column .== floor.(sums_per_column)) .| (rounded_sums_per_column .== ceil.(sums_per_column))
+)
+
+integers = rand(0:10, 10, 5)
+@assert round_counts(integers; dims = 2) == integers
+
+# Rows
+
+data = flip(data)
+rounded = round_counts(data; dims = 1)
+@assert all((rounded .== floor.(data)) .| (rounded .== ceil.(data)))
+
+sums_per_row = vec(sum(data; dims = 2))
+rounded_sums_per_row = vec(sum(rounded; dims = 2))
+@assert all((rounded_sums_per_row .== floor.(sums_per_row)) .| (rounded_sums_per_row .== ceil.(sums_per_row)))
+
+integers = flip(integers)
+@assert round_counts(integers; dims = 1) == integers
+
+# output
+
+</code>
+</pre>
+</div>
+</section>
+</details>
+</article>
 <h2 id="Index">
 <a class="docs-heading-anchor" href="#Index">Index
 </a>
@@ -429,6 +543,12 @@ end
 <li>
 <a href="downsample.html#TanayLabUtilities.Downsample.downsamples">
 <code>TanayLabUtilities.Downsample.downsamples
+</code>
+</a>
+</li>
+<li>
+<a href="downsample.html#TanayLabUtilities.Downsample.round_counts">
+<code>TanayLabUtilities.Downsample.round_counts
 </code>
 </a>
 </li>
