@@ -16,7 +16,7 @@
 <script data-outdated-warner src="assets/warner.js">
 </script>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/>
-<link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.63.2/juliamono.min.css" rel="stylesheet" type="text/css"/>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/>
@@ -113,6 +113,14 @@
 </a>
 </li>
 <li>
+<a class="tocitem" href="matrix_layouts.html">Matrix layouts
+</a>
+</li>
+<li>
+<a class="tocitem" href="matrix_formats.html">Matrix Formats
+</a>
+</li>
+<li>
 <a class="tocitem" href="downsample.html">Downsample
 </a>
 </li>
@@ -122,6 +130,14 @@
 </li>
 <li>
 <a class="tocitem" href="grouped_correlations.html">Grouped Correlations
+</a>
+</li>
+<li>
+<a class="tocitem" href="chi_squared.html">Chi Squared
+</a>
+</li>
+<li>
+<a class="tocitem" href="sparse_statistics.html">Sparse Statistics
 </a>
 </li>
 <li>
@@ -247,30 +263,34 @@
 <p>Get some object associated with a 
 <code>path
 </code> and identified by the 
-<code>key from the global cache (if it is there) or invoke the
-</code>getter
-<code>to obtain it (and cache it for future reference). As a convenience, the
-</code>getter
-<code>is passed the
-</code>path
-<code>and
-</code>key
-<code>. If
-</code>purge
-<code>is set, then any existing value is ignored and is replaced by the result of the
-</code>getter
-<code>. The file&#39;s inode is always compared, so a cached entry is invalidated if the file at
-</code>path
-<code>has been replaced (for example, by
-</code>rm
-<code>followed by re-creation). By default, the
-</code>mtime
-<code>of the file is **not** checked: callers are assumed to be the sole writers of the file, and their own writes (which bump the
-</code>mtime
-<code>) must not throw away a cached object that is still in use. If the caller instead wants to treat external
-</code>mtime
-<code>changes as invalidation (for example, because the file may be rewritten by an unrelated process), set
-</code>check_mtime = true`.
+<code>key
+</code> from the global cache (if it is there) or invoke the 
+<code>getter
+</code> to obtain it (and cache it for future reference). As a convenience, the 
+<code>getter
+</code> is passed the 
+<code>path
+</code> and 
+<code>key
+</code>. If 
+<code>purge
+</code> is set, then any existing value is ignored and is replaced by the result of the 
+<code>getter
+</code>. The file&#39;s inode is always compared, so a cached entry is invalidated if the file at 
+<code>path
+</code> has been replaced (for example, by 
+<code>rm
+</code> followed by re-creation). By default, the 
+<code>mtime
+</code> of the file is 
+<strong>not
+</strong> checked: callers are assumed to be the sole writers of the file, and their own writes (which bump the 
+<code>mtime
+</code>) must not throw away a cached object that is still in use. If the caller instead wants to treat external 
+<code>mtime
+</code> changes as invalidation (for example, because the file may be rewritten by an unrelated process), set 
+<code>check_mtime = true
+</code>.
 </p>
 <p>There&#39;s a singleton 
 <code>GLOBAL_CACHE
@@ -298,7 +318,7 @@
 end
 @assert first == [1]
 @assert first === get_through_global_weak_cache(&quot;fake path&quot;, :test) do _
-    @assert false;
+    @assert false
 end
 
 second = get_through_global_weak_cache(&quot;fake path&quot;, :test; purge = true) do _
@@ -395,7 +415,7 @@ end
 <hr/>
 <p>This document was generated with 
 <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl
-</a> version 1.17.0. Using Julia version 1.12.6.
+</a> version 1.19.0. Using Julia version 1.12.6.
 </p>
 </section>
 <footer class="modal-card-foot">

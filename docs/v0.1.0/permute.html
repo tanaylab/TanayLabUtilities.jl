@@ -16,7 +16,7 @@
 <script data-outdated-warner src="assets/warner.js">
 </script>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/>
-<link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.63.2/juliamono.min.css" rel="stylesheet" type="text/css"/>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/>
@@ -121,6 +121,14 @@
 </a>
 </li>
 <li>
+<a class="tocitem" href="matrix_layouts.html">Matrix layouts
+</a>
+</li>
+<li>
+<a class="tocitem" href="matrix_formats.html">Matrix Formats
+</a>
+</li>
+<li>
 <a class="tocitem" href="downsample.html">Downsample
 </a>
 </li>
@@ -130,6 +138,14 @@
 </li>
 <li>
 <a class="tocitem" href="grouped_correlations.html">Grouped Correlations
+</a>
+</li>
+<li>
+<a class="tocitem" href="chi_squared.html">Chi Squared
+</a>
+</li>
+<li>
+<a class="tocitem" href="sparse_statistics.html">Sparse Statistics
 </a>
 </li>
 <li>
@@ -513,11 +529,16 @@ permute_dense_matrix_columns!(; destination, source, columns_permutation)
 </pre>
 <p>Fill 
 <code>destination
-</code> such that 
-<code>destination[destination_row, destination_column] == source[rows_permutation[destination_row], columns_permutation[destination_column]]
-</code> for every 
+</code> such that, for every 
 <code>(destination_row, destination_column)
-</code>. Single-pass; parallelized per destination column. If 
+</code>:
+</p>
+<pre>
+<code class="language-julia hljs">destination[destination_row, destination_column] ==
+source[rows_permutation[destination_row], columns_permutation[destination_column]]
+</code>
+</pre>
+<p>Single-pass; parallelized per destination column. If 
 <code>progress
 </code> is given, advance it by 
 <code>n_rows
@@ -599,13 +620,8 @@ permute_sparse_matrix_rows!(;
     source,
     inverse_rows_permutation,
 )
-destination = SparseMatrixCSC(
-    size(source, 1),
-    size(source, 2),
-    destination_colptr,
-    destination_rowval,
-    destination_nzval,
-)
+destination =
+    SparseMatrixCSC(size(source, 1), size(source, 2), destination_colptr, destination_rowval, destination_nzval)
 @assert destination == sparse([0.0 4.0; 1.0 2.0; 3.0 0.0])
 
 # output
@@ -713,20 +729,9 @@ destination_colptr = Vector{Int}(undef, size(source, 2) + 1)
 destination_rowval = Vector{Int}(undef, nnz(source))
 destination_nzval = Vector{Float64}(undef, nnz(source))
 columns_permutation = [3, 1, 2]
-permute_sparse_matrix_columns!(;
-    destination_colptr,
-    destination_rowval,
-    destination_nzval,
-    source,
-    columns_permutation,
-)
-destination = SparseMatrixCSC(
-    size(source, 1),
-    size(source, 2),
-    destination_colptr,
-    destination_rowval,
-    destination_nzval,
-)
+permute_sparse_matrix_columns!(; destination_colptr, destination_rowval, destination_nzval, source, columns_permutation)
+destination =
+    SparseMatrixCSC(size(source, 1), size(source, 2), destination_colptr, destination_rowval, destination_nzval)
 @assert destination == sparse([2.0 1.0 0.0; 0.0 0.0 3.0; 0.0 4.0 5.0])
 
 # output
@@ -809,11 +814,16 @@ destination = SparseMatrixCSC(
 </pre>
 <p>Fill the 
 <code>(colptr, rowval, nzval)
-</code> backing triplet of a sparse destination such that 
-<code>destination[inverse_rows_permutation[source_row], destination_column] == source[source_row, columns_permutation[destination_column]]
-</code> for every 
+</code> backing triplet of a sparse destination such that, for every 
 <code>(source_row, destination_column)
-</code>. Single-pass; parallelized per destination column. If 
+</code>:
+</p>
+<pre>
+<code class="language-julia hljs">destination[inverse_rows_permutation[source_row], destination_column] ==
+source[source_row, columns_permutation[destination_column]]
+</code>
+</pre>
+<p>Single-pass; parallelized per destination column. If 
 <code>progress
 </code> is given, advance it by the column nnz per destination column completed.
 </p>
@@ -844,13 +854,8 @@ permute_sparse_matrix_both!(;
     inverse_rows_permutation,
     columns_permutation,
 )
-destination = SparseMatrixCSC(
-    size(source, 1),
-    size(source, 2),
-    destination_colptr,
-    destination_rowval,
-    destination_nzval,
-)
+destination =
+    SparseMatrixCSC(size(source, 1), size(source, 2), destination_colptr, destination_rowval, destination_nzval)
 @assert destination == sparse([4.0 0.0 3.0; 0.0 1.0 2.0])
 
 # output
@@ -1048,7 +1053,7 @@ destination = SparseMatrixCSC(
 <hr/>
 <p>This document was generated with 
 <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl
-</a> version 1.17.0. Using Julia version 1.12.6.
+</a> version 1.19.0. Using Julia version 1.12.6.
 </p>
 </section>
 <footer class="modal-card-foot">

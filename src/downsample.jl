@@ -219,7 +219,7 @@ rounded = round_counts(data; dims = 2)
 sums_per_column = vec(sum(data; dims = 1))
 rounded_sums_per_column = vec(sum(rounded; dims = 1))
 @assert all(
-    (rounded_sums_per_column .== floor.(sums_per_column)) .| (rounded_sums_per_column .== ceil.(sums_per_column))
+    (rounded_sums_per_column .== floor.(sums_per_column)) .| (rounded_sums_per_column .== ceil.(sums_per_column)),
 )
 
 integers = rand(0:10, 10, 5)

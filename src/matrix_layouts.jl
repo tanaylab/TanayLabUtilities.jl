@@ -815,7 +815,7 @@ result = relayout!(named_destination, named_source)
 # Permuted
 
 source = rand(3, 4)
-destination = PermutedDimsArray(rand(4, 3), (2,1))
+destination = PermutedDimsArray(rand(4, 3), (2, 1))
 result = relayout!(destination, source)
 @assert result === destination
 @assert brief(source) == "3 x 4 x Float64 in Columns (Dense)"
@@ -823,7 +823,7 @@ result = relayout!(destination, source)
 @assert result == source
 
 source = rand(3, 4)
-destination = PermutedDimsArray(adjoint(rand(4, 3)), (1,2))
+destination = PermutedDimsArray(adjoint(rand(4, 3)), (1, 2))
 result = relayout!(destination, source)
 @assert result === destination
 @assert brief(source) == "3 x 4 x Float64 in Columns (Dense)"
@@ -936,6 +936,7 @@ base = rand(3, 4)
 @assert major_axis(relayout(base)) == minor_axis(base);
 
 # output
+
 ```
 """
 function relayout(matrix::AbstractMatrix)::AbstractMatrix
@@ -969,13 +970,13 @@ base = NamedArray(rand(3, 4))
 
 # Permuted
 
-base = PermutedDimsArray(rand(3, 4), (2,1))
+base = PermutedDimsArray(rand(3, 4), (2, 1))
 @assert flipped(base) == flip(base)
 @assert brief(base) == "4 x 3 x Float64 in Rows (Permute, Dense)"
 @assert brief(flip(base)) == "3 x 4 x Float64 in Columns (Dense)"
 @assert brief(flipped(base)) == "3 x 4 x Float64 in Rows (Transpose, Dense)"
 
-base = PermutedDimsArray(rand(3, 4), (1,2))
+base = PermutedDimsArray(rand(3, 4), (1, 2))
 @assert flipped(base) == flip(base)
 @assert brief(base) == "3 x 4 x Float64 in Columns (!Permute, Dense)"
 @assert brief(flip(base)) == "4 x 3 x Float64 in Rows (Transpose, Dense)"

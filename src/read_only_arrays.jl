@@ -120,6 +120,7 @@ sparse_read_only = read_only_array(sparse)
 @assert read_only_array(sparse_read_only) === sparse_read_only;
 
 # output
+
 ```
 """
 function read_only_array(array::AbstractArray)::AbstractArray
@@ -246,6 +247,7 @@ sparse = SparseMatrixCSC(base)
 @assert mutable_array(read_only_array(sparse)) === sparse;
 
 # output
+
 ```
 """
 function mutable_array(array::AbstractArray)::AbstractArray

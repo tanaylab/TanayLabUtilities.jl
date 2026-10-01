@@ -1,0 +1,37 @@
+# The package-specific documentation settings, read by `deps/document.jl`.
+
+pages = [
+    "index.md",
+    "types.md",
+    "brief.md",
+    "logger.md",
+    "flame_time.md",
+    "parallel_loops.md",
+    "permute.md",
+    "parallel_distances.md",
+    "parallel_storage.md",
+    "mostly_read_write_locks.md",
+    "extended_read_write_locks.md",
+    "unique_names.md",
+    "documentation.md",
+    "handlers.md",
+    "read_only_arrays.md",
+    "matrix_layouts.md",
+    "matrix_formats.md",
+    "downsample.md",
+    "zero_correlation.md",
+    "grouped_correlations.md",
+    "chi_squared.md",
+    "sparse_statistics.md",
+    "cross_validations.md",
+    "global_weak_cache.md",
+    "kmeans.md",
+    "cached_ispath.md",
+    "old_linux_mmap.md",
+    "bits_loops.md",
+]
+
+# Stack Overflow refuses automated requests, so the link check always fails for it.
+linkcheck_ignore = [
+    "https://stackoverflow.com/questions/61936371/usage-and-convention-differences-between-missing-nothing-undef-and-nan-in-jul",
+]

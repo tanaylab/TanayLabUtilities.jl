@@ -16,7 +16,7 @@
 <script data-outdated-warner src="assets/warner.js">
 </script>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/>
-<link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.63.2/juliamono.min.css" rel="stylesheet" type="text/css"/>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/>
@@ -112,6 +112,14 @@
 <a class="tocitem" href="read_only_arrays.html">Read-Only Arrays
 </a>
 </li>
+<li>
+<a class="tocitem" href="matrix_layouts.html">Matrix layouts
+</a>
+</li>
+<li>
+<a class="tocitem" href="matrix_formats.html">Matrix Formats
+</a>
+</li>
 <li class="is-active">
 <a class="tocitem" href="downsample.html">Downsample
 </a>
@@ -130,6 +138,14 @@
 </li>
 <li>
 <a class="tocitem" href="grouped_correlations.html">Grouped Correlations
+</a>
+</li>
+<li>
+<a class="tocitem" href="chi_squared.html">Chi Squared
+</a>
+</li>
+<li>
+<a class="tocitem" href="sparse_statistics.html">Sparse Statistics
 </a>
 </li>
 <li>
@@ -492,7 +508,7 @@ rounded = round_counts(data; dims = 2)
 sums_per_column = vec(sum(data; dims = 1))
 rounded_sums_per_column = vec(sum(rounded; dims = 1))
 @assert all(
-    (rounded_sums_per_column .== floor.(sums_per_column)) .| (rounded_sums_per_column .== ceil.(sums_per_column))
+    (rounded_sums_per_column .== floor.(sums_per_column)) .| (rounded_sums_per_column .== ceil.(sums_per_column)),
 )
 
 integers = rand(0:10, 10, 5)
@@ -555,7 +571,7 @@ integers = flip(integers)
 </ul>
 </article>
 <nav class="docs-footer">
-<a class="docs-footer-prevpage" href="read_only_arrays.html">« Read-Only Arrays
+<a class="docs-footer-prevpage" href="matrix_formats.html">« Matrix Formats
 </a>
 <a class="docs-footer-nextpage" href="zero_correlation.html">Zero Correlation »
 </a>
@@ -605,7 +621,7 @@ integers = flip(integers)
 <hr/>
 <p>This document was generated with 
 <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl
-</a> version 1.17.0. Using Julia version 1.12.6.
+</a> version 1.19.0. Using Julia version 1.12.6.
 </p>
 </section>
 <footer class="modal-card-foot">

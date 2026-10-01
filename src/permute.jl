@@ -270,10 +270,15 @@ end
         progress::Maybe{AbstractProgress} = nothing,
     )::Nothing
 
-Fill `destination` such that `destination[destination_row, destination_column] ==
-source[rows_permutation[destination_row], columns_permutation[destination_column]]` for every `(destination_row,
-destination_column)`. Single-pass; parallelized per destination column. If `progress` is given, advance it by `n_rows`
-per destination column completed.
+Fill `destination` such that, for every `(destination_row, destination_column)`:
+
+```julia
+destination[destination_row, destination_column] ==
+source[rows_permutation[destination_row], columns_permutation[destination_column]]
+```
+
+Single-pass; parallelized per destination column. If `progress` is given, advance it by `n_rows` per destination column
+completed.
 
 ```jldoctest
 source = Float64[1 2 3; 4 5 6]
@@ -322,9 +327,10 @@ end
         progress::Maybe{AbstractProgress} = nothing,
     )::Nothing
 
-Fill the `(colptr, rowval, nzval)` backing triplet of a sparse destination such that `destination[:, destination_column]
-== source[:, columns_permutation[destination_column]]` for every `destination_column`. Parallelized per destination
-column. If `progress` is given, advance it by the column nnz per destination column completed.
+Fill the `(colptr, rowval, nzval)` backing triplet of a sparse destination such that
+`destination[:, destination_column] == source[:, columns_permutation[destination_column]]` for every
+`destination_column`. Parallelized per destination column. If `progress` is given, advance it by the column nnz per
+destination column completed.
 
 Use [`permute_sparse_matrix_columns_buffers!`](@ref) when the source is held as raw `(colptr, rowval, nzval)` buffers
 rather than a `SparseMatrixCSC`.
@@ -337,20 +343,9 @@ destination_colptr = Vector{Int}(undef, size(source, 2) + 1)
 destination_rowval = Vector{Int}(undef, nnz(source))
 destination_nzval = Vector{Float64}(undef, nnz(source))
 columns_permutation = [3, 1, 2]
-permute_sparse_matrix_columns!(;
-    destination_colptr,
-    destination_rowval,
-    destination_nzval,
-    source,
-    columns_permutation,
-)
-destination = SparseMatrixCSC(
-    size(source, 1),
-    size(source, 2),
-    destination_colptr,
-    destination_rowval,
-    destination_nzval,
-)
+permute_sparse_matrix_columns!(; destination_colptr, destination_rowval, destination_nzval, source, columns_permutation)
+destination =
+    SparseMatrixCSC(size(source, 1), size(source, 2), destination_colptr, destination_rowval, destination_nzval)
 @assert destination == sparse([2.0 1.0 0.0; 0.0 0.0 3.0; 0.0 4.0 5.0])
 
 # output
@@ -480,13 +475,8 @@ permute_sparse_matrix_rows!(;
     source,
     inverse_rows_permutation,
 )
-destination = SparseMatrixCSC(
-    size(source, 1),
-    size(source, 2),
-    destination_colptr,
-    destination_rowval,
-    destination_nzval,
-)
+destination =
+    SparseMatrixCSC(size(source, 1), size(source, 2), destination_colptr, destination_rowval, destination_nzval)
 @assert destination == sparse([0.0 4.0; 1.0 2.0; 3.0 0.0])
 
 # output
@@ -600,10 +590,16 @@ end
         progress::Maybe{AbstractProgress} = nothing,
     )::Nothing
 
-Fill the `(colptr, rowval, nzval)` backing triplet of a sparse destination such that
-`destination[inverse_rows_permutation[source_row], destination_column] == source[source_row,
-columns_permutation[destination_column]]` for every `(source_row, destination_column)`. Single-pass; parallelized per
-destination column. If `progress` is given, advance it by the column nnz per destination column completed.
+Fill the `(colptr, rowval, nzval)` backing triplet of a sparse destination such that, for every
+`(source_row, destination_column)`:
+
+```julia
+destination[inverse_rows_permutation[source_row], destination_column] ==
+source[source_row, columns_permutation[destination_column]]
+```
+
+Single-pass; parallelized per destination column. If `progress` is given, advance it by the column nnz per destination
+column completed.
 
 Use [`permute_sparse_matrix_both_buffers!`](@ref) when the source is held as raw `(colptr, rowval, nzval)` buffers
 rather than a `SparseMatrixCSC`.
@@ -625,13 +621,8 @@ permute_sparse_matrix_both!(;
     inverse_rows_permutation,
     columns_permutation,
 )
-destination = SparseMatrixCSC(
-    size(source, 1),
-    size(source, 2),
-    destination_colptr,
-    destination_rowval,
-    destination_nzval,
-)
+destination =
+    SparseMatrixCSC(size(source, 1), size(source, 2), destination_colptr, destination_rowval, destination_nzval)
 @assert destination == sparse([4.0 0.0 3.0; 0.0 1.0 2.0])
 
 # output

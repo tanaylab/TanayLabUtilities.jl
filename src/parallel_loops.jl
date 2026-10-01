@@ -97,15 +97,15 @@ end
 
 Run the `body` in parallel, passing it the iteration `index`. The `policy` is one of:
 
-  * `:greedy_sticky` - `nthreads()` sticky worker tasks spawned via `@threads :static for _ in 1:nthreads()`, each
+  - `:greedy_sticky` - `nthreads()` sticky worker tasks spawned via `@threads :static for _ in 1:nthreads()`, each
     pulling the next index position from an `Atomic{Int}` counter. Combines the dynamic load balancing of `:greedy`
     with the threadid stability of `:static`: tasks never migrate, so `threadid()`-indexed scratch is safe inside the
     body. Pair with a heaviest-first `order` (or `weights`) to attack the tail-latency problem - heavy items dispatch
     first, light items fill the tail.
-  * `:greedy`, `:dynamic`, `:static` - passed straight to `@threads`. Note that `:greedy` and `:dynamic` create
+  - `:greedy`, `:dynamic`, `:static` - passed straight to `@threads`. Note that `:greedy` and `:dynamic` create
     *non-sticky* tasks that may migrate across threads at yield points, so `threadid()`-indexed scratch is unsafe
     under those.
-  * `:serial` - run the loop on the calling thread (useful for debugging).
+  - `:serial` - run the loop on the calling thread (useful for debugging).
 
 If `order` is specified, it must be a permutation of the *positions* of `indices` - that is, a length-`length(indices)`
 vector whose values are a permutation of `1:length(indices)`. The body still receives the corresponding
@@ -116,12 +116,12 @@ longest items dispatch as early as possible): pass `sortperm(weight_per_index; r
 balancing the static partition. Mutates the caller's `order` array.
 
 If `weights` is specified, it must be a length-`length(indices)` vector of non-negative integers giving the estimated
-work for each position in `indices`. When `order` is not given, `weights` computes it to be `sortperm(weights; rev =
-true)` so the heaviest items dispatch first. When `progress` is also given, each iteration advances the bar by the
-visited position's `weights` entry instead of by 1; the caller is responsible for sizing the progress total to
-`sum(weights)` so the percentage reflects work done rather than items done. `weights` and `order` are independent and
-may be combined: pass both to keep an explicit visit order while reporting work-weighted progress. Mutually exclusive
-with `progress_chunk` (the unweighted-throttling alternative).
+work for each position in `indices`. When `order` is not given, `weights` computes it to be
+`sortperm(weights; rev = true)` so the heaviest items dispatch first. When `progress` is also given, each iteration
+advances the bar by the visited position's `weights` entry instead of by 1; the caller is responsible for sizing the
+progress total to `sum(weights)` so the percentage reflects work done rather than items done. `weights` and `order` are
+independent and may be combined: pass both to keep an explicit visit order while reporting work-weighted progress.
+Mutually exclusive with `progress_chunk` (the unweighted-throttling alternative).
 
 If this is invoked from inside another parallel loop and `nested` is `false` (the default), `policy` is ignored and the
 loop is executed serially. This makes functions safe to compose: parallel at the top level, serial when called from
@@ -397,7 +397,7 @@ size = 10
 function collect_rng(rng::AbstractRNG)::Vector{Float64}
     results = zeros(Float64, size)
     parallel_loop_with_rng(1:size; rng) do index, rng
-        results[index] = rand(rng)
+        return results[index] = rand(rng)
     end
     @assert results[1] != results[2]
     return results
@@ -408,7 +408,7 @@ end
 function collect_default_rng()::Vector{Float64}
     results = zeros(Float64, size)
     parallel_loop_with_rng(1:size; seed = 123456, policy = :dynamic) do index, _
-        results[index] = rand()
+        return results[index] = rand()
     end
     @assert results[1] != results[2]
     return results

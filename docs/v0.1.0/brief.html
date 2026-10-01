@@ -16,7 +16,7 @@
 <script data-outdated-warner src="assets/warner.js">
 </script>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/>
-<link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.63.2/juliamono.min.css" rel="stylesheet" type="text/css"/>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/>
@@ -121,6 +121,14 @@
 </a>
 </li>
 <li>
+<a class="tocitem" href="matrix_layouts.html">Matrix layouts
+</a>
+</li>
+<li>
+<a class="tocitem" href="matrix_formats.html">Matrix Formats
+</a>
+</li>
+<li>
 <a class="tocitem" href="downsample.html">Downsample
 </a>
 </li>
@@ -130,6 +138,14 @@
 </li>
 <li>
 <a class="tocitem" href="grouped_correlations.html">Grouped Correlations
+</a>
+</li>
+<li>
+<a class="tocitem" href="chi_squared.html">Chi Squared
+</a>
+</li>
+<li>
+<a class="tocitem" href="sparse_statistics.html">Sparse Statistics
 </a>
 </li>
 <li>
@@ -267,10 +283,10 @@
 @assert brief(nothing) == &quot;nothing&quot;
 @assert brief(missing) == &quot;missing&quot;
 @assert brief(undef) == &quot;undef&quot;
-@assert brief((&quot;foo&quot;, :bar)) == &quot;(\&quot;foo\&quot;, :bar)&quot;
-@assert brief(&quot;foo&quot; =&gt; :bar) == &quot;\&quot;foo\&quot; =&gt; :bar&quot;
-@assert brief(&quot;foo&quot;) == &quot;\&quot;foo\&quot;&quot;
-@assert brief(&quot;foo &quot;^10) == &quot;\&quot;foo foo foo foo ...\&quot; (40)&quot;
+@assert brief((&quot;foo&quot;, :bar)) == &quot;(&quot; * repr(&quot;foo&quot;) * &quot;, :bar)&quot;
+@assert brief(&quot;foo&quot; =&gt; :bar) == repr(&quot;foo&quot;) * &quot; =&gt; :bar&quot;
+@assert brief(&quot;foo&quot;) == repr(&quot;foo&quot;)
+@assert brief(&quot;foo &quot;^10) == repr(&quot;foo foo foo foo ...&quot;) * &quot; (40)&quot;
 @assert brief([true, false]) == &quot;2 x Bool (Dense; 1 (50%) true)&quot;
 @assert brief(Int64) == &quot;Int64&quot;
 @assert brief(String) == &quot;Str&quot;
@@ -566,7 +582,7 @@ println(delimited_number(1.234567e9))
 <hr/>
 <p>This document was generated with 
 <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl
-</a> version 1.17.0. Using Julia version 1.12.6.
+</a> version 1.19.0. Using Julia version 1.12.6.
 </p>
 </section>
 <footer class="modal-card-foot">

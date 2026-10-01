@@ -14,14 +14,14 @@ GLOBAL_CACHE = Dict{Tuple{AbstractString, Any}, Tuple{Float64, UInt, WeakRef}}()
 """
     get_through_global_weak_cache(getter::Function, path::AbstractString, key::Any)::Any
 
-Get some object associated with a `path` and identified by the `key from the global cache (if it is there) or invoke the
-`getter` to obtain it (and cache it for future reference). As a convenience, the `getter` is passed the `path` and
+Get some object associated with a `path` and identified by the `key` from the global cache (if it is there) or invoke
+the `getter` to obtain it (and cache it for future reference). As a convenience, the `getter` is passed the `path` and
 `key`. If `purge` is set, then any existing value is ignored and is replaced by the result of the `getter`. The file's
-inode is always compared, so a cached entry is invalidated if the file at `path` has been replaced (for example, by
-`rm` followed by re-creation). By default, the `mtime` of the file is **not** checked: callers are assumed to be the
-sole writers of the file, and their own writes (which bump the `mtime`) must not throw away a cached object that is
-still in use. If the caller instead wants to treat external `mtime` changes as invalidation (for example, because the
-file may be rewritten by an unrelated process), set `check_mtime = true`.
+inode is always compared, so a cached entry is invalidated if the file at `path` has been replaced (for example, by `rm`
+followed by re-creation). By default, the `mtime` of the file is **not** checked: callers are assumed to be the sole
+writers of the file, and their own writes (which bump the `mtime`) must not throw away a cached object that is still in
+use. If the caller instead wants to treat external `mtime` changes as invalidation (for example, because the file may be
+rewritten by an unrelated process), set `check_mtime = true`.
 
 There's a singleton `GLOBAL_CACHE` and all accesses are protected by a single `GLOBAL_LOCK`, so while this is
 thread-safe, it does not support parallelism. It is meant for "expensive" OS operations such as `mmap`, not for
@@ -40,7 +40,7 @@ first = get_through_global_weak_cache("fake path", :test) do _
 end
 @assert first == [1]
 @assert first === get_through_global_weak_cache("fake path", :test) do _
-    @assert false;
+    @assert false
 end
 
 second = get_through_global_weak_cache("fake path", :test; purge = true) do _

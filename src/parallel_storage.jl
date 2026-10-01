@@ -60,13 +60,13 @@ with_reusable(reusable_storage) do storage_1
         storage_2.is_clean = false
         global second
         second = storage_2
-        @assert second !== first;
+        @assert second !== first
     end
 
     with_reusable(reusable_storage) do storage_3
         @assert storage_3.is_clean;
         storage_3.is_clean = false
-        @assert storage_3 === second;
+        @assert storage_3 === second
     end
 end
 

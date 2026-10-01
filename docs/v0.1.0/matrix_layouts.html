@@ -16,7 +16,7 @@
 <script data-outdated-warner src="assets/warner.js">
 </script>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/>
-<link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.63.2/juliamono.min.css" rel="stylesheet" type="text/css"/>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/>
@@ -112,6 +112,22 @@
 <a class="tocitem" href="read_only_arrays.html">Read-Only Arrays
 </a>
 </li>
+<li class="is-active">
+<a class="tocitem" href="matrix_layouts.html">Matrix layouts
+</a>
+<ul class="internal">
+<li>
+<a class="tocitem" href="#Index">
+<span>Index
+</span>
+</a>
+</li>
+</ul>
+</li>
+<li>
+<a class="tocitem" href="matrix_formats.html">Matrix Formats
+</a>
+</li>
 <li>
 <a class="tocitem" href="downsample.html">Downsample
 </a>
@@ -122,6 +138,14 @@
 </li>
 <li>
 <a class="tocitem" href="grouped_correlations.html">Grouped Correlations
+</a>
+</li>
+<li>
+<a class="tocitem" href="chi_squared.html">Chi Squared
+</a>
+</li>
+<li>
+<a class="tocitem" href="sparse_statistics.html">Sparse Statistics
 </a>
 </li>
 <li>
@@ -706,13 +730,13 @@ base = NamedArray(rand(3, 4))
 
 # Permuted
 
-base = PermutedDimsArray(rand(3, 4), (2,1))
+base = PermutedDimsArray(rand(3, 4), (2, 1))
 @assert flipped(base) == flip(base)
 @assert brief(base) == &quot;4 x 3 x Float64 in Rows (Permute, Dense)&quot;
 @assert brief(flip(base)) == &quot;3 x 4 x Float64 in Columns (Dense)&quot;
 @assert brief(flipped(base)) == &quot;3 x 4 x Float64 in Rows (Transpose, Dense)&quot;
 
-base = PermutedDimsArray(rand(3, 4), (1,2))
+base = PermutedDimsArray(rand(3, 4), (1, 2))
 @assert flipped(base) == flip(base)
 @assert brief(base) == &quot;3 x 4 x Float64 in Columns (!Permute, Dense)&quot;
 @assert brief(flip(base)) == &quot;4 x 3 x Float64 in Rows (Transpose, Dense)&quot;
@@ -906,7 +930,7 @@ result = relayout!(named_destination, named_source)
 # Permuted
 
 source = rand(3, 4)
-destination = PermutedDimsArray(rand(4, 3), (2,1))
+destination = PermutedDimsArray(rand(4, 3), (2, 1))
 result = relayout!(destination, source)
 @assert result === destination
 @assert brief(source) == &quot;3 x 4 x Float64 in Columns (Dense)&quot;
@@ -914,7 +938,7 @@ result = relayout!(destination, source)
 @assert result == source
 
 source = rand(3, 4)
-destination = PermutedDimsArray(adjoint(rand(4, 3)), (1,2))
+destination = PermutedDimsArray(adjoint(rand(4, 3)), (1, 2))
 result = relayout!(destination, source)
 @assert result === destination
 @assert brief(source) == &quot;3 x 4 x Float64 in Columns (Dense)&quot;
@@ -972,6 +996,7 @@ relayout(matrix::NamedMatrix)::NamedMatrix
 @assert major_axis(relayout(base)) == minor_axis(base);
 
 # output
+
 </code>
 </pre>
 </div>
@@ -1331,6 +1356,12 @@ for matrix: 2 x 3 x Int64 in Columns (Dense)
 </ul>
 </article>
 <nav class="docs-footer">
+<a class="docs-footer-prevpage" href="read_only_arrays.html">« Read-Only Arrays
+</a>
+<a class="docs-footer-nextpage" href="matrix_formats.html">Matrix Formats »
+</a>
+<div class="flexbox-break">
+</div>
 <p class="footer-message">Powered by 
 <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl
 </a> and the 
@@ -1375,7 +1406,7 @@ for matrix: 2 x 3 x Int64 in Columns (Dense)
 <hr/>
 <p>This document was generated with 
 <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl
-</a> version 1.17.0. Using Julia version 1.12.6.
+</a> version 1.19.0. Using Julia version 1.12.6.
 </p>
 </section>
 <footer class="modal-card-foot">

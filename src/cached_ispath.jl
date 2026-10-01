@@ -31,9 +31,9 @@ How long to hold on to `ispath` results before going back to the OS and asking f
 This can be controlled by setting the `TLU_IS_PATH_CACHE_TIMEOUT` environment variable.
 
 By default, this is set to a negative value, meaning we cache everything forever. This is fastest and works as long as
-the code using [`cached_ispath`](@ref) also invokes [`report_modified!](@ref) (for example, the `Daf` file system
+the code using [`cached_ispath`](@ref) also invokes [`report_modified!`](@ref) (for example, the `Daf` file system
 `FilesDaf` format does this). If the code is designed to deal with external modifications to the file system, it should
-contain additional calls to [`report_modified!](@ref) to force refreshing the cache.
+contain additional calls to [`report_modified!`](@ref) to force refreshing the cache.
 
 If this is zero then [`cached_ispath`](@ref) ignores the cache and simply calls `ispath`. This is slow (especially when
 accessing network disks) but is "safest" as we will always return the correct answer regardless of anything. This is

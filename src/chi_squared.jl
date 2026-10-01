@@ -27,10 +27,10 @@ using ..Types
 Compute chi-squared statistics and p-values for 2x2 contingency tables. The two input vectors (or the two columns of
 the input matrix) contain non-negative counts. Each entry defines one 2x2 table together with the column sums:
 
-|              | First          | Second         |
-|:------------ |:-------------- |:-------------- |
-| Current entry| `a`            | `c`            |
-| Other entries| `sum1 - a`     | `sum2 - c`     |
+|               | First      | Second     |
+|:------------- |:---------- |:---------- |
+| Current entry | `a`        | `c`        |
+| Other entries | `sum1 - a` | `sum2 - c` |
 
 If `yates` is `true` (the default), Yates' continuity correction is applied. The inputs must not contain `NaN` values.
 The function works with both dense and sparse inputs.

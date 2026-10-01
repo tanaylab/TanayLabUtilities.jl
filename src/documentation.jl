@@ -52,8 +52,10 @@ Enhance the documentation of a function. This stashes the default value of named
 global constants, copied from other functions via [`function_default`](@ref), etc.
 
 ```jldoctest
-"Foo, default x: \$(DEFAULT.x), default y: \$(DEFAULT.y)."
-@documented function foo(x::Integer = 1; y::Integer = 2)::Integer
+@doc "Foo, default x: \$(DEFAULT.x), default y: \$(DEFAULT.y)." @documented function foo(
+    x::Integer = 1;
+    y::Integer = 2,
+)::Integer
     return x + y
 end
 
@@ -67,8 +69,7 @@ Foo, default x: `1`, default y: `2`.
 ```
 
 ```jldoctest
-"Foo, default x: \$(DEFAULT.x)."
-@documented function foo()::Integer
+@doc "Foo, default x: \$(DEFAULT.x)." @documented function foo()::Integer
     return 1
 end
 
@@ -81,8 +82,7 @@ exists for the function: foo
 ```
 
 ```jldoctest
-"Foo, default x: \$(DEFAULT.x), default y: \$(DEFAULT.y)."
-function foo(x::Integer = 1; y::Integer = 2)::Integer
+@doc "Foo, default x: \$(DEFAULT.x), default y: \$(DEFAULT.y)." function foo(x::Integer = 1; y::Integer = 2)::Integer
     return x + y
 end
 

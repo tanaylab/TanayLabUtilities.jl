@@ -134,9 +134,8 @@ Clustering.nclusters(r::KmeansResultView) = length(r.counts)
         rng::AbstractRNG = default_rng(),
     )::Union{KmeansResult, KmeansResultView}
 
-
 Same as `kmeans!`, but if `buffers` are specified, run allocation-free code. Seeding is restricted to `:kmpp`.
-Implementation is otherwise identical to `Clustering.kmeans!.
+Implementation is otherwise identical to `Clustering.kmeans!`.
 """
 @documented function kmeans_in_buffers!(
     X::AbstractMatrix{<:Real},
@@ -195,7 +194,7 @@ end
     )::Union{KmeansResult, KmeansResultView}
 
 Same as `kmeans`, but if `buffers` are specified, run allocation-free code. Seeding is restricted to `:kmpp`.
-Implementation is otherwise identical to `Clustering.kmeans.
+Implementation is otherwise identical to `Clustering.kmeans`.
 """
 @documented function kmeans_in_buffers(
     X::AbstractMatrix{<:Real},

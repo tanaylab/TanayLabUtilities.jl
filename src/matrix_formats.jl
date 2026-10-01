@@ -571,7 +571,6 @@ the default `indtype` will be [`indtype_for_size`](@ref) for the matrix. This wi
 example, `sparsify` of a transposed matrix will be a transposed matrix). If `copy`, this will create a copy even if it
 is already sparse and has the correct `eltype` and `indtype`.
 
-
 ```jldoctest
 using SparseArrays
 
@@ -1043,16 +1042,25 @@ Create a sparse column-major matrix. This differs from the simple `SparseMatrixC
 # Matrix
 
 @assert brief(sparse_matrix_csc([0 1 2; 3 4 0])) == "2 x 3 x Int64 in Columns (Sparse 4 (67%) [UInt16])"
-@assert brief(sparse_matrix_csc([0 1 2; 3 4 0]; eltype = Float32)) == "2 x 3 x Float32 in Columns (Sparse 4 (67%) [UInt16])"
+@assert brief(sparse_matrix_csc([0 1 2; 3 4 0]; eltype = Float32)) ==
+        "2 x 3 x Float32 in Columns (Sparse 4 (67%) [UInt16])"
 @assert brief(sparse_matrix_csc([0 1 2; 3 4 0]; indtype = UInt8)) == "2 x 3 x Int64 in Columns (Sparse 4 (67%) [UInt8])"
 
 # Vectors
 
 sparse = sparse_matrix_csc([0 1 2; 3 4 0])
 
-@assert brief(sparse_matrix_csc(2, 3, sparse.colptr, sparse.rowval, sparse.nzval)) == "2 x 3 x Int64 in Columns (Sparse 4 (67%) [UInt16])"
-@assert brief(sparse_matrix_csc(2, 3, read_only_array(sparse.colptr), read_only_array(sparse.rowval), read_only_array(sparse.nzval))) ==
-      "2 x 3 x Int64 in Columns (ReadOnly, Sparse 4 (67%) [UInt16])";
+@assert brief(sparse_matrix_csc(2, 3, sparse.colptr, sparse.rowval, sparse.nzval)) ==
+        "2 x 3 x Int64 in Columns (Sparse 4 (67%) [UInt16])"
+@assert brief(
+    sparse_matrix_csc(
+        2,
+        3,
+        read_only_array(sparse.colptr),
+        read_only_array(sparse.rowval),
+        read_only_array(sparse.nzval),
+    ),
+) == "2 x 3 x Int64 in Columns (ReadOnly, Sparse 4 (67%) [UInt16])";
 
 # output
 
@@ -1121,7 +1129,8 @@ Create a sparse vector. This differs from the simple `SparseVector` in the follo
 # Vectors
 
 @assert brief(sparse_vector(3, [1, 3], [1.0, 2.0])) == "3 x Float64 (Sparse 2 (67%) [Int64])"
-@assert brief(sparse_vector(3, read_only_array([1, 3]), read_only_array([1.0, 2.0]))) == "3 x Float64 (ReadOnly, Sparse 2 (67%) [Int64])"
+@assert brief(sparse_vector(3, read_only_array([1, 3]), read_only_array([1.0, 2.0]))) ==
+        "3 x Float64 (ReadOnly, Sparse 2 (67%) [Int64])"
 
 # output
 
@@ -1675,7 +1684,13 @@ the dense matrix are assumed to be non-zero.
 using SparseArrays
 
 dense = rand(Float32, 3, 4)
-sparse = embed_dense_matrix_in_sparse_matrix(dense; rows_indices = [1, 3, 5], n_rows = 5, columns_indices = [2, 3, 4, 6], n_columns = 6)
+sparse = embed_dense_matrix_in_sparse_matrix(
+    dense;
+    rows_indices = [1, 3, 5],
+    n_rows = 5,
+    columns_indices = [2, 3, 4, 6],
+    n_columns = 6,
+)
 
 @assert all(sparse[[1, 3, 5], [2, 3, 4, 6]] .== dense)
 @assert all(sparse[[2, 4], :] .== 0)
@@ -1742,7 +1757,13 @@ which remap the row and column indices of the input matrix.
 using SparseArrays
 
 input = sparse([1, 2, 1], [1, 2, 3], Float32[10, 20, 30], 2, 3)
-result = embed_sparse_matrix_in_sparse_matrix(input; rows_indices = [2, 4], n_rows = 5, columns_indices = [1, 3, 5], n_columns = 6)
+result = embed_sparse_matrix_in_sparse_matrix(
+    input;
+    rows_indices = [2, 4],
+    n_rows = 5,
+    columns_indices = [1, 3, 5],
+    n_columns = 6,
+)
 
 @assert result[2, 1] == 10
 @assert result[4, 3] == 20

@@ -12,7 +12,7 @@
 <!-- BitsLoops -->
 <g id="node1" class="node">
 <title>BitsLoops</title>
-<g id="a_node1"><a xlink:href="../bits_loops.html" xlink:title="BitsLoops" target="_top">
+<g id="a_node1"><a xlink:href="bits_loops.html" xlink:title="BitsLoops" target="_top">
 <polygon fill="none" stroke="#ffffff" points="549.5,-404 485.5,-404 485.5,-385 549.5,-385 549.5,-404"/>
 <text text-anchor="middle" x="517.5" y="-390.8" font-family="Sans-Serif" font-size="14.00" fill="#000000">BitsLoops</text>
 </a>
@@ -21,7 +21,7 @@
 <!-- Brief -->
 <g id="node2" class="node">
 <title>Brief</title>
-<g id="a_node2"><a xlink:href="../brief.html" xlink:title="Brief" target="_top">
+<g id="a_node2"><a xlink:href="brief.html" xlink:title="Brief" target="_top">
 <polygon fill="none" stroke="#ffffff" points="599.5,-404 567.5,-404 567.5,-385 599.5,-385 599.5,-404"/>
 <text text-anchor="middle" x="583.5" y="-390.8" font-family="Sans-Serif" font-size="14.00" fill="#000000">Brief</text>
 </a>
@@ -30,7 +30,7 @@
 <!-- FlameTime -->
 <g id="node13" class="node">
 <title>FlameTime</title>
-<g id="a_node13"><a xlink:href="../flame_time.html" xlink:title="FlameTime" target="_top">
+<g id="a_node13"><a xlink:href="flame_time.html" xlink:title="FlameTime" target="_top">
 <polygon fill="none" stroke="#ffffff" points="620.5,-349 546.5,-349 546.5,-330 620.5,-330 620.5,-349"/>
 <text text-anchor="middle" x="583.5" y="-335.8" font-family="Sans-Serif" font-size="14.00" fill="#000000">FlameTime</text>
 </a>
@@ -45,7 +45,7 @@
 <!-- CachedIsPath -->
 <g id="node3" class="node">
 <title>CachedIsPath</title>
-<g id="a_node3"><a xlink:href="../cached_ispath.html" xlink:title="CachedIsPath" target="_top">
+<g id="a_node3"><a xlink:href="cached_ispath.html" xlink:title="CachedIsPath" target="_top">
 <polygon fill="none" stroke="#ffffff" points="89,-239 0,-239 0,-220 89,-220 89,-239"/>
 <text text-anchor="middle" x="44.5" y="-225.8" font-family="Sans-Serif" font-size="14.00" fill="#000000">CachedIsPath</text>
 </a>
@@ -54,7 +54,7 @@
 <!-- MostlyReadWriteLocks -->
 <g id="node4" class="node">
 <title>MostlyReadWriteLocks</title>
-<g id="a_node4"><a xlink:href="../mostly_read_write_locks.html" xlink:title="MostlyReadWriteLocks" target="_top">
+<g id="a_node4"><a xlink:href="mostly_read_write_locks.html" xlink:title="MostlyReadWriteLocks" target="_top">
 <polygon fill="none" stroke="#ffffff" points="259,-294 116,-294 116,-275 259,-275 259,-294"/>
 <text text-anchor="middle" x="187.5" y="-280.8" font-family="Sans-Serif" font-size="14.00" fill="#000000">MostlyReadWriteLocks</text>
 </a>
@@ -69,7 +69,7 @@
 <!-- ExtendedReadWriteLocks -->
 <g id="node12" class="node">
 <title>ExtendedReadWriteLocks</title>
-<g id="a_node12"><a xlink:href="../extended_read_write_locks.html" xlink:title="ExtendedReadWriteLocks" target="_top">
+<g id="a_node12"><a xlink:href="extended_read_write_locks.html" xlink:title="ExtendedReadWriteLocks" target="_top">
 <polygon fill="none" stroke="#ffffff" points="268,-239 107,-239 107,-220 268,-220 268,-239"/>
 <text text-anchor="middle" x="187.5" y="-225.8" font-family="Sans-Serif" font-size="14.00" fill="#000000">ExtendedReadWriteLocks</text>
 </a>
@@ -84,7 +84,7 @@
 <!-- ChiSquared -->
 <g id="node5" class="node">
 <title>ChiSquared</title>
-<g id="a_node5"><a xlink:href="../chi_squared.html" xlink:title="ChiSquared" target="_top">
+<g id="a_node5"><a xlink:href="chi_squared.html" xlink:title="ChiSquared" target="_top">
 <polygon fill="none" stroke="#ffffff" points="299.5,-129 223.5,-129 223.5,-110 299.5,-110 299.5,-129"/>
 <text text-anchor="middle" x="261.5" y="-115.8" font-family="Sans-Serif" font-size="14.00" fill="#000000">ChiSquared</text>
 </a>
@@ -93,7 +93,7 @@
 <!-- MatrixLayouts -->
 <g id="node6" class="node">
 <title>MatrixLayouts</title>
-<g id="a_node6"><a xlink:href="../matrix_layouts.html" xlink:title="MatrixLayouts" target="_top">
+<g id="a_node6"><a xlink:href="matrix_layouts.html" xlink:title="MatrixLayouts" target="_top">
 <polygon fill="none" stroke="#ffffff" points="408,-184 319,-184 319,-165 408,-165 408,-184"/>
 <text text-anchor="middle" x="363.5" y="-170.8" font-family="Sans-Serif" font-size="14.00" fill="#000000">MatrixLayouts</text>
 </a>
@@ -108,7 +108,7 @@
 <!-- GroupedCorrelations -->
 <g id="node16" class="node">
 <title>GroupedCorrelations</title>
-<g id="a_node16"><a xlink:href="../grouped_correlations.html" xlink:title="GroupedCorrelations" target="_top">
+<g id="a_node16"><a xlink:href="grouped_correlations.html" xlink:title="GroupedCorrelations" target="_top">
 <polygon fill="none" stroke="#ffffff" points="205,-129 74,-129 74,-110 205,-110 205,-129"/>
 <text text-anchor="middle" x="139.5" y="-115.8" font-family="Sans-Serif" font-size="14.00" fill="#000000">GroupedCorrelations</text>
 </a>
@@ -123,7 +123,7 @@
 <!-- MatrixFormats -->
 <g id="node19" class="node">
 <title>MatrixFormats</title>
-<g id="a_node19"><a xlink:href="../matrix_formats.html" xlink:title="MatrixFormats" target="_top">
+<g id="a_node19"><a xlink:href="matrix_formats.html" xlink:title="MatrixFormats" target="_top">
 <polygon fill="none" stroke="#ffffff" points="409.5,-129 317.5,-129 317.5,-110 409.5,-110 409.5,-129"/>
 <text text-anchor="middle" x="363.5" y="-115.8" font-family="Sans-Serif" font-size="14.00" fill="#000000">MatrixFormats</text>
 </a>
@@ -138,7 +138,7 @@
 <!-- ParallelDistances -->
 <g id="node23" class="node">
 <title>ParallelDistances</title>
-<g id="a_node23"><a xlink:href="../parallel_distances.html" xlink:title="ParallelDistances" target="_top">
+<g id="a_node23"><a xlink:href="parallel_distances.html" xlink:title="ParallelDistances" target="_top">
 <polygon fill="none" stroke="#ffffff" points="535.5,-129 427.5,-129 427.5,-110 535.5,-110 535.5,-129"/>
 <text text-anchor="middle" x="481.5" y="-115.8" font-family="Sans-Serif" font-size="14.00" fill="#000000">ParallelDistances</text>
 </a>
@@ -153,7 +153,7 @@
 <!-- CrossValidations -->
 <g id="node7" class="node">
 <title>CrossValidations</title>
-<g id="a_node7"><a xlink:href="../cross_validations.html" xlink:title="CrossValidations" target="_top">
+<g id="a_node7"><a xlink:href="cross_validations.html" xlink:title="CrossValidations" target="_top">
 <polygon fill="none" stroke="#ffffff" points="806,-404 701,-404 701,-385 806,-385 806,-404"/>
 <text text-anchor="middle" x="753.5" y="-390.8" font-family="Sans-Serif" font-size="14.00" fill="#000000">CrossValidations</text>
 </a>
@@ -162,7 +162,7 @@
 <!-- Documentation -->
 <g id="node8" class="node">
 <title>Documentation</title>
-<g id="a_node8"><a xlink:href="../documentation.html" xlink:title="Documentation" target="_top">
+<g id="a_node8"><a xlink:href="documentation.html" xlink:title="Documentation" target="_top">
 <polygon fill="none" stroke="#ffffff" points="581.5,-239 485.5,-239 485.5,-220 581.5,-220 581.5,-239"/>
 <text text-anchor="middle" x="533.5" y="-225.8" font-family="Sans-Serif" font-size="14.00" fill="#000000">Documentation</text>
 </a>
@@ -177,7 +177,7 @@
 <!-- Permute -->
 <g id="node25" class="node">
 <title>Permute</title>
-<g id="a_node25"><a xlink:href="../permute.html" xlink:title="Permute" target="_top">
+<g id="a_node25"><a xlink:href="permute.html" xlink:title="Permute" target="_top">
 <polygon fill="none" stroke="#ffffff" points="609.5,-129 553.5,-129 553.5,-110 609.5,-110 609.5,-129"/>
 <text text-anchor="middle" x="581.5" y="-115.8" font-family="Sans-Serif" font-size="14.00" fill="#000000">Permute</text>
 </a>
@@ -192,7 +192,7 @@
 <!-- Logger -->
 <g id="node9" class="node">
 <title>Logger</title>
-<g id="a_node9"><a xlink:href="../logger.html" xlink:title="Logger" target="_top">
+<g id="a_node9"><a xlink:href="logger.html" xlink:title="Logger" target="_top">
 <polygon fill="none" stroke="#ffffff" points="569,-294 522,-294 522,-275 569,-275 569,-294"/>
 <text text-anchor="middle" x="545.5" y="-280.8" font-family="Sans-Serif" font-size="14.00" fill="#000000">Logger</text>
 </a>
@@ -207,7 +207,7 @@
 <!-- Downsample -->
 <g id="node10" class="node">
 <title>Downsample</title>
-<g id="a_node10"><a xlink:href="../downsample.html" xlink:title="Downsample" target="_top">
+<g id="a_node10"><a xlink:href="downsample.html" xlink:title="Downsample" target="_top">
 <polygon fill="none" stroke="#ffffff" points="663,-19 580,-19 580,0 663,0 663,-19"/>
 <text text-anchor="middle" x="621.5" y="-5.8" font-family="Sans-Serif" font-size="14.00" fill="#000000">Downsample</text>
 </a>
@@ -216,7 +216,7 @@
 <!-- SparseStatistics -->
 <g id="node11" class="node">
 <title>SparseStatistics</title>
-<g id="a_node11"><a xlink:href="../sparse_statistics.html" xlink:title="SparseStatistics" target="_top">
+<g id="a_node11"><a xlink:href="sparse_statistics.html" xlink:title="SparseStatistics" target="_top">
 <polygon fill="none" stroke="#ffffff" points="672,-74 571,-74 571,-55 672,-55 672,-74"/>
 <text text-anchor="middle" x="621.5" y="-60.8" font-family="Sans-Serif" font-size="14.00" fill="#000000">SparseStatistics</text>
 </a>
@@ -243,7 +243,7 @@
 <!-- ParallelLoops -->
 <g id="node20" class="node">
 <title>ParallelLoops</title>
-<g id="a_node20"><a xlink:href="../parallel_loops.html" xlink:title="ParallelLoops" target="_top">
+<g id="a_node20"><a xlink:href="parallel_loops.html" xlink:title="ParallelLoops" target="_top">
 <polygon fill="none" stroke="#ffffff" points="652.5,-184 566.5,-184 566.5,-165 652.5,-165 652.5,-184"/>
 <text text-anchor="middle" x="609.5" y="-170.8" font-family="Sans-Serif" font-size="14.00" fill="#000000">ParallelLoops</text>
 </a>
@@ -258,7 +258,7 @@
 <!-- ZeroCorrelation -->
 <g id="node27" class="node">
 <title>ZeroCorrelation</title>
-<g id="a_node27"><a xlink:href="../zero_correlation.html" xlink:title="ZeroCorrelation" target="_top">
+<g id="a_node27"><a xlink:href="zero_correlation.html" xlink:title="ZeroCorrelation" target="_top">
 <polygon fill="none" stroke="#ffffff" points="735.5,-294 637.5,-294 637.5,-275 735.5,-275 735.5,-294"/>
 <text text-anchor="middle" x="686.5" y="-280.8" font-family="Sans-Serif" font-size="14.00" fill="#000000">ZeroCorrelation</text>
 </a>
@@ -273,7 +273,7 @@
 <!-- Types -->
 <g id="node14" class="node">
 <title>Types</title>
-<g id="a_node14"><a xlink:href="../types.html" xlink:title="Types" target="_top">
+<g id="a_node14"><a xlink:href="types.html" xlink:title="Types" target="_top">
 <polygon fill="none" stroke="#ffffff" points="682.5,-404 642.5,-404 642.5,-385 682.5,-385 682.5,-404"/>
 <text text-anchor="middle" x="662.5" y="-390.8" font-family="Sans-Serif" font-size="14.00" fill="#000000">Types</text>
 </a>
@@ -288,7 +288,7 @@
 <!-- ParallelStorage -->
 <g id="node24" class="node">
 <title>ParallelStorage</title>
-<g id="a_node24"><a xlink:href="../parallel_storage.html" xlink:title="ParallelStorage" target="_top">
+<g id="a_node24"><a xlink:href="parallel_storage.html" xlink:title="ParallelStorage" target="_top">
 <polygon fill="none" stroke="#ffffff" points="734.5,-349 638.5,-349 638.5,-330 734.5,-330 734.5,-349"/>
 <text text-anchor="middle" x="686.5" y="-335.8" font-family="Sans-Serif" font-size="14.00" fill="#000000">ParallelStorage</text>
 </a>
@@ -303,7 +303,7 @@
 <!-- GlobalWeakCache -->
 <g id="node15" class="node">
 <title>GlobalWeakCache</title>
-<g id="a_node15"><a xlink:href="../global_weak_cache.html" xlink:title="GlobalWeakCache" target="_top">
+<g id="a_node15"><a xlink:href="global_weak_cache.html" xlink:title="GlobalWeakCache" target="_top">
 <polygon fill="none" stroke="#ffffff" points="942.5,-404 824.5,-404 824.5,-385 942.5,-385 942.5,-404"/>
 <text text-anchor="middle" x="883.5" y="-390.8" font-family="Sans-Serif" font-size="14.00" fill="#000000">GlobalWeakCache</text>
 </a>
@@ -312,7 +312,7 @@
 <!-- Handlers -->
 <g id="node17" class="node">
 <title>Handlers</title>
-<g id="a_node17"><a xlink:href="../handlers.html" xlink:title="Handlers" target="_top">
+<g id="a_node17"><a xlink:href="handlers.html" xlink:title="Handlers" target="_top">
 <polygon fill="none" stroke="#ffffff" points="345,-239 286,-239 286,-220 345,-220 345,-239"/>
 <text text-anchor="middle" x="315.5" y="-225.8" font-family="Sans-Serif" font-size="14.00" fill="#000000">Handlers</text>
 </a>
@@ -327,7 +327,7 @@
 <!-- KMeans -->
 <g id="node18" class="node">
 <title>KMeans</title>
-<g id="a_node18"><a xlink:href="../kmeans.html" xlink:title="KMeans" target="_top">
+<g id="a_node18"><a xlink:href="kmeans.html" xlink:title="KMeans" target="_top">
 <polygon fill="none" stroke="#ffffff" points="499,-74 444,-74 444,-55 499,-55 499,-74"/>
 <text text-anchor="middle" x="471.5" y="-60.8" font-family="Sans-Serif" font-size="14.00" fill="#000000">KMeans</text>
 </a>
@@ -372,7 +372,7 @@
 <!-- ReadOnlyArrays -->
 <g id="node21" class="node">
 <title>ReadOnlyArrays</title>
-<g id="a_node21"><a xlink:href="../read_only_arrays.html" xlink:title="ReadOnlyArrays" target="_top">
+<g id="a_node21"><a xlink:href="read_only_arrays.html" xlink:title="ReadOnlyArrays" target="_top">
 <polygon fill="none" stroke="#ffffff" points="467.5,-239 363.5,-239 363.5,-220 467.5,-220 467.5,-239"/>
 <text text-anchor="middle" x="415.5" y="-225.8" font-family="Sans-Serif" font-size="14.00" fill="#000000">ReadOnlyArrays</text>
 </a>
@@ -387,7 +387,7 @@
 <!-- OldLinuxMmap -->
 <g id="node22" class="node">
 <title>OldLinuxMmap</title>
-<g id="a_node22"><a xlink:href="../old_linux_mmap.html" xlink:title="OldLinuxMmap" target="_top">
+<g id="a_node22"><a xlink:href="old_linux_mmap.html" xlink:title="OldLinuxMmap" target="_top">
 <polygon fill="none" stroke="#ffffff" points="1058.5,-404 960.5,-404 960.5,-385 1058.5,-385 1058.5,-404"/>
 <text text-anchor="middle" x="1009.5" y="-390.8" font-family="Sans-Serif" font-size="14.00" fill="#000000">OldLinuxMmap</text>
 </a>
@@ -396,7 +396,7 @@
 <!-- UniqueNames -->
 <g id="node26" class="node">
 <title>UniqueNames</title>
-<g id="a_node26"><a xlink:href="../unique_names.html" xlink:title="UniqueNames" target="_top">
+<g id="a_node26"><a xlink:href="unique_names.html" xlink:title="UniqueNames" target="_top">
 <polygon fill="none" stroke="#ffffff" points="1168,-404 1077,-404 1077,-385 1168,-385 1168,-404"/>
 <text text-anchor="middle" x="1122.5" y="-390.8" font-family="Sans-Serif" font-size="14.00" fill="#000000">UniqueNames</text>
 </a>

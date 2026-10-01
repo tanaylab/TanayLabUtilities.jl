@@ -32,12 +32,12 @@ lock_write(read_write_lock; what = "top_write") do
 
     lock_write(read_write_lock; what = "nested_write") do
         @assert has_write_lock(read_write_lock);
-        @assert has_read_lock(read_write_lock);
+        @assert has_read_lock(read_write_lock)
     end
 
     lock_read(read_write_lock; what = "nested_read") do
         @assert has_write_lock(read_write_lock);
-        @assert has_read_lock(read_write_lock);
+        @assert has_read_lock(read_write_lock)
     end
 end
 
@@ -63,7 +63,7 @@ lock_read(read_write_lock; what = () -> "top_read") do
 
     lock_read(read_write_lock; what = () -> "nested_read") do
         @assert !has_write_lock(read_write_lock);
-        @assert has_read_lock(read_write_lock);
+        @assert has_read_lock(read_write_lock)
     end
 end
 

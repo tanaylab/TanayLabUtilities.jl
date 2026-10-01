@@ -16,7 +16,7 @@
 <script data-outdated-warner src="assets/warner.js">
 </script>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/>
-<link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.63.2/juliamono.min.css" rel="stylesheet" type="text/css"/>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/>
@@ -113,6 +113,14 @@
 </a>
 </li>
 <li>
+<a class="tocitem" href="matrix_layouts.html">Matrix layouts
+</a>
+</li>
+<li>
+<a class="tocitem" href="matrix_formats.html">Matrix Formats
+</a>
+</li>
+<li>
 <a class="tocitem" href="downsample.html">Downsample
 </a>
 </li>
@@ -122,6 +130,14 @@
 </li>
 <li>
 <a class="tocitem" href="grouped_correlations.html">Grouped Correlations
+</a>
+</li>
+<li>
+<a class="tocitem" href="chi_squared.html">Chi Squared
+</a>
+</li>
+<li>
+<a class="tocitem" href="sparse_statistics.html">Sparse Statistics
 </a>
 </li>
 <li class="is-active">
@@ -288,23 +304,16 @@ end
 cross_validation_indices = pick_cross_validation_indices(;
     full_indices = collect(1:12),
     cross_validation_parts = 3,
-    rng = Random.default_rng()
+    rng = Random.default_rng(),
 )
-@assert all([
-    length(test_indices)
-    for test_indices
-    in cross_validation_indices.test_indices_per_part
-] .== 4)
-@assert all([
-    length(train_indices)
-    for train_indices
-    in cross_validation_indices.train_indices_per_part
-] .== 8)
-@assert all([
-    length(union(Set(test_indices), Set(train_indices)))
-    for (test_indices, train_indices)
-    in zip(cross_validation_indices.test_indices_per_part, cross_validation_indices.train_indices_per_part)
-] .== 12)
+@assert all([length(test_indices) for test_indices in cross_validation_indices.test_indices_per_part] .== 4)
+@assert all([length(train_indices) for train_indices in cross_validation_indices.train_indices_per_part] .== 8)
+@assert all(
+    [
+        length(union(Set(test_indices), Set(train_indices))) for (test_indices, train_indices) in
+        zip(cross_validation_indices.test_indices_per_part, cross_validation_indices.train_indices_per_part)
+    ] .== 12,
+)
 
 # output
 
@@ -344,7 +353,7 @@ cross_validation_indices = pick_cross_validation_indices(;
 </ul>
 </article>
 <nav class="docs-footer">
-<a class="docs-footer-prevpage" href="grouped_correlations.html">« Grouped Correlations
+<a class="docs-footer-prevpage" href="sparse_statistics.html">« Sparse Statistics
 </a>
 <a class="docs-footer-nextpage" href="global_weak_cache.html">Global Weak Cache »
 </a>
@@ -394,7 +403,7 @@ cross_validation_indices = pick_cross_validation_indices(;
 <hr/>
 <p>This document was generated with 
 <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl
-</a> version 1.17.0. Using Julia version 1.12.6.
+</a> version 1.19.0. Using Julia version 1.12.6.
 </p>
 </section>
 <footer class="modal-card-foot">

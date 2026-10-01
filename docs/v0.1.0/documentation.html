@@ -16,7 +16,7 @@
 <script data-outdated-warner src="assets/warner.js">
 </script>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/>
-<link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.63.2/juliamono.min.css" rel="stylesheet" type="text/css"/>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/>
@@ -121,6 +121,14 @@
 </a>
 </li>
 <li>
+<a class="tocitem" href="matrix_layouts.html">Matrix layouts
+</a>
+</li>
+<li>
+<a class="tocitem" href="matrix_formats.html">Matrix Formats
+</a>
+</li>
+<li>
 <a class="tocitem" href="downsample.html">Downsample
 </a>
 </li>
@@ -130,6 +138,14 @@
 </li>
 <li>
 <a class="tocitem" href="grouped_correlations.html">Grouped Correlations
+</a>
+</li>
+<li>
+<a class="tocitem" href="chi_squared.html">Chi Squared
+</a>
+</li>
+<li>
+<a class="tocitem" href="sparse_statistics.html">Sparse Statistics
 </a>
 </li>
 <li>
@@ -257,8 +273,10 @@ end
 </a>, etc.
 </p>
 <pre>
-<code class="language-julia hljs">&quot;Foo, default x: $(DEFAULT.x), default y: $(DEFAULT.y).&quot;
-@documented function foo(x::Integer = 1; y::Integer = 2)::Integer
+<code class="language-julia hljs">@doc &quot;Foo, default x: $(DEFAULT.x), default y: $(DEFAULT.y).&quot; @documented function foo(
+    x::Integer = 1;
+    y::Integer = 2,
+)::Integer
     return x + y
 end
 
@@ -272,8 +290,7 @@ Foo, default x: `1`, default y: `2`.
 </code>
 </pre>
 <pre>
-<code class="language-julia hljs">&quot;Foo, default x: $(DEFAULT.x).&quot;
-@documented function foo()::Integer
+<code class="language-julia hljs">@doc &quot;Foo, default x: $(DEFAULT.x).&quot; @documented function foo()::Integer
     return 1
 end
 
@@ -286,8 +303,7 @@ exists for the function: foo
 </code>
 </pre>
 <pre>
-<code class="language-julia hljs">&quot;Foo, default x: $(DEFAULT.x), default y: $(DEFAULT.y).&quot;
-function foo(x::Integer = 1; y::Integer = 2)::Integer
+<code class="language-julia hljs">@doc &quot;Foo, default x: $(DEFAULT.x), default y: $(DEFAULT.y).&quot; function foo(x::Integer = 1; y::Integer = 2)::Integer
     return x + y
 end
 
@@ -497,7 +513,7 @@ ERROR: not a @documented function: foo
 <hr/>
 <p>This document was generated with 
 <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl
-</a> version 1.17.0. Using Julia version 1.12.6.
+</a> version 1.19.0. Using Julia version 1.12.6.
 </p>
 </section>
 <footer class="modal-card-foot">

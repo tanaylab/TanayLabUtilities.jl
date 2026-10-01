@@ -27,7 +27,7 @@ format(
     always_use_return = true,
     whitespace_in_kwargs = true,
     annotate_untyped_fields_with_any = true,
-    format_docstrings = false,
+    format_docstrings = true,
     conditional_to_if = true,
     normalize_line_endings = "unix",
     trailing_comma = true,
