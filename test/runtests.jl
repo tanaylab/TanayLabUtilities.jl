@@ -14,6 +14,14 @@ setup_logger(; level = Info)
 
 TanayLabUtilities.MatrixLayouts.GLOBAL_INEFFICIENT_ACTION_HANDLER = ErrorHandler
 
+@logged function logged_sum(x::Int; y::Int = 1)::Int
+    return x + y
+end
+
+@documented function documented_untyped(x; y = 1)
+    return x + y
+end
+
 @testset "doctests" begin
     DocMeta.setdocmeta!(TanayLabUtilities, :DocTestSetup, :(using TanayLabUtilities); recursive = true)
     return doctest(TanayLabUtilities; manual = false)
@@ -470,6 +478,8 @@ end
 
     @assert cached_ispath(target_real)
     @assert cached_ispath(target_alias)
+
+    @test cached_ispath("/")
 end
 
 @testset "grouped_correlations" begin
@@ -609,8 +619,8 @@ end
         replaced_variable = copy(variable)
         replaced_variable[1:2, :] .= new_variable
         is_active_now = Bool[false, true, true, true]
-        @test mean_correlation(grouped) ≈ reference_mean(fixed[is_active_now, :], replaced_variable[is_active_now, :]) atol =
-            1e-5
+        expected_mean = reference_mean(fixed[is_active_now, :], replaced_variable[is_active_now, :])
+        @test mean_correlation(grouped) ≈ expected_mean atol = 1e-5
         @test grouped.is_active_per_point == is_active_now
         @test grouped.n_active_per_group == [1, 2]
     end
@@ -729,6 +739,37 @@ end
             return nothing
         end
         @test results == collect(1:n_items)
+    end
+
+    @testset "is_in_parallel_loop is true only inside a threaded loop" begin
+        @test !is_in_parallel_loop()
+        n_items = 2 * Threads.nthreads()
+        is_in_loop_per_item = fill(false, n_items)
+        parallel_loop_wo_rng(1:n_items; policy = :static) do index
+            is_in_loop_per_item[index] = is_in_parallel_loop()
+            return nothing
+        end
+        @test all(is_in_loop_per_item) == (Threads.nthreads() > 1)
+        @test !is_in_parallel_loop()
+    end
+
+    @testset "debug progress exists only when its group is debugged" begin
+        withenv("JULIA_DEBUG" => "") do
+            @test DebugProgress(3; group = :tlu_test) === nothing
+            @test DebugProgressUnknown(; group = :tlu_test) === nothing
+        end
+        withenv("JULIA_DEBUG" => "tlu_other") do
+            @test DebugProgress(3; group = :tlu_test) === nothing
+        end
+        withenv("JULIA_DEBUG" => "tlu_test") do
+            @test DebugProgress(3; group = :tlu_test) isa Progress
+            @test DebugProgressUnknown(; group = :tlu_test) isa ProgressUnknown
+        end
+        withenv("JULIA_DEBUG" => "tlu_other") do
+            with_logger(ConsoleLogger(stderr, Logging.Debug)) do
+                @test DebugProgress(3; group = :tlu_test) isa Progress
+            end
+        end
     end
 
     @testset ":static with order shuffles via round-robin" begin
@@ -945,5 +986,202 @@ end
               round_counts(dense; dims = Columns, rng = Random.Xoshiro(7))
         @test round_counts(flip(sparse(dense)); dims = Rows, rng = Random.Xoshiro(7)) ==
               round_counts(flip(dense); dims = Rows, rng = Random.Xoshiro(7))
+    end
+end
+
+@testset "matrix_formats" begin
+    using NamedArrays
+
+    matrix = sparse([0 1 0; 2 0 3])
+
+    @testset "sparse queries see through wrappers" begin
+        read_only = read_only_array(matrix)
+        @test nnz(read_only) == 3
+        @test SparseArrays.indtype(read_only) == SparseArrays.indtype(matrix)
+
+        read_only_columns = view(read_only, :, 2:3)
+        @test nnz(read_only_columns) == 2
+        @test SparseArrays.indtype(read_only_columns) == SparseArrays.indtype(matrix)
+
+        named = NamedArray(matrix)
+        @test nnz(named) == 3
+        @test SparseArrays.indtype(named) == SparseArrays.indtype(matrix)
+    end
+
+    @testset "base_array unwraps to the array holding the data" begin
+        dense = [1 2; 3 4]
+        @test base_array(dense) === dense
+        @test base_array(NamedArray(dense)) === dense
+
+        values = [1, 2, 3]
+        @test base_array(SparseArrays.ReadOnly(values)) === values
+
+        column = view(dense, :, 1)
+        @test base_array(column) === column
+
+        read_only_column = base_array(view(SparseArrays.ReadOnly(dense), :, 1))
+        @test parent(read_only_column) === dense
+        @test read_only_column == [1, 3]
+    end
+end
+
+@testset "matrix_layouts" begin
+    @test major_axis(falses(2, 3)) == Columns
+end
+
+@testset "mostly_read_write_locks" begin
+    import ConcurrentUtils
+
+    @testset "trylock succeeds only when there is no reader" begin
+        lock = MostlyReadWriteLock()
+        @test trylock(lock)
+        unlock(lock)
+
+        ConcurrentUtils.lock_read(lock)
+        @test !trylock(lock)
+        ConcurrentUtils.unlock_read(lock)
+    end
+
+    @testset "trylock fails while another task holds the lock" begin
+        lock = MostlyReadWriteLock()
+        Base.lock(lock)
+        @test !fetch(Threads.@spawn trylock(lock))
+        unlock(lock)
+    end
+
+    @testset "trylock_read succeeds only when there is no writer" begin
+        lock = MostlyReadWriteLock()
+        @test ConcurrentUtils.trylock_read(lock)
+        ConcurrentUtils.unlock_read(lock)
+        @test ConcurrentUtils.trylock_read(() -> 1, lock) == Some(1)
+
+        Base.lock(lock)
+        @test !ConcurrentUtils.trylock_read(lock)
+        @test ConcurrentUtils.trylock_read(() -> 1, lock) === nothing
+        unlock(lock)
+    end
+end
+
+@testset "logged" begin
+    @test logged_sum(1; y = 2) == 3
+end
+
+@testset "documented" begin
+    @test documented_untyped(1) == 2
+    @test function_default(documented_untyped, :y) == 1
+end
+
+@testset "parallel_storage" begin
+    @test reset_reusable_storage!(1) === nothing
+end
+
+@testset "kmeans" begin
+    # Two well separated clouds of five points each, so every correct clustering splits them the same way.
+    values_of_points = Float64[
+        0.0 0.1 0.2 0.1 0.0 10.0 10.1 10.2 10.1 10.0
+        0.0 0.1 0.0 0.2 0.1 10.0 10.1 10.0 10.2 10.1
+    ]
+
+    function is_split_by_cloud(assignments::AbstractVector{<:Integer})::Bool
+        return allequal(assignments[1:5]) && allequal(assignments[6:10]) && assignments[1] != assignments[6]
+    end
+
+    function make_buffers()::KMeansBuffers
+        return KMeansBuffers{Float64}(; n_dims = 2, max_k = 4, n_points = 20)
+    end
+
+    @testset "kmeans_in_buffers" begin
+        @testset "without buffers" begin
+            result = kmeans_in_buffers(values_of_points, 2; rng = Random.Xoshiro(1))
+            @test is_split_by_cloud(result.assignments)
+        end
+
+        @testset "with buffers" begin
+            buffers = KMeansBuffers(make_buffers(); n_dims = 2, k = 2, n_points = 10)
+            result = kmeans_in_buffers(values_of_points, 2; buffers, rng = Random.Xoshiro(1))
+            @test result isa KmeansResultView
+            @test is_split_by_cloud(result.assignments)
+            @test sort(collect(result.counts)) == [5, 5]
+        end
+    end
+
+    @testset "kmeans_in_buffers!" begin
+        @testset "without buffers" begin
+            centers = Float64[0.0 10.0; 0.0 10.0]
+            result = kmeans_in_buffers!(values_of_points, centers; rng = Random.Xoshiro(1))
+            @test is_split_by_cloud(result.assignments)
+        end
+
+        @testset "repicks a center with no points" begin
+            buffers = KMeansBuffers(make_buffers(); n_dims = 2, k = 2, n_points = 10)
+            centers = Float64[0.0 100.0; 0.0 100.0]
+            result = kmeans_in_buffers!(values_of_points, centers; buffers, rng = Random.Xoshiro(1))
+            @test is_split_by_cloud(result.assignments)
+        end
+
+        @testset "one cluster per point" begin
+            two_points = values_of_points[:, [1, 6]]
+            buffers = KMeansBuffers(make_buffers(); n_dims = 2, k = 2, n_points = 2)
+            result = kmeans_in_buffers!(two_points, zeros(2, 2); buffers, rng = Random.Xoshiro(1))
+            @test result.assignments == [1, 2]
+            @test result.centers == two_points
+            @test result.totalcost == 0
+        end
+
+        @testset "a single cluster" begin
+            buffers = KMeansBuffers(make_buffers(); n_dims = 2, k = 1, n_points = 10)
+            result = kmeans_in_buffers!(values_of_points, zeros(2, 1); buffers, rng = Random.Xoshiro(1))
+            @test all(==(1), result.assignments)
+            @test vec(result.centers) ≈ vec(sum(values_of_points; dims = 2) ./ 10)
+        end
+    end
+
+    @testset "kmeans_in_rounds" begin
+        @testset "default" begin
+            result = kmeans_in_rounds(values_of_points, 2; rounds = 3, rng = Random.Xoshiro(1))
+            @test is_split_by_cloud(result.assignments)
+        end
+
+        @testset "buffers" begin
+            result = kmeans_in_rounds(
+                values_of_points,
+                2;
+                buffers = (make_buffers(), make_buffers()),
+                rounds = 3,
+                rng = Random.Xoshiro(1),
+            )
+            @test is_split_by_cloud(result.assignments)
+        end
+
+        @testset "buffer_pool" begin
+            buffer_pool = Channel{KMeansBuffers}(Threads.nthreads())
+            for _ in 1:Threads.nthreads()
+                put!(buffer_pool, make_buffers())
+            end
+            result = kmeans_in_rounds(values_of_points, 2; buffer_pool, rounds = 3, rng = Random.Xoshiro(1))
+            @test is_split_by_cloud(result.assignments)
+
+            centers = Float64[0.0 10.0; 0.0 10.0]
+            result = kmeans_in_rounds(values_of_points, 2; centers, buffer_pool, rounds = 2, rng = Random.Xoshiro(1))
+            @test is_split_by_cloud(result.assignments)
+        end
+
+        @testset "centers" begin
+            centers = Float64[0.0 10.0; 0.0 10.0]
+            result = kmeans_in_rounds(
+                values_of_points,
+                2;
+                centers,
+                buffers = (make_buffers(), make_buffers()),
+                rounds = 2,
+                rng = Random.Xoshiro(1),
+            )
+            @test is_split_by_cloud(result.assignments)
+        end
+
+        @testset "min_size" begin
+            result = kmeans_in_rounds(values_of_points, 2; min_size = 3, rounds = 3, rng = Random.Xoshiro(1))
+            @test is_split_by_cloud(result.assignments)
+        end
     end
 end

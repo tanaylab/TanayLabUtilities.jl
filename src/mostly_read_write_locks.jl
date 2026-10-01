@@ -33,7 +33,7 @@ end
 const MAX_SPINS = 100
 const PAUSE_CYCLES = 10
 
-@inline function cpu_pause()::Nothing
+@inline function cpu_pause()::Nothing  # UNTESTED
     # x86 PAUSE instruction equivalent
     ccall(:jl_cpu_pause, Cvoid, ())
     return nothing
@@ -85,8 +85,8 @@ function Base.trylock(lock::MostlyReadWriteLock)::Bool
     end
 
     if lock.readers[] > 0
-        Base.unlock(lock.write_mutex)
-        return false
+        Base.unlock(lock.write_mutex)  # UNTESTED
+        return false  # UNTESTED
     end
 
     lock.writer_active[] = true
@@ -139,8 +139,8 @@ function ConcurrentUtils.trylock_read(lock::MostlyReadWriteLock)::Bool
     atomic_add!(lock.readers, 1)
 
     if lock.writer_active[]
-        atomic_sub!(lock.readers, 1)
-        return false
+        atomic_sub!(lock.readers, 1)  # UNTESTED
+        return false  # UNTESTED
     end
 
     return true
@@ -151,7 +151,7 @@ function ConcurrentUtils.trylock_read(action::Function, lock::MostlyReadWriteLoc
         try
             return Some(action())
         finally
-            read_unlock(lock)  # NOLINT # NOJET
+            unlock_read(lock)
         end
     else
         return nothing

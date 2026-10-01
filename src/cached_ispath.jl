@@ -86,23 +86,6 @@ function resolve_realpath(path::AbstractString)::AbstractString
     end
 end
 
-function get_if_cached_and_fresh(path::AbstractString)::Maybe{DirectoryFiles}
-    @assert IS_PATH_CACHE_TIMEOUT != 0
-    entry = get(IS_PATH_CACHE_DICT, path, nothing)
-    while entry isa DirectoryRedirect
-        if IS_PATH_CACHE_TIMEOUT > 0 && (now() - entry.fetched_at).value / 1000.0 >= IS_PATH_CACHE_TIMEOUT
-            return nothing
-        end
-        entry = get(IS_PATH_CACHE_DICT, entry.real_directory, nothing)
-    end
-    if entry isa DirectoryFiles &&
-       (IS_PATH_CACHE_TIMEOUT < 0 || (now() - entry.fetched_at).value / 1000.0 < IS_PATH_CACHE_TIMEOUT)
-        return entry
-    else
-        return nothing
-    end
-end
-
 function collect_subtree!(to_delete::Vector{AbstractString}, path::AbstractString)::Nothing
     prefix = path * "/"
     token = searchsortedfirst(IS_PATH_CACHE_DICT, prefix)
@@ -214,6 +197,10 @@ function cached_ispath(path::AbstractString)::Bool
         return ispath(path)  # UNTESTED
     else
         path = normalize_path(path)
+        if path == "/"
+            # The root is not an entry of any directory, and it always exists.
+            return true
+        end
         directory = dirname(path)
         file_name = basename(path)
         directory_files = cached_readdir(directory)

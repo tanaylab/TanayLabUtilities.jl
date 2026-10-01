@@ -46,7 +46,7 @@ function __init__()::Nothing
     return nothing
 end
 
-function is_in_linux_ramdisk(directory::AbstractString)::Bool
+function is_in_linux_ramdisk(directory::AbstractString)::Bool  # UNTESTED
     @static if Sys.islinux()
         directory = string(directory)
         buffer = zeros(UInt8, 512)  # For struct statfs
@@ -63,7 +63,7 @@ function is_in_linux_ramdisk(directory::AbstractString)::Bool
     end
 end
 
-function disable_thp(ptr::Ptr{Cvoid}, size::Integer)::Nothing
+function disable_thp(ptr::Ptr{Cvoid}, size::Integer)::Nothing  # UNTESTED
     if size > 0
         MADV_NOHUGEPAGE = 15
         ret = ccall(:madvise, Cint, (Ptr{Cvoid}, Csize_t, Cint), ptr, Csize_t(size), Cint(MADV_NOHUGEPAGE))

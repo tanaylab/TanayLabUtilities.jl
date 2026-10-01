@@ -452,7 +452,7 @@ function parallel_loop_with_rng(  # NOJET
     return nothing
 end
 
-function is_debug_enabled_for_caller(group::Maybe{Symbol} = nothing)  # UNTESTED
+function is_debug_enabled_for_caller(group::Maybe{Symbol} = nothing)
     if get(ENV, "JULIA_DEBUG", "") == ""
         return false
     end
@@ -462,22 +462,24 @@ function is_debug_enabled_for_caller(group::Maybe{Symbol} = nothing)  # UNTESTED
     end
     stack = stacktrace(backtrace())
     if length(stack) < 4
-        caller_module = Main
+        caller_module = Main  # UNTESTED
     else
         caller_frame = stack[4]
         linfo = caller_frame.linfo
         if linfo === nothing
             caller_module = Main
-        elseif linfo isa Module
-            caller_module = linfo
-        elseif linfo isa Core.MethodInstance
-            def = linfo.def
-            caller_module = def isa Method ? def.module : def isa Module ? def : Main  # NOJET
+        elseif linfo isa Module  # UNTESTED
+            caller_module = linfo  # UNTESTED
+        elseif linfo isa Core.MethodInstance  # UNTESTED
+            def = linfo.def  # UNTESTED
+            caller_module = def isa Method ? def.module : def isa Module ? def : Main  # NOJET # UNTESTED
         else
-            caller_module = Main
+            caller_module = Main  # UNTESTED
         end
     end
-    return Logging.shouldlog(logger, Logging.Debug, caller_module, group, :check)
+    # This is how `@debug` matches `JULIA_DEBUG` against the group and the module. The logger's `shouldlog` does not.
+    return Base.CoreLogging.env_override_minlevel(group, caller_module) &&
+           Logging.shouldlog(logger, Logging.Debug, caller_module, group, :check)
 end
 
 """

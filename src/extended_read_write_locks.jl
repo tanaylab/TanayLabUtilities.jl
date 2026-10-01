@@ -318,7 +318,7 @@ function what_suffix(what::Function)::AbstractString
     return what_suffix(what())
 end
 
-function what_suffix(::Nothing)::AbstractString
+function what_suffix(::Nothing)::AbstractString  # UNTESTED
     return ""
 end
 

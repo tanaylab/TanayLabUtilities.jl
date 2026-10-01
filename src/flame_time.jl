@@ -145,7 +145,7 @@ mutable struct SerialMeasurement
     involuntary_context_switches::Int64
 end
 
-function Base.copy(measurement::SerialMeasurement)::SerialMeasurement
+function Base.copy(measurement::SerialMeasurement)::SerialMeasurement  # UNTESTED
     return SerialMeasurement(
         measurement.invocations,
         measurement.iterations,
@@ -186,7 +186,7 @@ function combine_measurements(  # UNTESTED
     )
 end
 
-function sort_weight(measurement::SerialMeasurement)::Int64
+function sort_weight(measurement::SerialMeasurement)::Int64  # UNTESTED
     return measurement.elapsed_ns
 end
 
@@ -197,7 +197,7 @@ mutable struct ParallelMeasurement
     scaled_elapsed_ns::Int64
 end
 
-function Base.copy(measurement::ParallelMeasurement)::ParallelMeasurement
+function Base.copy(measurement::ParallelMeasurement)::ParallelMeasurement  # UNTESTED
     return ParallelMeasurement(
         measurement.invocations,
         measurement.iterations,
@@ -237,7 +237,7 @@ function combine_measurements(  # UNTESTED
     )
 end
 
-function sort_weight(measurement::ParallelMeasurement)::Int64
+function sort_weight(measurement::ParallelMeasurement)::Int64  # UNTESTED
     return measurement.scaled_elapsed_ns
 end
 
@@ -250,8 +250,8 @@ within a `parallel_loop`). For parallel code we can only meaningfully measure el
 complete `parallel_loop`), we measure much more - GC overhead, CPU time, page faults, IO, and context switches.
 
 If `name` starts with `.`, then we take the name of the surrounding `flame_timed` context (which must exist) and append
-the `name` to it. This allows easily marking sections inside logged functions (e.g. `flame_timed(".loop")`) in a way that
-still makes sense when generating a reversed flame graph.
+the `name` to it. This allows easily marking sections inside logged functions (e.g. `flame_timed(".loop")`) in a way
+that still makes sense when generating a reversed flame graph.
 
 If `TLU_FLAME_MEASUREMENTS_FILE` was not specified, this just invokes the `body` without (almost) any overhead.
 
@@ -701,7 +701,7 @@ end
 
 DID_WARN_ABOUT_EXPENSIVE_OPERATIONS_IN_PARALLEL = Set{Tuple{AbstractString, AbstractString}}()
 
-function warn_about_expensive_operation_in_parallel(name::AbstractString)::Nothing
+function warn_about_expensive_operation_in_parallel(name::AbstractString)::Nothing  # UNTESTED
     private_storage = task_local_storage()
     is_in_parallel = get(private_storage, :is_in_parallel, false)
     if is_in_parallel

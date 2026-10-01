@@ -3,11 +3,11 @@ Median, quantile, variance and standard-deviation reductions optimized for spars
 
 A quantile of a sparse vector with `nnz` non-zero values out of `n` total entries can be located in `O(nnz)` expected
 time instead of the dense `O(n * log(n))` time spent on a full sort. The key observation is that the values, if
-conceptually sorted, lay out as `[sorted negatives... | zeros... | sorted positives...]`, where any explicit zero entries
-that may be stored in `nzval` are folded together with the structural zeros. Once we know how many negatives and how
-many positives are stored in `nzval`, mapping a quantile position to a value just requires running an in-place
-quickselect on (a copy of) `nzval` to extract the one or two values needed.
-The implementation is allocation-free when the caller provides a `scratch` buffer of the appropriate size.
+conceptually sorted, lay out as `[sorted negatives... | zeros... | sorted positives...]`, where any explicit zero
+entries that may be stored in `nzval` are folded together with the structural zeros. Once we know how many negatives and
+how many positives are stored in `nzval`, mapping a quantile position to a value just requires running an in-place
+quickselect on (a copy of) `nzval` to extract the one or two values needed. The implementation is allocation-free when
+the caller provides a `scratch` buffer of the appropriate size.
 
 The variance is computed in `O(nnz)` by running Welford's algorithm over `nzval` and merging the resulting stream stats
 `(n, mean, M2)` with the all-zeros stream `(n_zero, 0, 0)` via the standard pairwise variance combiner; this is exact
@@ -267,8 +267,8 @@ end
 
 Compute the variance of the values of a `vector`, or of each column (`dims = 1` / [`Rows`](@ref)) or each row
 (`dims = 2` / [`Columns`](@ref)) of a `matrix`, or of all the elements of a `matrix` when `dims` is omitted. The shape
-conventions match `Statistics.var`: with `dims` the matrix variant returns a vector of length `n_columns` (`dims = Rows`)
-or `n_rows` (`dims = Columns`); without `dims` it returns a scalar `Float64`.
+conventions match `Statistics.var`: with `dims` the matrix variant returns a vector of length `n_columns`
+(`dims = Rows`) or `n_rows` (`dims = Columns`); without `dims` it returns a scalar `Float64`.
 
 If `corrected` is `true` (the default), the bias-corrected sample variance is returned (sum of squared deviations
 divided by `n - 1`); otherwise the population variance is returned (divided by `n`).
@@ -689,7 +689,9 @@ function compute_sparse_quantile_of_dense_matrix!(
     if scratch === nothing
         scratch = Vector{Float64}(undef, n_required_scratch)
     else
-        @assert length(scratch) >= n_required_scratch "scratch length: $(length(scratch)) is below required: $(n_required_scratch)"
+        @assert length(scratch) >= n_required_scratch (
+            "scratch length: $(length(scratch)) is below required: $(n_required_scratch)"
+        )
     end
 
     @views scratch_matrix = reshape(scratch[1:n_required_scratch], slice_length, n_iterations)
@@ -942,8 +944,13 @@ function auc_per_group!(;
     positive::Bool = false,
 )::AbstractVector{Float64}
     n_groups = length(n_samples_per_group)
-    @assert length(auc_per_group) == n_groups "auc_per_group length: $(length(auc_per_group)) is not the number of groups: $(n_groups)"
-    @assert length(group_index_per_sample) == length(feature_per_sample) "group_index_per_sample length: $(length(group_index_per_sample)) is not the feature length: $(length(feature_per_sample))"
+    @assert length(auc_per_group) == n_groups (
+        "auc_per_group length: $(length(auc_per_group)) is not the number of groups: $(n_groups)"
+    )
+    @assert length(group_index_per_sample) == length(feature_per_sample) (
+        "group_index_per_sample length: $(length(group_index_per_sample)) " *
+        "is not the feature length: $(length(feature_per_sample))"
+    )
     return flame_timed("auc_per_group") do
         n_included_samples = sum(n_samples_per_group)
         rank_sum_per_group = zeros(Float64, n_groups)
@@ -973,8 +980,8 @@ end
 
 Compute the one-vs-rest AUC of the `feature_per_sample` for each distinct value of `category_per_sample` (an integer or
 string label per sample). Returns the distinct categories (in order of first appearance) aligned with their AUCs. See
-[`auc_per_group!`](@ref) for the definition and the sparse-feature optimization; use it directly to avoid re-deriving the
-categories when scoring many features against the same categories.
+[`auc_per_group!`](@ref) for the definition and the sparse-feature optimization; use it directly to avoid re-deriving
+the categories when scoring many features against the same categories.
 
 ```jldoctest
 using SparseArrays
@@ -996,7 +1003,9 @@ function auc_per_category(
     category_per_sample::AbstractVector;
     positive::Bool = false,
 )::Tuple{Vector, Vector{Float64}}
-    @assert length(feature_per_sample) == length(category_per_sample) "feature length: $(length(feature_per_sample)) is not the category length: $(length(category_per_sample))"
+    @assert length(feature_per_sample) == length(category_per_sample) (
+        "feature length: $(length(feature_per_sample)) is not the category length: $(length(category_per_sample))"
+    )
     category_per_group = unique(category_per_sample)
     n_groups = length(category_per_group)
     group_index_per_category =

@@ -96,7 +96,8 @@ function brief_array(array::AbstractArray, prefixes::Vector{String}; transposed:
     if issparse(array)
         push!(
             prefixes,
-            "Sparse $(delimited_number(nnz(array))) ($(percent(nnz(array), length(array)))) [$(SparseArrays.indtype(array))]",
+            "Sparse $(delimited_number(nnz(array))) ($(percent(nnz(array), length(array)))) " *
+            "[$(SparseArrays.indtype(array))]",
         )
         return format_brief_array(array, prefixes; transposed)
     else
@@ -154,7 +155,8 @@ function format_brief_array(matrix::AbstractMatrix, prefixes::Vector{String}; tr
     if transposed
         n_rows, n_columns = n_columns, n_rows
     end
-    return "$(delimited_number(n_rows)) x $(delimited_number(n_columns)) x $(eltype(matrix)) $(layout_suffix) ($(join(prefixes, ", "))$(suffix)$(mask_suffix(matrix)))"
+    return "$(delimited_number(n_rows)) x $(delimited_number(n_columns)) x $(eltype(matrix)) $(layout_suffix) " *
+           "($(join(prefixes, ", "))$(suffix)$(mask_suffix(matrix)))"
 end
 
 function mask_suffix(::AbstractArray)::AbstractString
@@ -1661,8 +1663,8 @@ end
     )::SparseMatrixCSC{T} where {T}
 
 Embed a dense `matrix` into a sparse matrix of size `n_rows` x `n_columns`. The dense matrix values are placed at the
-positions given by `rows_indices` (which must be sorted) and `columns_indices` (which must be sorted). All entries of the
-dense matrix are assumed to be non-zero.
+positions given by `rows_indices` (which must be sorted) and `columns_indices` (which must be sorted). All entries of
+the dense matrix are assumed to be non-zero.
 
 !!! note
 

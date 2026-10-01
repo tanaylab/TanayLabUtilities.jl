@@ -49,7 +49,7 @@ end
 @assert second == [2];
 
 first = second = nothing
-gc()
+GC.gc()
 third = get_through_global_weak_cache("fake path", :test) do _
     return [3]
 end
@@ -57,6 +57,7 @@ end
 
 # output
 
+```
 """
 function get_through_global_weak_cache(
     getter::Function,

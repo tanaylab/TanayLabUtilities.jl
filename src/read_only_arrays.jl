@@ -4,8 +4,8 @@ to be copy-free for efficiency (in particular, matrices can be several GBs). How
 code to access vector or matrix data and accidentally modify it in-place, thereby corrupting it and causing all sort of
 hard-to-debug hilarity. Julia in its infinite wisdom takes the view that "everything is mutable" so has no builtin
 notion of "read-only view of an array", probably due to the general weakness of its type system (which might be a price
-paid for efficient multiple dispatch?). Luckily the `SparseArraysReadOnly` package happens to implement something along these
-lines, which we shamelessly ab/use for our purposes and re-export as `ReadOnlyArray`.
+paid for efficient multiple dispatch?). Luckily the `SparseArraysReadOnly` package happens to implement something along
+these lines, which we shamelessly ab/use for our purposes and re-export as `ReadOnlyArray`.
 
 !!! note
 

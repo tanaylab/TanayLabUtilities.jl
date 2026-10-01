@@ -197,7 +197,7 @@ function major_axis(matrix::SubArray)::Maybe{Int8}
     return major_axis(matrix.parent)
 end
 
-function major_axis(matrix::DiskArrays.CachedDiskArray)::Maybe{Int8}
+function major_axis(matrix::DiskArrays.CachedDiskArray)::Maybe{Int8}  # UNTESTED
     return major_axis(matrix.parent)
 end
 
@@ -662,8 +662,8 @@ end
 """
     @check_turbo_vector(vector::Any)
 
-Assert that `vector` is an `AbstractVector` that can be used in a `LoopVectorization` `@turbo` loop (a strided array of a
-supported element type), with a friendly error message if not. Use this just before a `@turbo` loop instead of a
+Assert that `vector` is an `AbstractVector` that can be used in a `LoopVectorization` `@turbo` loop (a strided array of
+a supported element type), with a friendly error message if not. Use this just before a `@turbo` loop instead of a
 verbose manual `LoopVectorization.check_args` assertion.
 
 ```jldoctest
@@ -916,7 +916,7 @@ function unnamed_relayout(destination::DenseMatrix, source::AbstractMatrix)::Den
     return destination
 end
 
-function unnamed_relayout(destination::AbstractMatrix, source::AbstractMatrix)::AbstractMatrix
+function unnamed_relayout(destination::AbstractMatrix, source::AbstractMatrix)::AbstractMatrix  # UNTESTED
     return error("""
                unsupported relayout destination: $(typeof(destination))
                and source: $(typeof(source))
