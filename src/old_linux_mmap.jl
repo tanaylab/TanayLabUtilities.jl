@@ -135,14 +135,14 @@ function mmap_populate_if_old_linux_ramdisk(  # UNTESTED
         bytes_size = total_size * sizeof(T)
 
         if bytes_size > 0 && IS_OLD_LINUX_KERNEL && is_in_linux_ramdisk(dirname(path))
-            return open(path, mode) do file  # NOJET
+            return open(path, mode) do file
                 MAP_POPULATE = Cint(0x08000)
                 MAP_SHARED = Cint(0x01)
                 PROT_READ = Cint(0x01)
                 PROT_WRITE = Cint(0x02)
                 prot = mode == "r+" ? PROT_READ | PROT_WRITE : PROT_READ
                 flags = MAP_SHARED | MAP_POPULATE
-                ptr = ccall(  # NOJET
+                ptr = ccall(
                     :mmap,
                     Ptr{Cvoid},
                     (Ptr{Cvoid}, Csize_t, Cint, Cint, Cint, Csize_t),
@@ -180,8 +180,8 @@ function mmap_populate_if_old_linux_ramdisk(  # UNTESTED
         end
     end
 
-    return open(path, mode) do file  # NOJET
-        return mmap_with_small_pages(file, ArrayT, size, 0; grow = false)  # NOJET
+    return open(path, mode) do file
+        return mmap_with_small_pages(file, ArrayT, size, 0; grow = false)
     end
 end
 

@@ -276,15 +276,15 @@ function delimited_number(number::Number; decimal = ".", delim = ",")::AbstractS
         delimited = left_part
     elseif length(parts) == 2
         right_part = parts[2]
-        right_part = replace(right_part, RIGHT_REGEX => SubstitutionString("\\1" * delim))  # NOJET
-        delimited = left_part * decimal * right_part  # NOJET
+        right_part = replace(right_part, RIGHT_REGEX => SubstitutionString("\\1" * delim))
+        delimited = left_part * decimal * right_part
     else
         @assert false
     end
     if suffix === nothing
-        return delimited  # NOJET
+        return delimited
     else
-        return delimited * "e" * suffix  # NOJET
+        return delimited * "e" * suffix
     end
 end
 

@@ -164,12 +164,12 @@ function mask_suffix(::AbstractArray)::AbstractString
 end
 
 function mask_suffix(array::AbstractArray{Bool})::AbstractString
-    n_true = sum(array)  # NOJET
+    n_true = sum(array)
     if issparse(array) && n_true == nnz(array)
         return ""
     else
         n_true = sum(array)
-        return "; $(n_true) ($(percent(n_true, length(array)))) true"  # NOJET
+        return "; $(n_true) ($(percent(n_true, length(array)))) true"
     end
 end
 
@@ -1388,7 +1388,7 @@ sparse = sparse_vector(dense)
     end
 
     if !copy && is_sparse
-        current_storage = sparse_array_storage(array; eltype, indtype = SparseArrays.indtype(array))  # NOJET
+        current_storage = sparse_array_storage(array; eltype, indtype = SparseArrays.indtype(array))
         copy = sparse_storage <= current_storage * (1.0 - min_sparse_saving_fraction)
     end
 

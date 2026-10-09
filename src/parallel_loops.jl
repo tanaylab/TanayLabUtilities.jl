@@ -163,7 +163,7 @@ end
 
 ```
 """
-function parallel_loop_wo_rng(  # NOJET
+function parallel_loop_wo_rng(
     body::Function,
     indices::AbstractVector{<:Integer};
     name::AbstractString = ".loop",
@@ -254,9 +254,9 @@ function parallel_loop_wo_rng(  # NOJET
                     return nothing
                 end
                 if step_per_position !== nothing
-                    next!(progress; step = Int(step_per_position[position]))  # NOJET
+                    next!(progress; step = Int(step_per_position[position]))
                 elseif progress_chunk === nothing
-                    next!(progress)  # NOJET
+                    next!(progress)
                 elseif position % progress_chunk == 0
                     next!(progress; step = progress_chunk)
                 end
@@ -420,7 +420,7 @@ end
 
 ```
 """
-function parallel_loop_with_rng(  # NOJET
+function parallel_loop_with_rng(
     body::Function,
     indices::AbstractVector{<:Integer};
     name::AbstractString = ".loop",
@@ -444,7 +444,7 @@ function parallel_loop_with_rng(  # NOJET
         else
             iteration_rng = copy(rng)
         end
-        Random.seed!(iteration_rng, seed + index)  # NOJET
+        Random.seed!(iteration_rng, seed + index)
         body(index, iteration_rng)
         return nothing
     end
@@ -472,7 +472,7 @@ function is_debug_enabled_for_caller(group::Maybe{Symbol} = nothing)
             caller_module = linfo  # UNTESTED
         elseif linfo isa Core.MethodInstance  # UNTESTED
             def = linfo.def  # UNTESTED
-            caller_module = def isa Method ? def.module : def isa Module ? def : Main  # NOJET # UNTESTED
+            caller_module = def isa Method ? def.module : def isa Module ? def : Main  # UNTESTED
         else
             caller_module = Main  # UNTESTED
         end

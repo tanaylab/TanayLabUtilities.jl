@@ -180,7 +180,7 @@ end
 function major_axis(matrix::AbstractMatrix)::Maybe{Int8}
     try
         matrix_strides = strides(matrix)
-        if matrix_strides[Rows] == 1  # NOJET
+        if matrix_strides[Rows] == 1
             return Columns
         elseif matrix_strides[Columns] == 1  # UNTESTED
             return Rows  # UNTESTED
@@ -862,7 +862,7 @@ function named_relayout(destination::AbstractMatrix, source::NamedMatrix)::Named
 end
 
 function named_relayout(destination::NamedArray, source::NamedMatrix)::NamedArray
-    @assert destination.dimnames == source.dimnames  # NOJET
+    @assert destination.dimnames == source.dimnames
     @assert destination.dicts == source.dicts
     @assert named_relayout(parent(destination), parent(source)) === parent(destination)
     return destination
@@ -905,7 +905,7 @@ end
 function unnamed_relayout(destination::SparseMatrixCSC, source::AbstractMatrix)::SparseMatrixCSC
     @assert size(destination) == size(source)
     @assert issparse(source)
-    @assert LinearAlgebra.transpose!(destination, flip(mutable_array(source))) === destination  # NOJET
+    @assert LinearAlgebra.transpose!(destination, flip(mutable_array(source))) === destination
     return destination
 end
 

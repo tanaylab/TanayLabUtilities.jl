@@ -147,7 +147,7 @@ Implementation is otherwise identical to `Clustering.kmeans!`.
     rng::AbstractRNG = default_rng(),
 )::Union{KmeansResult, KmeansResultView}
     if buffers === nothing
-        return Clustering.kmeans!(X, centers; maxiter, tol, distance, rng)  # NOJET
+        return Clustering.kmeans!(X, centers; maxiter, tol, distance, rng)
     end
 
     @assert distance isa SqEuclidean "Buffered kmeans only supports SqEuclidean, got: $(typeof(distance))"
@@ -424,7 +424,7 @@ function _repick_unused_centers!(
         centers[:, i] .= view(X, :, j)
         _sq_euclidean_colwise!(ds, X, view(X, :, j))
         ds[j] = 0
-        @turbo for l in eachindex(sampling_weights)  # NOJET
+        @turbo for l in eachindex(sampling_weights)
             sampling_weights[l] = min(sampling_weights[l], ds[l])
         end
     end
@@ -489,7 +489,7 @@ If `min_size` is specified, rounds are ranked first by the number of clusters wh
     for _ in 1:rounds
         if centers === nothing
             kmeans_result = flame_timed("kmeans") do
-                return kmeans_in_buffers(values_of_points, k; buffers = current_buf, rng)  # NOJET
+                return kmeans_in_buffers(values_of_points, k; buffers = current_buf, rng)
             end
         else
             if current_buf !== nothing
@@ -550,7 +550,7 @@ function kmeans_in_rounds_parallel(
         try
             round_buffer = KMeansBuffers(full_buffer; n_dims, k, n_points)
             kmeans_result = if centers === nothing
-                kmeans_in_buffers(values_of_points, k; buffers = round_buffer, rng = round_rng)  # NOJET
+                kmeans_in_buffers(values_of_points, k; buffers = round_buffer, rng = round_rng)
             else
                 copyto!(@view(round_buffer.centers[:, 1:k]), centers)
                 kmeans_in_buffers!(

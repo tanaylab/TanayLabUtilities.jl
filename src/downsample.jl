@@ -505,7 +505,7 @@ downsamples([100, 500, 1000])
     max_downsamples_quantile::AbstractFloat = 0.5,
 )::Integer
     @assert 0 <= min_downsamples_quantile <= max_downsamples_quantile <= 1
-    return Int(  # NOJET
+    return Int(
         round(
             min(
                 max(min_downsamples, sparse_quantile(samples_per_vector, min_downsamples_quantile)),

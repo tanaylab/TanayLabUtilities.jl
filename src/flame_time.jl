@@ -70,7 +70,7 @@ function __init__()::Nothing
             FLAME_PREFIX = Base.basename(FLAME_PREFIX)  # UNTESTED
         end
         @info "Will append flameview measurements into: $(path) under: $(FLAME_PREFIX)" _group = :tlu_env  # UNTESTED
-        atexit(__end__)  # UNTESTED # NOJET
+        atexit(__end__)  # UNTESTED
     end
     return nothing
 end
@@ -78,7 +78,7 @@ end
 function __end__()::Nothing
     @assert FLAME_MEASUREMENTS_DICT !== nothing
     @assert FLAME_MEASUREMENTS_FILE !== nothing
-    open(FLAME_MEASUREMENTS_FILE, "a") do file  # NOJET
+    open(FLAME_MEASUREMENTS_FILE, "a") do file
         for ((stack, is_in_parallel), measurement) in FLAME_MEASUREMENTS_DICT
             print(file, "$(stack) $(is_in_parallel)")
             if is_in_parallel
@@ -460,14 +460,14 @@ function finalize_flameview(;  # UNTESTED
             @assert previous_measurement isa SerialMeasurement
             @assert measurement isa ParallelMeasurement
             @assert previous_measurement.iterations == -measurement.invocations
-            loop_scale = min(previous_measurement.elapsed_ns / measurement.elapsed_ns, 1.0)  # NOJET
+            loop_scale = min(previous_measurement.elapsed_ns / measurement.elapsed_ns, 1.0)
             loop_stack = stack
         else
             if is_in_parallel
                 @assert measurement isa ParallelMeasurement
                 @assert loop_stack !== nothing
-                @assert startswith(stack, loop_stack)  # NOJET
-                @assert length(stack) > length(loop_stack)  # NOJET
+                @assert startswith(stack, loop_stack)
+                @assert length(stack) > length(loop_stack)
                 measurement.scaled_elapsed_ns = Int64(round(measurement.elapsed_ns * loop_scale))  # NOJET
             else
                 @assert measurement isa SerialMeasurement
@@ -563,7 +563,7 @@ function finalize_flameview(;  # UNTESTED
             if semicolon_index === nothing
                 semicolon_index = 0
             end
-            self_stack = stack * ";" * stack[(semicolon_index + 1):end] * ".self"  # NOJET
+            self_stack = stack * ";" * stack[(semicolon_index + 1):end] * ".self"
             self_measurements_dict[self_stack] = folded_measurements_dict[self_stack] = copy(self_measurement)
             self_measurement.elapsed_ns = 0
             if self_measurement isa ParallelMeasurement
