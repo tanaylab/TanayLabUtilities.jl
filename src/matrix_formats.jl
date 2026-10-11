@@ -1495,38 +1495,54 @@ function dense_array_storage(array::AbstractArray; eltype::Type)::Int64
 end
 
 # Why do we have to define these ourselves... Sigh.
+#
+# Each is defined only if missing, because overwriting an existing method fails precompilation.
 
-function SparseArrays.indtype(read_only::ReadOnlyArray)::Type
-    return SparseArrays.indtype(parent(read_only))
+@static if !hasmethod(SparseArrays.indtype, Tuple{ReadOnlyArray})
+    function SparseArrays.indtype(read_only::ReadOnlyArray)::Type
+        return SparseArrays.indtype(parent(read_only))
+    end
 end
 
-function SparseArrays.indtype(sub_array::SubArray)::Type
-    return SparseArrays.indtype(parent(sub_array))
+@static if !hasmethod(SparseArrays.indtype, Tuple{SubArray})
+    function SparseArrays.indtype(sub_array::SubArray)::Type
+        return SparseArrays.indtype(parent(sub_array))
+    end
 end
 
-function SparseArrays.nnz(read_only::ReadOnlyArray)::Integer
-    return SparseArrays.nnz(parent(read_only))
+@static if !hasmethod(SparseArrays.nnz, Tuple{ReadOnlyArray})
+    function SparseArrays.nnz(read_only::ReadOnlyArray)::Integer
+        return SparseArrays.nnz(parent(read_only))
+    end
 end
 
-function SparseArrays.nnz(sub_read_only::SubArray{T, N, ReadOnlyArray{T, N, R}, I, L})::Integer where {T, N, R, I, L}
-    return nnz(
-        SubArray{T, N, R, I, L}(
-            parent(parent(sub_read_only)),
-            sub_read_only.indices,
-            sub_read_only.offset1,
-            sub_read_only.stride1,
-        ),
-    )
+@static if !hasmethod(SparseArrays.nnz, Tuple{SubArray{T, N, ReadOnlyArray{T, N, R}, I, L} where {T, N, R, I, L}})
+    function SparseArrays.nnz(
+        sub_read_only::SubArray{T, N, ReadOnlyArray{T, N, R}, I, L},
+    )::Integer where {T, N, R, I, L}
+        return nnz(
+            SubArray{T, N, R, I, L}(
+                parent(parent(sub_read_only)),
+                sub_read_only.indices,
+                sub_read_only.offset1,
+                sub_read_only.stride1,
+            ),
+        )
+    end
 end
 
 # These we can excuse...
 
-function SparseArrays.indtype(named::NamedArray)::Type
-    return SparseArrays.indtype(named.array)
+@static if !hasmethod(SparseArrays.indtype, Tuple{NamedArray})
+    function SparseArrays.indtype(named::NamedArray)::Type
+        return SparseArrays.indtype(named.array)
+    end
 end
 
-function SparseArrays.nnz(named::NamedArray)::Integer
-    return SparseArrays.nnz(named.array)
+@static if !hasmethod(SparseArrays.nnz, Tuple{NamedArray})
+    function SparseArrays.nnz(named::NamedArray)::Integer
+        return SparseArrays.nnz(named.array)
+    end
 end
 
 """
