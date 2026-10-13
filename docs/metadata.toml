@@ -13,6 +13,7 @@ pages = [
     "mostly_read_write_locks.md",
     "extended_read_write_locks.md",
     "unique_names.md",
+    "duplicates.md",
     "documentation.md",
     "handlers.md",
     "read_only_arrays.md",

@@ -34,6 +34,9 @@ include("parallel_storage.jl")
 include("unique_names.jl")
 @reexport using .UniqueNames
 
+include("duplicates.jl")
+@reexport using .Duplicates
+
 include("handlers.jl")
 @reexport using .Handlers
 
