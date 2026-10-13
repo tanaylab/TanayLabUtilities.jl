@@ -817,6 +817,13 @@ dense = rand(3, 4)
 @assert isapprox(densify(dense; eltype = Float32), dense)
 @assert brief(densify(dense; eltype = Float32)) == "3 x 4 x Float32 in Columns (Dense)"
 
+# No major axis
+
+reshaped = reshape(1:12, 3, 4)
+@assert brief(reshaped) == "3 x 4 x Int64 w/o major axis (ReshapedArray)"
+@assert densify(reshaped) == reshaped
+@assert brief(densify(reshaped)) == "3 x 4 x Int64 in Columns (Dense)"
+
 # Sparse
 
 sparse = SparseMatrixCSC([0 1 2; 3 4 0])
@@ -921,7 +928,7 @@ dense = rand(4)
 function densify(matrix::AbstractMatrix; copy::Bool = false, eltype::Maybe{Type} = nothing)::AbstractMatrix
     is_sparse, eltype = parse_dense_array(matrix; eltype)
 
-    if is_sparse || copy || major_axis(matrix) == Nothing || eltype != Base.eltype(matrix)
+    if is_sparse || copy || major_axis(matrix) === nothing || eltype != Base.eltype(matrix)
         matrix = Matrix{eltype}(matrix)
     end
 
