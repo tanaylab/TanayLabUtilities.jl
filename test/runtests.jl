@@ -22,6 +22,25 @@ end
     return x + y
 end
 
+# A read-only array type whose `mutable_array` is costly, like a lazy array that reads all of its data to provide it.
+struct CostlyReadOnly <: AbstractVector{Int}
+    values::Vector{Int}
+    n_mutable_calls::Base.RefValue{Int}
+end
+
+Base.size(array::CostlyReadOnly) = size(array.values)
+
+Base.getindex(array::CostlyReadOnly, index::Int) = array.values[index]
+
+function TanayLabUtilities.ReadOnlyArrays.mutable_array(array::CostlyReadOnly)::Vector{Int}
+    array.n_mutable_calls[] += 1
+    return copy(array.values)
+end
+
+function TanayLabUtilities.ReadOnlyArrays.is_read_only_array(::CostlyReadOnly)::Bool
+    return true
+end
+
 @testset "doctests" begin
     DocMeta.setdocmeta!(TanayLabUtilities, :DocTestSetup, :(using TanayLabUtilities); recursive = true)
     return doctest(TanayLabUtilities; manual = false)
@@ -1022,6 +1041,20 @@ end
         read_only_column = base_array(view(SparseArrays.ReadOnly(dense), :, 1))
         @test parent(read_only_column) === dense
         @test read_only_column == [1, 3]
+    end
+end
+
+@testset "read_only_arrays" begin
+    using NamedArrays
+
+    @testset "is_read_only_array does not call mutable_array" begin
+        costly = CostlyReadOnly([1, 2, 3], Ref(0))
+        @test is_read_only_array(costly)
+        @test is_read_only_array(NamedArray(costly))
+        @test is_read_only_array(view(costly, 1:2))
+        @test costly.n_mutable_calls[] == 0
+        @test mutable_array(NamedArray(costly)).array == [1, 2, 3]
+        @test costly.n_mutable_calls[] == 1
     end
 end
 

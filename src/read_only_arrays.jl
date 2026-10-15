@@ -174,10 +174,20 @@ end
 """
     is_read_only_array(array::AbstractArray)::Bool
 
-Return whether an `array` is immutable. See [`ReadOnlyArray`](@ref)
+Return whether an `array` is immutable. See [`ReadOnlyArray`](@ref). A wrapper (`NamedArray`, `PermutedDimsArray`,
+`Transpose`, `Adjoint`, or a view) is read-only if the array it wraps is. An array type that rejects writes by itself
+should add a method returning `true`. This never calls [`mutable_array`](@ref), which may be costly.
 """
-function is_read_only_array(array::AbstractArray)::Bool
-    return mutable_array(array) !== array
+function is_read_only_array(::AbstractArray)::Bool
+    return false
+end
+
+function is_read_only_array(::SparseArrays.ReadOnly)::Bool
+    return true
+end
+
+function is_read_only_array(array::Union{NamedArray, PermutedDimsArray, Transpose, Adjoint, SubArray})::Bool
+    return is_read_only_array(parent(array))
 end
 
 """
