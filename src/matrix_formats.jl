@@ -569,7 +569,7 @@ end
 Return a sparse version of an array, possibly forcing a different `eltype` and/or `indtype`. If given a dense matrix,
 the default `indtype` will be [`indtype_for_size`](@ref) for the matrix. This will preserve the matrix layout (for
 example, `sparsify` of a transposed matrix will be a transposed matrix). If `copy`, this will create a copy even if it
-is already sparse and has the correct `eltype` and `indtype`.
+is already sparse and has the correct `eltype` and `indtype`. The copy is never read-only.
 
 ```jldoctest
 using SparseArrays
@@ -602,10 +602,12 @@ sparse = SparseMatrixCSC([0 1 2; 3 4 0])
 read_only = read_only_array(sparse)
 @assert sparsify(read_only) === read_only
 @assert brief(read_only) == "2 x 3 x Int64 in Columns (ReadOnly, Sparse 4 (67%) [Int64])"
+@assert brief(sparsify(read_only; copy = true)) == "2 x 3 x Int64 in Columns (Sparse 4 (67%) [Int64])"
 
 read_only = read_only_array(dense)
 @assert sparsify(read_only) == read_only
 @assert brief(sparsify(read_only)) == "3 x 4 x Float64 in Columns (ReadOnly, Sparse 12 (100%) [UInt16])"
+@assert brief(sparsify(read_only; copy = true)) == "3 x 4 x Float64 in Columns (Sparse 12 (100%) [UInt16])"
 
 # Named
 
@@ -730,7 +732,9 @@ function sparsify(
     indtype::Maybe{Type} = nothing,
 )::AbstractArray
     parent_array = sparsify(parent(array); copy, eltype, indtype)
-    if parent_array === parent(array)
+    if copy
+        return parent_array
+    elseif parent_array === parent(array)
         return array
     else
         return ReadOnlyArray(parent_array)
@@ -799,7 +803,7 @@ end
 
 Return a dense version of an array, possibly forcing a different `eltype`. This will preserve the matrix layout (for
 example, `densify` of a transposed matrix will be a transposed matrix). If `copy`, this will create a copy even if it is
-already dense and has the correct `eltype`.
+already dense and has the correct `eltype`. The copy is never read-only.
 
 ```jldoctest
 using SparseArrays
@@ -838,9 +842,11 @@ read_only = read_only_array(sparse)
 @assert densify(read_only) == read_only
 @assert brief(read_only) == "2 x 3 x Int64 in Columns (ReadOnly, Sparse 4 (67%) [Int64])"
 @assert brief(densify(read_only)) == "2 x 3 x Int64 in Columns (ReadOnly, Dense)"
+@assert brief(densify(read_only; copy = true)) == "2 x 3 x Int64 in Columns (Dense)"
 
 read_only = read_only_array(dense)
-@assert densify(read_only) == dense
+@assert densify(read_only) === read_only
+@assert brief(densify(read_only; copy = true)) == "3 x 4 x Float64 in Columns (Dense)"
 
 # Named
 
@@ -947,8 +953,10 @@ end
 
 function densify(array::ReadOnlyArray; copy::Bool = false, eltype::Maybe{Type} = nothing)::AbstractArray
     parent_array = densify(parent(array); copy, eltype)
-    if copy || parent_array === parent(array)
+    if copy
         return parent_array
+    elseif parent_array === parent(array)
+        return array
     else
         return ReadOnlyArray(parent_array)
     end
@@ -1160,7 +1168,7 @@ end
 
 function sparse_vector(size::Integer, nzind::AbstractVector, nzval::AbstractVector)::Union{ReadOnlyArray, SparseVector}
     if is_read_only_array(nzind) || is_read_only_array(nzval)
-        return read_only_array(SparseVector(size, mutable_array(nzind), mutable_array(nzval)))  # NOJET
+        return read_only_array(SparseVector(size, mutable_array(nzind), mutable_array(nzval)))
     else
         return SparseVector(size, nzind, nzval)
     end
@@ -1185,7 +1193,7 @@ a vector of `Bool` for the data.
 """
 function sparse_mask_vector(size::Integer, indptr::AbstractVector)::Union{ReadOnlyArray, SparseVector{Bool}}
     if is_read_only_array(indptr)
-        return read_only_array(SparseVector(size, mutable_array(indptr), fill(true, length(indptr))))  # NOJET
+        return read_only_array(SparseVector(size, mutable_array(indptr), fill(true, length(indptr))))
     else
         return SparseVector(size, indptr, fill(true, length(indptr)))
     end
@@ -1259,7 +1267,7 @@ end
 
 Return a "best" (dense or sparse) version of an array. The sparse format is chosen if it saves at least
 `min_sparse_saving_fraction` of the storage of the dense format. If `copy`, this will create a copy even if it is
-already in the best format.
+already in the best format. The copy is never read-only.
 
 If `eltype` is specified, computes the savings (and create the "best" version) using this element type. In addition, if
 given a sparse matrix, we consider the [`indtype_for_size`](@ref) for it, and if that saves
@@ -1293,10 +1301,12 @@ read_only = read_only_array(dense)
 
 @assert bestify(read_only) == read_only
 @assert brief(bestify(read_only)) == "5 x 5 x Int32 in Columns (ReadOnly, Sparse 5 (20%) [UInt16])"
+@assert brief(bestify(read_only; copy = true)) == "5 x 5 x Int32 in Columns (Sparse 5 (20%) [UInt16])"
 
 read_only = read_only_array(sparse)
 @assert bestify(read_only) === read_only
 @assert brief(read_only) == "5 x 5 x Int32 in Columns (ReadOnly, Sparse 5 (20%) [UInt16])"
+@assert brief(bestify(read_only; copy = true)) == "5 x 5 x Int32 in Columns (Sparse 5 (20%) [UInt16])"
 
 @assert bestify(read_only; min_sparse_saving_fraction = 0.6) == read_only
 @assert brief(bestify(read_only; min_sparse_saving_fraction = 0.6)) == "5 x 5 x Int32 in Columns (ReadOnly, Dense)"
@@ -1410,7 +1420,9 @@ function bestify(
     indtype::Maybe{Type} = nothing,
 )::AbstractArray
     parent_array = bestify(parent(array); min_sparse_saving_fraction, copy, eltype, indtype)
-    if parent_array === parent(array)
+    if copy
+        return parent_array
+    elseif parent_array === parent(array)
         return array
     else
         return read_only_array(parent_array)

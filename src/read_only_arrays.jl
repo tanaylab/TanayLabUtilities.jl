@@ -246,6 +246,18 @@ sparse = SparseMatrixCSC(base)
 @assert mutable_array(sparse) === sparse;
 @assert mutable_array(read_only_array(sparse)) === sparse;
 
+# Nested
+
+nested = SparseArrays.ReadOnly(transpose(read_only_array(base)))
+@assert parent(mutable_array(nested)) === base;
+
+# Views
+
+viewed = view(read_only_array(base), :, 2:3)
+@assert is_read_only_array(viewed);
+@assert parent(mutable_array(viewed)) === base;
+@assert mutable_array(viewed) == viewed;
+
 # output
 
 ```
@@ -285,7 +297,17 @@ function mutable_array(array::Adjoint)::Adjoint
 end
 
 function mutable_array(array::SparseArrays.ReadOnly)::AbstractArray
-    return parent(array)
+    return mutable_array(parent(array))
+end
+
+function mutable_array(array::SubArray)::AbstractArray
+    parent_array = parent(array)
+    mutable_parent_array = mutable_array(parent_array)
+    if mutable_parent_array === parent_array
+        return array
+    else
+        return view(mutable_parent_array, parentindices(array)...)
+    end
 end
 
 function mutable_array(array::NamedArray)::NamedArray
