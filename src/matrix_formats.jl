@@ -101,8 +101,8 @@ function brief_array(array::AbstractArray, prefixes::Vector{String}; transposed:
         )
         return format_brief_array(array, prefixes; transposed)
     else
-        push!(prefixes, string(nameof(typeof(array))))  # UNTESTED
-        return format_brief_array(array, prefixes; transposed)  # UNTESTED
+        push!(prefixes, string(nameof(typeof(array))))
+        return format_brief_array(array, prefixes; transposed)
     end
 end
 
@@ -146,7 +146,7 @@ function format_brief_array(matrix::AbstractMatrix, prefixes::Vector{String}; tr
     end
 
     if layout === nothing
-        layout_suffix = "w/o major axis"  # UNTESTED
+        layout_suffix = "w/o major axis"
     else
         layout_suffix = "in $(axis_name(layout))"
     end

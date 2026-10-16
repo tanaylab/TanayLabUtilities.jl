@@ -1056,10 +1056,132 @@ end
         @test mutable_array(NamedArray(costly)).array == [1, 2, 3]
         @test costly.n_mutable_calls[] == 1
     end
+
+    @testset "mutable_array of a view of a mutable array is the view" begin
+        mutable_view = view([1, 2, 3], 1:2)
+        @test mutable_array(mutable_view) === mutable_view
+    end
 end
 
 @testset "matrix_layouts" begin
     @test major_axis(falses(2, 3)) == Columns
+
+    # Relayout the `source` with the given budget and minimal write sizes, so large matrices are relayouted in bands.
+    function relayout_with(source::AbstractMatrix; budget_kb::Integer, min_write_kb::Integer = 1)::AbstractMatrix
+        saved_budget_kb = TanayLabUtilities.MatrixLayouts.RELAYOUT_BUDGET_KB
+        saved_min_write_kb = TanayLabUtilities.MatrixLayouts.RELAYOUT_MIN_WRITE_KB
+        TanayLabUtilities.MatrixLayouts.RELAYOUT_BUDGET_KB = budget_kb
+        TanayLabUtilities.MatrixLayouts.RELAYOUT_MIN_WRITE_KB = min_write_kb
+        try
+            n_rows, n_columns = size(source)
+            if issparse(source)
+                colptr = fill(eltype(source.colptr)(nnz(source) + 1), n_rows + 1)
+                colptr[1] = 1
+                destination = SparseMatrixCSC(
+                    n_columns,
+                    n_rows,
+                    colptr,
+                    ones(eltype(source.rowval), nnz(source)),
+                    zeros(eltype(source), nnz(source)),
+                )
+            else
+                destination = similar(source, n_columns, n_rows)
+            end
+            return relayout!(flip(destination), source)
+        finally
+            TanayLabUtilities.MatrixLayouts.RELAYOUT_BUDGET_KB = saved_budget_kb
+            TanayLabUtilities.MatrixLayouts.RELAYOUT_MIN_WRITE_KB = saved_min_write_kb
+        end
+    end
+
+    # Whether the `relayout` of the `source` has the same data as `transpose!`, down to the stored arrays.
+    function is_same_as_transpose(relayout::AbstractMatrix, source::AbstractMatrix)::Bool
+        expected = copy(transpose(source))
+        actual = parent(relayout)
+        if issparse(source)
+            return actual.colptr == expected.colptr &&
+                   actual.rowval[1:nnz(source)] == expected.rowval &&
+                   actual.nzval[1:nnz(source)] == expected.nzval
+        else
+            return actual == expected
+        end
+    end
+
+    @testset "sparse relayout in bands" begin
+        rng = Random.Xoshiro(123456)
+
+        @testset "one task and many bands" begin
+            source = SparseMatrixCSC{Float32, Int64}(sprand(rng, Float32, 200, 300, 0.1))
+            @test is_same_as_transpose(relayout_with(source; budget_kb = 1), source)
+        end
+
+        @testset "several tasks" begin
+            source = SparseMatrixCSC{Float32, Int64}(sprand(rng, Float32, 200, 300, 0.1))
+            @test is_same_as_transpose(relayout_with(source; budget_kb = 64), source)
+        end
+
+        @testset "narrow bands of Int32 indices" begin
+            source = SparseMatrixCSC{Bool, Int32}(sprand(rng, Bool, 3000, 1_100_000, 2e-6))
+            @test is_same_as_transpose(relayout_with(source; budget_kb = 1), source)
+        end
+
+        @testset "a column larger than a band" begin
+            source = sprand(rng, Float64, 50, 2000, 0.05)
+            source[7, :] .= 1.0
+            @test is_same_as_transpose(relayout_with(source; budget_kb = 1), source)
+        end
+
+        @testset "empty columns" begin
+            source = sprand(rng, Float64, 200, 300, 0.1)
+            source[1:50, :] .= 0.0
+            dropzeros!(source)
+            @test is_same_as_transpose(relayout_with(source; budget_kb = 1), source)
+        end
+
+        @testset "a single row" begin
+            source = sprand(rng, Float64, 1, 5000, 0.5)
+            @test is_same_as_transpose(relayout_with(source; budget_kb = 1), source)
+        end
+
+        @testset "a single column" begin
+            source = sprand(rng, Float64, 5000, 1, 0.5)
+            @test is_same_as_transpose(relayout_with(source; budget_kb = 1), source)
+        end
+
+        @testset "an empty matrix" begin
+            source = spzeros(Float64, 0, 10)
+            @test is_same_as_transpose(relayout_with(source; budget_kb = 1), source)
+        end
+    end
+
+    @testset "dense relayout in bands" begin
+        rng = Random.Xoshiro(123456)
+
+        @testset "one task and many bands" begin
+            source = rand(rng, Float32, 37, 1000)
+            @test is_same_as_transpose(relayout_with(source; budget_kb = 1), source)
+        end
+
+        @testset "several tasks" begin
+            source = rand(rng, Float32, 37, 1000)
+            @test is_same_as_transpose(relayout_with(source; budget_kb = 64), source)
+        end
+
+        @testset "a column larger than a band" begin
+            source = rand(rng, 1:100, 3, 20000)
+            @test is_same_as_transpose(relayout_with(source; budget_kb = 1), source)
+        end
+
+        @testset "a single row" begin
+            source = rand(rng, Float64, 1, 5000)
+            @test is_same_as_transpose(relayout_with(source; budget_kb = 1), source)
+        end
+
+        @testset "a single column" begin
+            source = rand(rng, Float64, 5000, 1)
+            @test is_same_as_transpose(relayout_with(source; budget_kb = 1), source)
+        end
+    end
 end
 
 @testset "mostly_read_write_locks" begin
