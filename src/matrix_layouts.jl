@@ -975,7 +975,7 @@ function run_relayout_tasks(task_function::Function, n_tasks::Integer)::Nothing
     if n_tasks == 1
         task_function(1)
     else
-        @sync for task_index in 1:n_tasks
+        @sync for task_index in 1:n_tasks  # NOJET
             Threads.@spawn task_function(task_index)
         end
     end

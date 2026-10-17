@@ -41,6 +41,19 @@ function TanayLabUtilities.ReadOnlyArrays.is_read_only_array(::CostlyReadOnly)::
     return true
 end
 
+# A `Bool` vector that counts how many of its elements were read.
+struct CountingBools <: AbstractVector{Bool}
+    values::Vector{Bool}
+    n_reads::Base.RefValue{Int}
+end
+
+Base.size(array::CountingBools) = size(array.values)
+
+function Base.getindex(array::CountingBools, index::Int)::Bool
+    array.n_reads[] += 1
+    return array.values[index]
+end
+
 @testset "doctests" begin
     DocMeta.setdocmeta!(TanayLabUtilities, :DocTestSetup, :(using TanayLabUtilities); recursive = true)
     return doctest(TanayLabUtilities; manual = false)
@@ -1041,6 +1054,114 @@ end
         read_only_column = base_array(view(SparseArrays.ReadOnly(dense), :, 1))
         @test parent(read_only_column) === dense
         @test read_only_column == [1, 3]
+    end
+
+    @testset "sparse_matrix_csc of a wrapped sparse matrix doesn't read it element by element" begin
+        large = sparse(Int32[1, 50_000], Int32[1, 5_000], [1.0, 2.0], 50_000, 5_000)
+        wrapped = NamedArray(read_only_array(large))
+        sparse_matrix_csc(wrapped)
+        elapsed = @elapsed copied = sparse_matrix_csc(wrapped)
+        @test copied == large
+        @test copied !== large
+        @test SparseArrays.indtype(copied) == Int32
+        @test elapsed < 0.1
+    end
+
+    @testset "sparse_vector of a wrapped sparse vector doesn't read it element by element" begin
+        large = sparsevec(Int32[1, 100_000_000], [1.0, 2.0], 100_000_000)
+        wrapped = NamedArray(read_only_array(large))
+        sparse_vector(wrapped)
+        elapsed = @elapsed copied = sparse_vector(wrapped)
+        @test copied == large
+        @test copied !== large
+        @test SparseArrays.indtype(copied) == Int32
+        @test elapsed < 0.1
+    end
+
+    @testset "brief of a Bool array reads it once" begin
+        counting = CountingBools([true, false, true], Ref(0))
+        brief(counting)
+        @test counting.n_reads[] == 3
+    end
+
+    @testset "reinterpreted_array" begin
+        @testset "shares the bytes" begin
+            bytes = Vector{UInt8}(reinterpret(UInt8, Float64[1, 2, 3, 4]))
+            matrix = reinterpreted_array(Float64, bytes, (2, 2))
+            @test matrix == [1.0 3.0; 2.0 4.0]
+            matrix[1, 1] = 5
+            @test reinterpret(Float64, bytes)[1] == 5
+        end
+
+        @testset "offset" begin
+            bytes = Vector{UInt8}(reinterpret(UInt8, Float64[1, 2, 3, 4]))
+            @test reinterpreted_array(Float64, bytes, 2; offset = 16) == [3.0, 4.0]
+            @test reinterpreted_array(Float64, view(bytes, 17:32), 2) == [3.0, 4.0]
+        end
+
+        @testset "empty" begin
+            @test reinterpreted_array(Float64, UInt8[], 0) == Float64[]
+        end
+
+        @testset "keeps the bytes alive" begin
+            function collect_garbage()::Nothing
+                for _ in 1:5
+                    GC.gc(true)
+                end
+                return nothing
+            end
+
+            # Each reference is dropped by returning from the function holding it. Setting a variable to `nothing`
+            # inside a running function doesn't reliably drop the old value.
+
+            # Only a `reshape` of the result survives this.
+            @noinline function wrapped_bytes(; is_view::Bool)::Tuple{Matrix{Float64}, WeakRef}
+                bytes = Vector{UInt8}(reinterpret(UInt8, Float64.(0:1000)))
+                if is_view
+                    vector = reinterpreted_array(Float64, view(bytes, 9:length(bytes)), 1000)
+                else
+                    vector = reinterpreted_array(Float64, bytes, 1000; offset = 8)
+                end
+                return (reshape(vector, 10, 100), WeakRef(bytes))
+            end
+
+            # Whether the bytes stayed alive while the `reshape` was used. It is dropped when this returns.
+            @noinline function used_then_dropped(; is_view::Bool, is_collecting::Bool)::Tuple{Bool, WeakRef}
+                reshaped_matrix, weak_bytes = wrapped_bytes(; is_view)
+                if is_collecting
+                    collect_garbage()
+                end
+                is_alive = weak_bytes.value !== nothing && vec(reshaped_matrix) == Float64.(1:1000)
+                return (is_alive, weak_bytes)
+            end
+
+            for is_view in (false, true)
+                @testset "is_view: $(is_view)" begin
+                    is_alive, weak_bytes = used_then_dropped(; is_view, is_collecting = true)
+                    @test is_alive
+                    collect_garbage()
+                    @test weak_bytes.value === nothing
+                end
+            end
+
+            @testset "threads" begin
+                weak_bytes_per_task = Vector{WeakRef}(undef, 1000)
+                Threads.@threads for task_index in 1:1000
+                    is_alive, weak_bytes = used_then_dropped(; is_view = isodd(task_index), is_collecting = false)
+                    @assert is_alive
+                    weak_bytes_per_task[task_index] = weak_bytes
+                end
+                collect_garbage()
+                @test all(weak_bytes.value === nothing for weak_bytes in weak_bytes_per_task)
+            end
+        end
+
+        @testset "rejects bad input" begin
+            bytes = zeros(UInt8, 16)
+            @test_throws AssertionError reinterpreted_array(Float64, bytes, 3)
+            @test_throws AssertionError reinterpreted_array(Float64, bytes, 1; offset = 1)
+            @test_throws AssertionError reinterpreted_array(String, bytes, 1)
+        end
     end
 end
 

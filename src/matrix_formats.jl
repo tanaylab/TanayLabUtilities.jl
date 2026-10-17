@@ -30,6 +30,7 @@ export embed_sparse_matrix_in_sparse_matrix
 export indtype_for_size
 export nzind
 export nzval
+export reinterpreted_array
 export rowval
 export similar_array
 export sparse_mask_vector
@@ -168,7 +169,6 @@ function mask_suffix(array::AbstractArray{Bool})::AbstractString
     if issparse(array) && n_true == nnz(array)
         return ""
     else
-        n_true = sum(array)
         return "; $(n_true) ($(percent(n_true, length(array)))) true"
     end
 end
@@ -1088,6 +1088,8 @@ function sparse_matrix_csc(
 )::SparseMatrixCSC
     _, eltype, indtype = parse_sparse_array(matrix; eltype, indtype)
 
+    # The constructor reads a wrapped matrix element by element.
+    matrix = base_array(matrix)
     if eltype != Base.eltype(matrix)
         matrix = SparseMatrixCSC{Base.eltype(matrix), indtype}(matrix)
         return SparseMatrixCSC{eltype, indtype}(size(matrix)..., matrix.colptr, matrix.rowval, eltype.(matrix.nzval))
@@ -1158,9 +1160,11 @@ function sparse_vector(
 )::SparseVector
     _, eltype, indtype = parse_sparse_array(vector; eltype, indtype)
 
+    # The constructor reads a wrapped vector element by element.
+    vector = base_array(vector)
     if eltype != Base.eltype(vector)
         vector = SparseVector{Base.eltype(vector), indtype}(vector)
-        return SparseVector{eltype, indtype}(length(vector), vector.nzind, eltype.(vector.nzval))  # NOJET
+        return SparseVector{eltype, indtype}(length(vector), vector.nzind, eltype.(vector.nzval))
     else
         return SparseVector{eltype, indtype}(vector)
     end
@@ -1869,6 +1873,91 @@ function base_array(array::SubArray)::AbstractArray
         return array
     end
     return view(parent_base, parentindices(array)...)
+end
+
+# The owners of the memory wrapped by `reinterpreted_array`, by the `objectid` of the wrapping `Memory`. Every array
+# sharing the memory references that same `Memory` (even a `reshape`, which is another `Array`). A finalizer can't keep
+# an owner alive, since the GC doesn't trace a finalizer's closure. So this table holds the owner, and the `Memory`'s
+# finalizer removes it. An `objectid` is reused only after its object is freed, which is after the finalizer ran.
+const PINNED_OWNERS = Dict{UInt, Any}()
+
+# Finalizers can't wait on a `ReentrantLock`. A `SpinLock` disables finalizers on the thread holding it, so a GC inside
+# the critical section can't run `unpin_owner` on that thread.
+const PINNED_OWNERS_LOCK = Threads.SpinLock()
+
+function pin_owner!(memory::Memory, owner::Any)::Nothing
+    lock(PINNED_OWNERS_LOCK) do
+        PINNED_OWNERS[objectid(memory)] = owner
+        return nothing
+    end
+    finalizer(unpin_owner, memory)
+    return nothing
+end
+
+function unpin_owner(memory::Memory)::Nothing
+    lock(PINNED_OWNERS_LOCK) do
+        delete!(PINNED_OWNERS, objectid(memory))
+        return nothing
+    end
+    return nothing
+end
+
+"""
+    reinterpreted_array(
+        ::Type{T},
+        bytes::AbstractVector{UInt8},
+        dims::Union{Integer, Tuple{Vararg{Integer}}};
+        offset::Integer = 0,
+    )::Array{T} where {T}
+
+Return an `Array{T}` of shape `dims` that shares the memory of the `bytes`, starting at byte `offset`. Unlike
+`reinterpret`, the result is a plain `Array`. The `bytes` may be a `Vector{UInt8}`, or a contiguous view of one.
+
+The `bytes` stay alive as long as any array sharing the result's memory does. This includes a `reshape` or a `view` of
+the result. A global table holds the `bytes` until the shared memory is collected.
+
+The `T` must be a bits type. The data must fit in the `bytes`, and its start must be aligned for `T`.
+
+```jldoctest
+bytes = Vector{UInt8}(reinterpret(UInt8, Float64[1, 2]))
+reinterpreted_array(Float64, bytes, 2)
+
+# output
+
+2-element Vector{Float64}:
+ 1.0
+ 2.0
+```
+"""
+function reinterpreted_array(
+    ::Type{T},
+    bytes::Vector{UInt8},
+    dims::Union{Integer, Tuple{Vararg{Integer}}};
+    offset::Integer = 0,
+)::Array{T} where {T}
+    @assert isbitstype(T)
+    element_count = dims isa Integer ? Int(dims) : Int(prod(dims))
+    @assert 0 <= offset && offset + element_count * sizeof(T) <= length(bytes)
+    if element_count == 0
+        return Array{T}(undef, dims)
+    end
+    data_pointer = Ptr{T}(pointer(bytes, Int(offset) + 1))
+    @assert UInt(data_pointer) % Base.datatype_alignment(T) == 0
+    array = unsafe_wrap(Array, data_pointer, dims; own = false)
+    pin_owner!(array.ref.mem, bytes)
+    return array
+end
+
+function reinterpreted_array(
+    ::Type{T},
+    bytes::SubArray{UInt8, 1, Vector{UInt8}, Tuple{UnitRange{Int}}, true},
+    dims::Union{Integer, Tuple{Vararg{Integer}}};
+    offset::Integer = 0,
+)::Array{T} where {T}
+    @assert isbitstype(T)
+    element_count = dims isa Integer ? Int(dims) : Int(prod(dims))
+    @assert 0 <= offset && offset + element_count * sizeof(T) <= length(bytes)
+    return reinterpreted_array(T, parent(bytes), dims; offset = first(parentindices(bytes)[1]) - 1 + offset)
 end
 
 end  # module
