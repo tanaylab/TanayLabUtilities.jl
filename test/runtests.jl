@@ -1,4 +1,5 @@
 using Documenter
+using LinearAlgebra
 using Logging
 using SparseArrays
 using SpecialFunctions
@@ -52,6 +53,26 @@ Base.size(array::CountingBools) = size(array.values)
 function Base.getindex(array::CountingBools, index::Int)::Bool
     array.n_reads[] += 1
     return array.values[index]
+end
+
+# A matrix that counts how many of its elements were read, like a lazy matrix. Its plain storage is the wrapped matrix.
+struct CountingMatrix <: AbstractMatrix{Float64}
+    values::Matrix{Float64}
+    n_reads::Base.RefValue{Int}
+end
+
+Base.size(matrix::CountingMatrix) = size(matrix.values)
+
+function Base.getindex(matrix::CountingMatrix, row::Int, column::Int)::Float64
+    matrix.n_reads[] += 1
+    return matrix.values[row, column]
+end
+
+function TanayLabUtilities.MatrixFormats.plain_array(
+    matrix::CountingMatrix;
+    transposed_as::Maybe{Type} = nothing,  # NOLINT
+)::Matrix{Float64}
+    return matrix.values
 end
 
 @testset "doctests" begin
@@ -1078,10 +1099,62 @@ end
         @test elapsed < 0.1
     end
 
+    @testset "sparse_matrix_csc of a lazy matrix reads its plain storage" begin
+        counting = CountingMatrix([0.0 1.0; 2.0 0.0], Ref(0))
+        @test sparse_matrix_csc(counting) == [0.0 1.0; 2.0 0.0]
+        @test counting.n_reads[] == 0
+    end
+
     @testset "brief of a Bool array reads it once" begin
         counting = CountingBools([true, false, true], Ref(0))
         brief(counting)
         @test counting.n_reads[] == 3
+    end
+
+    @testset "plain_array" begin
+        dense = Float64[1 2 3; 4 5 6]
+        strings = ["a" "b"; "c" "d"]
+        sparse_matrix = sparse(dense)
+
+        @testset "plain is itself" begin
+            @test plain_array(dense) === dense
+            @test plain_array(sparse_matrix) === sparse_matrix
+            @test plain_array(sparse(Float64[0, 1])) isa SparseVector
+        end
+
+        @testset "wrappers of plain are unwrapped" begin
+            @test plain_array(read_only_array(dense)) === dense
+            @test plain_array(NamedArray(read_only_array(sparse_matrix))) === sparse_matrix
+        end
+
+        @testset "transposes are rewrapped, not copied" begin
+            for transposed in (transpose(dense), PermutedDimsArray(dense, (2, 1)), read_only_array(flip(dense)))
+                result = plain_array(transposed)
+                @test result isa Transpose
+                @test parent(result) === dense
+                result = plain_array(transposed; transposed_as = PermutedDimsArray)
+                @test result isa PermutedDimsArray
+                @test parent(result) === dense
+            end
+            result = plain_array(read_only_array(flip(sparse_matrix)); transposed_as = Adjoint)
+            @test result isa Adjoint
+            @test parent(result) === sparse_matrix
+            result = plain_array(PermutedDimsArray(strings, (2, 1)))
+            @test result isa PermutedDimsArray
+            @test parent(result) === strings
+            @test plain_array(transpose(PermutedDimsArray(dense, (2, 1)))) === dense
+        end
+
+        @testset "strided views are copied" begin
+            strided = view(dense, :, 1:2:3)
+            result = plain_array(strided)
+            @test result isa Matrix{Float64}
+            @test result == strided
+            sparse_columns = view(sparse_matrix, :, 1:2:3)
+            result = plain_array(sparse_columns)
+            @test result isa SparseMatrixCSC
+            @test result == sparse_columns
+        end
     end
 
     @testset "reinterpreted_array" begin

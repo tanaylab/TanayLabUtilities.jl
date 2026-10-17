@@ -30,6 +30,7 @@ export embed_sparse_matrix_in_sparse_matrix
 export indtype_for_size
 export nzind
 export nzval
+export plain_array
 export reinterpreted_array
 export rowval
 export similar_array
@@ -1088,8 +1089,11 @@ function sparse_matrix_csc(
 )::SparseMatrixCSC
     _, eltype, indtype = parse_sparse_array(matrix; eltype, indtype)
 
-    # The constructor reads a wrapped matrix element by element.
+    # The constructor reads a wrapped or lazy matrix element by element. A strided or sparse one is read efficiently.
     matrix = base_array(matrix)
+    if !(matrix isa StridedArray || issparse(matrix))
+        matrix = plain_array(matrix)
+    end
     if eltype != Base.eltype(matrix)
         matrix = SparseMatrixCSC{Base.eltype(matrix), indtype}(matrix)
         return SparseMatrixCSC{eltype, indtype}(size(matrix)..., matrix.colptr, matrix.rowval, eltype.(matrix.nzval))
@@ -1160,8 +1164,11 @@ function sparse_vector(
 )::SparseVector
     _, eltype, indtype = parse_sparse_array(vector; eltype, indtype)
 
-    # The constructor reads a wrapped vector element by element.
+    # The constructor reads a wrapped or lazy vector element by element. A strided or sparse one is read efficiently.
     vector = base_array(vector)
+    if !(vector isa StridedArray || issparse(vector))
+        vector = plain_array(vector)
+    end
     if eltype != Base.eltype(vector)
         vector = SparseVector{Base.eltype(vector), indtype}(vector)
         return SparseVector{eltype, indtype}(length(vector), vector.nzind, eltype.(vector.nzval))
@@ -1873,6 +1880,92 @@ function base_array(array::SubArray)::AbstractArray
         return array
     end
     return view(parent_base, parentindices(array)...)
+end
+
+"""
+    plain_array(array::AbstractArray; transposed_as::Maybe{Type} = nothing)::AbstractArray
+
+Return the values of the `array` as plain storage (an `Array`, `SparseMatrixCSC` or `SparseVector`), or as a transpose
+of plain storage. This is for code that needs the storage itself, such as HDF5 writers or code that accesses the
+`SparseMatrixCSC` fields. The result may share the storage of the `array`, so it must not be modified.
+
+Read-only and named wrappers are removed without copying. A transpose (`Transpose`, the `Adjoint` of a real matrix, or a
+`PermutedDimsArray` that swaps the dimensions) is never copied. Instead its plain parent is wrapped again. By default
+this is the same wrapper [`flip`](@ref) uses: a `Transpose` for numbers, and a `PermutedDimsArray` otherwise. Set
+`transposed_as` to `Transpose`, `PermutedDimsArray` or `Adjoint` (for real numbers) to get a specific one, for code that
+only handles that one. Any other array (e.g. a view with gaps) is copied.
+
+```jldoctest
+matrix = [1 2; 3 4]
+@assert plain_array(read_only_array(matrix)) === matrix
+@assert parent(plain_array(transpose(matrix); transposed_as = PermutedDimsArray)) === matrix
+
+# output
+
+```
+"""
+function plain_array(array::AbstractArray; transposed_as::Maybe{Type} = nothing)::AbstractArray  # NOLINT
+    if issparse(array)
+        return ndims(array) == 1 ? SparseVector(array) : SparseMatrixCSC(array)
+    else
+        return Array(array)
+    end
+end
+
+function plain_array(
+    array::Union{Array, SparseMatrixCSC, SparseVector};
+    transposed_as::Maybe{Type} = nothing,  # NOLINT
+)::AbstractArray
+    return array
+end
+
+function plain_array(array::ReadOnlyArray; transposed_as::Maybe{Type} = nothing)::AbstractArray
+    return plain_array(parent(array); transposed_as)
+end
+
+function plain_array(array::NamedArray; transposed_as::Maybe{Type} = nothing)::AbstractArray
+    return plain_array(array.array; transposed_as)
+end
+
+function plain_array(array::Transpose; transposed_as::Maybe{Type} = nothing)::AbstractArray
+    return transposed_plain_array(parent(array), transposed_as)
+end
+
+function plain_array(array::Adjoint; transposed_as::Maybe{Type} = nothing)::AbstractArray
+    if eltype(array) <: Complex
+        return Array(array)  # UNTESTED # NOJET
+    else
+        return transposed_plain_array(parent(array), transposed_as)
+    end
+end
+
+function plain_array(
+    array::PermutedDimsArray{T, 2, P, IP, A};
+    transposed_as::Maybe{Type} = nothing,
+)::AbstractArray where {T, P, IP, A}
+    if P == (Columns, Rows)
+        return transposed_plain_array(parent(array), transposed_as)
+    else
+        return plain_array(parent(array); transposed_as)  # UNTESTED
+    end
+end
+
+# The transpose of the `matrix`, wrapping its plain storage. A transposed plain storage is flipped back to the storage.
+function transposed_plain_array(matrix::AbstractMatrix, transposed_as::Maybe{Type})::AbstractMatrix
+    plain_matrix = plain_array(matrix)
+    if plain_matrix isa Union{Transpose, PermutedDimsArray}
+        return parent(plain_matrix)
+    elseif transposed_as === nothing
+        return flip(plain_matrix)
+    elseif transposed_as === PermutedDimsArray
+        return PermutedDimsArray(plain_matrix, (Columns, Rows))
+    elseif transposed_as === Adjoint
+        @assert eltype(plain_matrix) <: Real
+        return Adjoint(plain_matrix)
+    else
+        @assert transposed_as === Transpose
+        return Transpose(plain_matrix)
+    end
 end
 
 # The owners of the memory wrapped by `reinterpreted_array`, by the `objectid` of the wrapping `Memory`. Every array
