@@ -62,7 +62,7 @@ end
 
 Base.IteratorSize(::Type{<:StoredValuesAtRows}) = Base.SizeUnknown()
 
-function Base.eltype(::Type{<:StoredValuesAtRows{T}}) where {T}
+function Base.eltype(::Type{<:StoredValuesAtRows{T}}) where {T}  # ONLY SEEMS UNTESTED
     return Tuple{Int, T}
 end
 
@@ -84,8 +84,9 @@ function Base.iterate(
     return nothing
 end
 
-# The first index from `stored_index` to `last_stored_index` whose row is at least `row_index`, or `last_stored_index + 1`
-# if there is none. Gallops forward from `stored_index`, doubling the step, then searches the last step.
+# The first index from `stored_index` to `last_stored_index` whose row is at least `row_index`, or
+# `last_stored_index + 1` if there is none. Gallops forward from `stored_index`, doubling the step, then searches the
+# last step.
 function first_stored_index_at_or_after(
     row_index_per_stored::AbstractVector{<:Integer},
     stored_index::Integer,

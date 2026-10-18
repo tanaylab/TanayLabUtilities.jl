@@ -49,7 +49,8 @@ end
 
 Enhance the documentation of a function. This stashes the default value of named arguments. This allows expanding
 [`DEFAULT`](@ref) in the documentation string, which is especially useful if these defaults are computed, read from
-global constants, copied from other functions via [`function_default`](@ref), etc.
+global constants, copied from other functions via [`function_default`](@ref), etc. A default which refers to other
+arguments (e.g., `title = name`) can only be computed when the function is called, so it isn't stashed.
 
 ```jldoctest
 @doc "Foo, default x: \$(DEFAULT.x), default y: \$(DEFAULT.y)." @documented function foo(
@@ -151,7 +152,15 @@ function collect_arg_default(function_module::Module, defaults::Dict{Symbol, Any
             @assert length(name.args) == 2
             name = name.args[1]
         end
-        defaults[name] = function_module.eval(value)
+        try
+            defaults[name] = function_module.eval(value)
+        catch exception
+            # A default which refers to other arguments (e.g., `title = name`) can only be computed when the function is
+            # called, so it isn't recorded.
+            if !(exception isa UndefVarError)
+                rethrow()
+            end
+        end
     end
     return nothing
 end

@@ -23,6 +23,10 @@ end
     return x + y
 end
 
+@documented function documented_dependent(x; y::Int = 1, z::Int = x + y)::Int
+    return z
+end
+
 # A read-only array type whose reads are costly, like a lazy array that reads its data on demand.
 struct CostlyReadOnly <: AbstractVector{Int}
     values::Vector{Int}
@@ -447,6 +451,7 @@ end
         end
         @test_throws "row indices are not strictly increasing" stored_values_at_rows(matrix, 1, [3, 2])
         @test_throws "row indices are not strictly increasing" stored_values_at_rows(matrix, 1, [3, 3])
+        @test eltype(stored_values_at_rows(matrix, 1, [1])) == Tuple{Int, eltype(matrix)}
     end
 
     @testset "gather_sparse_column!" begin
@@ -1501,6 +1506,16 @@ end
 @testset "documented" begin
     @test documented_untyped(1) == 2
     @test function_default(documented_untyped, :y) == 1
+
+    # A default which refers to other arguments isn't stashed, but still applies when the function is called.
+    @test documented_dependent(1) == 2
+    @test function_default(documented_dependent, :y) == 1
+    @test_throws "no parameter (with default): z" function_default(documented_dependent, :z)
+
+    # A default which fails for another reason still fails the definition.
+    @test_throws "bad default" @eval @documented function documented_failing(; x::Int = error("bad default"))::Int
+        return x
+    end
 end
 
 @testset "parallel_storage" begin
