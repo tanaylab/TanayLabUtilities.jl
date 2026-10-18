@@ -402,7 +402,7 @@ function compute_sparse_var_of_vector(vector::AbstractVector{<:Real}, corrected:
     if issparse(vector)
         return welford_variance(nzval(plain_array(vector)), length(vector), corrected)
     else
-        return welford_variance(vector, length(vector), corrected)
+        return welford_variance(plain_array(vector), length(vector), corrected)
     end
 end
 
@@ -410,7 +410,7 @@ function compute_sparse_var_of_flat_matrix(matrix::AbstractMatrix{<:Real}, corre
     if issparse(matrix)
         return welford_variance(nzval(plain_array(matrix)), length(matrix), corrected)
     else
-        return welford_variance(vec(matrix), length(matrix), corrected)
+        return welford_variance(vec(plain_array(matrix)), length(matrix), corrected)
     end
 end
 
@@ -545,7 +545,7 @@ function compute_sparse_quantile_of_vector(
         n_nonzero = length(nonzero_values)
         n_implicit_zero = length(vector) - n_nonzero
     else
-        nonzero_values = vector
+        nonzero_values = plain_array(vector)
         n_nonzero = length(vector)
         n_implicit_zero = 0
     end
@@ -572,7 +572,7 @@ function compute_sparse_quantile_of_flat_matrix(
         n_nonzero = length(nonzero_values)
         n_implicit_zero = length(matrix) - n_nonzero
     else
-        nonzero_values = vec(matrix)
+        nonzero_values = vec(plain_array(matrix))
         n_nonzero = length(nonzero_values)
         n_implicit_zero = 0
     end

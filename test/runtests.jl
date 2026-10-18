@@ -260,6 +260,16 @@ end
         @test sparse_var(sparse_column) ≈ var(dense_matrix[rows, 3])
     end
 
+    @testset "whole matrices read their plain storage" begin
+        dense_matrix = Float64[0 1 0; 2 0 3; 0 4 0; 5 0 6]
+        counting = CountingMatrix(dense_matrix, Ref(0))
+        @test sparse_median(counting) ≈ median(dense_matrix)
+        @test sparse_quantile(counting, 0.25) ≈ quantile(vec(dense_matrix), 0.25)
+        @test sparse_var(counting) ≈ var(dense_matrix)
+        @test sparse_std(counting) ≈ std(dense_matrix)
+        @test counting.n_reads[] == 0
+    end
+
     @testset "positive flag matches when all values are non-negative" begin
         sparse_vec = sparse([0, 0, 3, 0, 1, 4, 0, 1])
         for p in (0.0, 0.25, 0.5, 0.75, 1.0)
