@@ -790,6 +790,117 @@ base = SparseMatrixCSC([0.0 1.0 2.0; 3.0 4.0 0.0])
 </article>
 <article>
 <details class="docstring" open="true">
+<summary id="TanayLabUtilities.MatrixLayouts.base_array">
+<a class="docstring-binding" href="#TanayLabUtilities.MatrixLayouts.base_array">
+<code>TanayLabUtilities.MatrixLayouts.base_array
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+</summary>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">base_array(array::AbstractArray)::AbstractArray
+</code>
+</pre>
+<p>Return the simple base array of an wrapped array, as long as this array is index by the same integer indices. This removes the read-only and named wrappers. It never copies and never reads the data. See 
+<a href="matrix_formats.html#TanayLabUtilities.MatrixFormats">
+<code>MatrixFormats
+</code>
+</a> for when to use which function.
+</p>
+</div>
+</section>
+</details>
+</article>
+<article>
+<details class="docstring" open="true">
+<summary id="TanayLabUtilities.MatrixLayouts.plain_array">
+<a class="docstring-binding" href="#TanayLabUtilities.MatrixLayouts.plain_array">
+<code>TanayLabUtilities.MatrixLayouts.plain_array
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+</summary>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">plain_array(
+    array::AbstractArray;
+    transposed_as::Maybe{Type} = nothing,
+    contiguous::Bool = false,
+)::AbstractArray
+</code>
+</pre>
+<p>Return the values of the 
+<code>array
+</code>, for reading all of them. The result is plain storage (an 
+<code>Array
+</code>, 
+<code>SparseMatrixCSC
+</code> or 
+<code>SparseVector
+</code>), a strided view of an 
+<code>Array
+</code>, or a transpose of either. It may share the storage of the 
+<code>array
+</code>, so it must not be modified. See 
+<a href="matrix_formats.html#TanayLabUtilities.MatrixFormats">
+<code>MatrixFormats
+</code>
+</a> for when to use which function.
+</p>
+<p>Read-only and named wrappers are removed without copying. A strided view is kept, since code reads it efficiently. Set 
+<code>contiguous
+</code> to copy a view with gaps, for code that needs contiguous memory (e.g. HDF5 writers).
+</p>
+<p>A transpose (
+<code>Transpose
+</code>, the 
+<code>Adjoint
+</code> of a real matrix, or a 
+<code>PermutedDimsArray
+</code> that swaps the dimensions) is never copied. Instead its plain parent is wrapped again. By default this is the same wrapper 
+<a href="matrix_layouts.html#TanayLabUtilities.MatrixLayouts.flip">
+<code>flip
+</code>
+</a> uses: a 
+<code>Transpose
+</code> for numbers, and a 
+<code>PermutedDimsArray
+</code> otherwise. Set 
+<code>transposed_as
+</code> to 
+<code>Transpose
+</code>, 
+<code>PermutedDimsArray
+</code> or 
+<code>Adjoint
+</code> (for real numbers) to get a specific one, for code that only handles that one.
+</p>
+<p>Any other array is copied. A lazy array type (which reads its data on demand) may add a method that returns its materialization.
+</p>
+<pre>
+<code class="language-julia hljs">matrix = [1 2; 3 4]
+@assert plain_array(read_only_array(matrix)) === matrix
+@assert parent(plain_array(transpose(matrix); transposed_as = PermutedDimsArray)) === matrix
+
+vector = [1, 2, 3, 4, 5]
+@assert plain_array(view(vector, 1:2:5)) isa SubArray
+@assert plain_array(view(vector, 1:2:5); contiguous = true) isa Vector
+
+# output
+
+</code>
+</pre>
+</div>
+</section>
+</details>
+</article>
+<article>
+<details class="docstring" open="true">
 <summary id="TanayLabUtilities.MatrixLayouts.relayout!">
 <a class="docstring-binding" href="#TanayLabUtilities.MatrixLayouts.relayout!">
 <code>TanayLabUtilities.MatrixLayouts.relayout!
@@ -866,6 +977,28 @@ relayout!(destination::AbstractMatrix, source::NamedMatrix)::NamedMatrix
 </code>, dense for a non-sparse 
 <code>source
 </code>, with compatible storage sizes).
+</p>
+<p>If the data is larger than 
+<a href="matrix_layouts.html#TanayLabUtilities.MatrixLayouts.RELAYOUT_BUDGET_KB">
+<code>RELAYOUT_BUDGET_KB
+</code>
+</a>, it is relayouted in bands of the 
+<code>destination
+</code> columns. The first pass reads the 
+<code>source
+</code> in order, and appends each value to its band. The second pass rearranges each band in memory. Both passes write the 
+<code>destination
+</code> sequentially, in chunks of at least 
+<a href="matrix_layouts.html#TanayLabUtilities.MatrixLayouts.RELAYOUT_MIN_WRITE_KB">
+<code>RELAYOUT_MIN_WRITE_KB
+</code>
+</a>. This is much faster than 
+<code>transpose!
+</code> when the 
+<code>destination
+</code> is memory-mapped to a file, especially on a network file system. The passes use up to 
+<code>nthreads()
+</code> tasks, as many as the budget allows.
 </p>
 <div class="admonition is-info" id="Note-baf23ab14252bc0f">
 <header class="admonition-header">Note
@@ -1240,6 +1373,54 @@ for matrix: 2 x 3 x Int64 in Columns (Dense)
 </section>
 </details>
 </article>
+<article>
+<details class="docstring" open="true">
+<summary id="TanayLabUtilities.MatrixLayouts.RELAYOUT_BUDGET_KB">
+<a class="docstring-binding" href="#TanayLabUtilities.MatrixLayouts.RELAYOUT_BUDGET_KB">
+<code>TanayLabUtilities.MatrixLayouts.RELAYOUT_BUDGET_KB
+</code>
+</a> — 
+<span class="docstring-category">Constant
+</span>
+</summary>
+<section>
+<div>
+<p>The amount of scratch memory, in KB, 
+<a href="matrix_layouts.html#TanayLabUtilities.MatrixLayouts.relayout!">
+<code>relayout!
+</code>
+</a> uses for a large matrix. The data of a larger matrix is relayouted in two sequential passes, which is much faster when the destination is memory-mapped to a file. The default is 256 MB.
+</p>
+</div>
+</section>
+</details>
+</article>
+<article>
+<details class="docstring" open="true">
+<summary id="TanayLabUtilities.MatrixLayouts.RELAYOUT_MIN_WRITE_KB">
+<a class="docstring-binding" href="#TanayLabUtilities.MatrixLayouts.RELAYOUT_MIN_WRITE_KB">
+<code>TanayLabUtilities.MatrixLayouts.RELAYOUT_MIN_WRITE_KB
+</code>
+</a> — 
+<span class="docstring-category">Constant
+</span>
+</summary>
+<section>
+<div>
+<p>The minimal size, in KB, of each write 
+<a href="matrix_layouts.html#TanayLabUtilities.MatrixLayouts.relayout!">
+<code>relayout!
+</code>
+</a> does to the destination of a large matrix. Smaller writes are much slower when the destination is memory-mapped to a file. If 
+<a href="matrix_layouts.html#TanayLabUtilities.MatrixLayouts.RELAYOUT_BUDGET_KB">
+<code>RELAYOUT_BUDGET_KB
+</code>
+</a> is too small to allow this, then more memory is used. The default is 64 KB.
+</p>
+</div>
+</section>
+</details>
+</article>
 <h2 id="Index">
 <a class="docs-heading-anchor" href="#Index">Index
 </a>
@@ -1268,6 +1449,18 @@ for matrix: 2 x 3 x Int64 in Columns (Dense)
 </a>
 </li>
 <li>
+<a href="matrix_layouts.html#TanayLabUtilities.MatrixLayouts.RELAYOUT_BUDGET_KB">
+<code>TanayLabUtilities.MatrixLayouts.RELAYOUT_BUDGET_KB
+</code>
+</a>
+</li>
+<li>
+<a href="matrix_layouts.html#TanayLabUtilities.MatrixLayouts.RELAYOUT_MIN_WRITE_KB">
+<code>TanayLabUtilities.MatrixLayouts.RELAYOUT_MIN_WRITE_KB
+</code>
+</a>
+</li>
+<li>
 <a href="matrix_layouts.html#TanayLabUtilities.MatrixLayouts.Rows">
 <code>TanayLabUtilities.MatrixLayouts.Rows
 </code>
@@ -1276,6 +1469,12 @@ for matrix: 2 x 3 x Int64 in Columns (Dense)
 <li>
 <a href="matrix_layouts.html#TanayLabUtilities.MatrixLayouts.axis_name">
 <code>TanayLabUtilities.MatrixLayouts.axis_name
+</code>
+</a>
+</li>
+<li>
+<a href="matrix_layouts.html#TanayLabUtilities.MatrixLayouts.base_array">
+<code>TanayLabUtilities.MatrixLayouts.base_array
 </code>
 </a>
 </li>
@@ -1306,6 +1505,12 @@ for matrix: 2 x 3 x Int64 in Columns (Dense)
 <li>
 <a href="matrix_layouts.html#TanayLabUtilities.MatrixLayouts.other_axis">
 <code>TanayLabUtilities.MatrixLayouts.other_axis
+</code>
+</a>
+</li>
+<li>
+<a href="matrix_layouts.html#TanayLabUtilities.MatrixLayouts.plain_array">
+<code>TanayLabUtilities.MatrixLayouts.plain_array
 </code>
 </a>
 </li>

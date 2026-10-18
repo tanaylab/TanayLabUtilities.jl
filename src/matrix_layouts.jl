@@ -31,9 +31,11 @@ export @check_turbo_vector
 export Columns
 export Rows
 export axis_name
+export base_array
 export major_axis
 export minor_axis
 export other_axis
+export plain_array
 export relayout
 export relayout!
 export require_major_axis
@@ -928,7 +930,7 @@ end
 function unnamed_relayout(destination::SparseMatrixCSC, source::AbstractMatrix)::SparseMatrixCSC
     @assert size(destination) == size(source)
     @assert issparse(source)
-    flipped_source = flip(mutable_array(source))
+    flipped_source = flip(plain_array(source))
     if !(flipped_source isa SparseMatrixCSC && sparse_relayout_by_bands!(destination, flipped_source))
         @assert LinearAlgebra.transpose!(destination, flipped_source) === destination
     end
@@ -938,7 +940,7 @@ end
 function unnamed_relayout(destination::DenseMatrix, source::AbstractMatrix)::DenseMatrix
     @assert size(destination) == size(source)
     @assert !issparse(source)
-    flipped_source = flip(mutable_array(source))
+    flipped_source = flip(plain_array(source))
     if !dense_relayout_by_bands!(destination, flipped_source)
         @assert LinearAlgebra.transpose!(destination, flipped_source) === destination
     end
@@ -1515,7 +1517,7 @@ function flipped(matrix::AbstractMatrix)::AbstractMatrix
         if issparse(matrix)
             flame_timed("flipped.sparse") do
                 @assert axis == Columns
-                result = SparseMatrixCSC(flip(mutable_array(matrix)))  # NOLINT
+                result = SparseMatrixCSC(flip(plain_array(matrix)))  # NOLINT
                 return nothing
             end
 
@@ -1523,11 +1525,11 @@ function flipped(matrix::AbstractMatrix)::AbstractMatrix
             flame_timed("flipped.dense") do
                 if axis == Columns
                     result = Matrix{eltype(matrix)}(undef, size(matrix, Columns), size(matrix, Rows))
-                    result = permutedims!(result, mutable_array(matrix), (2, 1))
+                    result = permutedims!(result, plain_array(matrix), (2, 1))
 
                 elseif axis == Rows  # UNTESTED
                     result = Matrix{eltype(matrix)}(undef, size(matrix, Rows), size(matrix, Columns))  # UNTESTED
-                    result = permutedims!(result, flip(mutable_array(matrix)), (2, 1))  # UNTESTED
+                    result = permutedims!(result, flip(plain_array(matrix)), (2, 1))  # UNTESTED
                     result = flip(result)  # UNTESTED
 
                 else
@@ -1615,7 +1617,7 @@ function flip(matrix::AbstractMatrix)::AbstractMatrix
     if eltype(matrix) <: Number
         return Transpose(matrix)
     else
-        return PermutedDimsArray(matrix, (Columns, Rows))  # UNTESTED
+        return PermutedDimsArray(matrix, (Columns, Rows))
     end
 end
 
@@ -1626,6 +1628,172 @@ end
 function flip(matrix::NamedArray)::AbstractMatrix
     @assert ndims(matrix) == 2
     return NamedArray(flip(matrix.array), reverse(matrix.dicts), reverse(matrix.dimnames))
+end
+
+"""
+    base_array(array::AbstractArray)::AbstractArray
+
+Return the simple base array of an wrapped array, as long as this array is index by the same integer indices. This
+removes the read-only and named wrappers. It never copies and never reads the data. See
+[`MatrixFormats`](@ref TanayLabUtilities.MatrixFormats) for when to use which function.
+"""
+function base_array(array::AbstractArray)::AbstractArray
+    return array
+end
+
+function base_array(array::SparseArrays.ReadOnly)::AbstractArray
+    return base_array(parent(array))
+end
+
+function base_array(array::NamedArray)::AbstractArray
+    return base_array(array.array)
+end
+
+function base_array(array::SubArray)::AbstractArray
+    parent_base = base_array(parent(array))
+    if parent_base === parent(array)
+        return array
+    end
+    return view(parent_base, parentindices(array)...)
+end
+
+"""
+    plain_array(
+        array::AbstractArray;
+        transposed_as::Maybe{Type} = nothing,
+        contiguous::Bool = false,
+    )::AbstractArray
+
+Return the values of the `array`, for reading all of them. The result is plain storage (an `Array`, `SparseMatrixCSC` or
+`SparseVector`), a strided view of an `Array`, or a transpose of either. It may share the storage of the `array`, so it
+must not be modified. See [`MatrixFormats`](@ref TanayLabUtilities.MatrixFormats) for when to use which function.
+
+Read-only and named wrappers are removed without copying. A strided view is kept, since code reads it efficiently. Set
+`contiguous` to copy a view with gaps, for code that needs contiguous memory (e.g. HDF5 writers).
+
+A transpose (`Transpose`, the `Adjoint` of a real matrix, or a `PermutedDimsArray` that swaps the dimensions) is never
+copied. Instead its plain parent is wrapped again. By default this is the same wrapper [`flip`](@ref) uses: a
+`Transpose` for numbers, and a `PermutedDimsArray` otherwise. Set `transposed_as` to `Transpose`, `PermutedDimsArray` or
+`Adjoint` (for real numbers) to get a specific one, for code that only handles that one.
+
+Any other array is copied. A lazy array type (which reads its data on demand) may add a method that returns its
+materialization.
+
+```jldoctest
+matrix = [1 2; 3 4]
+@assert plain_array(read_only_array(matrix)) === matrix
+@assert parent(plain_array(transpose(matrix); transposed_as = PermutedDimsArray)) === matrix
+
+vector = [1, 2, 3, 4, 5]
+@assert plain_array(view(vector, 1:2:5)) isa SubArray
+@assert plain_array(view(vector, 1:2:5); contiguous = true) isa Vector
+
+# output
+
+```
+"""
+function plain_array(
+    array::AbstractArray;
+    transposed_as::Maybe{Type} = nothing,  # NOLINT
+    contiguous::Bool = false,  # NOLINT
+)::AbstractArray
+    return plain_copy(array)
+end
+
+function plain_array(
+    array::Union{Array, SparseMatrixCSC, SparseVector};
+    transposed_as::Maybe{Type} = nothing,  # NOLINT
+    contiguous::Bool = false,  # NOLINT
+)::AbstractArray
+    return array
+end
+
+function plain_array(
+    array::SubArray;
+    transposed_as::Maybe{Type} = nothing,  # NOLINT
+    contiguous::Bool = false,
+)::AbstractArray
+    base_view = base_array(array)
+    if parent(base_view) isa Array && base_view isa StridedArray && (!contiguous || is_contiguous_array(base_view))
+        return base_view
+    else
+        return plain_copy(array)
+    end
+end
+
+function plain_array(
+    array::ReadOnlyArray;
+    transposed_as::Maybe{Type} = nothing,
+    contiguous::Bool = false,
+)::AbstractArray
+    return plain_array(parent(array); transposed_as, contiguous)
+end
+
+function plain_array(array::NamedArray; transposed_as::Maybe{Type} = nothing, contiguous::Bool = false)::AbstractArray
+    return plain_array(array.array; transposed_as, contiguous)
+end
+
+function plain_array(array::Transpose; transposed_as::Maybe{Type} = nothing, contiguous::Bool = false)::AbstractArray
+    return transposed_plain_array(parent(array), transposed_as, contiguous)
+end
+
+function plain_array(array::Adjoint; transposed_as::Maybe{Type} = nothing, contiguous::Bool = false)::AbstractArray
+    if eltype(array) <: Complex
+        return Array(array)  # UNTESTED # NOJET
+    else
+        return transposed_plain_array(parent(array), transposed_as, contiguous)
+    end
+end
+
+function plain_array(
+    array::PermutedDimsArray{T, 2, P, IP, A};
+    transposed_as::Maybe{Type} = nothing,
+    contiguous::Bool = false,
+)::AbstractArray where {T, P, IP, A}
+    if P == (Columns, Rows)
+        return transposed_plain_array(parent(array), transposed_as, contiguous)
+    else
+        return plain_array(parent(array); transposed_as, contiguous)  # UNTESTED
+    end
+end
+
+# A copy of the values of the `array` in plain storage.
+function plain_copy(array::AbstractArray)::AbstractArray
+    if issparse(array)
+        return ndims(array) == 1 ? SparseVector(array) : SparseMatrixCSC(array)  # NOJET
+    else
+        return Array(array)
+    end
+end
+
+# Whether the elements of the strided `array` are adjacent in memory, in column-major order.
+function is_contiguous_array(array::StridedArray)::Bool
+    expected_stride = 1
+    for dimension in 1:ndims(array)
+        if size(array, dimension) > 1 && stride(array, dimension) != expected_stride
+            return false
+        end
+        expected_stride *= size(array, dimension)
+    end
+    return true
+end
+
+# The transpose of the `matrix`, wrapping its plain storage. A transposed plain storage is flipped back to the storage.
+function transposed_plain_array(matrix::AbstractMatrix, transposed_as::Maybe{Type}, contiguous::Bool)::AbstractMatrix
+    plain_matrix = plain_array(matrix; contiguous)
+    if plain_matrix isa Union{Transpose, PermutedDimsArray}
+        return parent(plain_matrix)
+    elseif transposed_as === nothing
+        return flip(plain_matrix)
+    elseif transposed_as === PermutedDimsArray
+        return PermutedDimsArray(plain_matrix, (Columns, Rows))
+    elseif transposed_as === Adjoint
+        @assert eltype(plain_matrix) <: Real
+        return Adjoint(plain_matrix)
+    else
+        @assert transposed_as === Transpose
+        return Transpose(plain_matrix)
+    end
 end
 
 end # module

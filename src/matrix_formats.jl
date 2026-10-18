@@ -16,10 +16,22 @@ match and libraries actually used them to trigger optimized code but "that would
 The code here tries to put this under some control so we can write robust code which "does the right thing", in most
 cases, at least when it comes to converting between formats. This means we are forced to provide alternatives to some
 built-in functions (for example, copying arrays). Sigh.
+
+## Which function to use
+
+Pick the function by what you will do with the array:
+
+  - To inspect it (element type, sparsity, number of non-zeros, `brief`), use [`base_array`](@ref). It removes the
+    read-only and named wrappers. It never copies and never reads the data.
+  - To read all of its values, use [`plain_array`](@ref). It returns plain storage, a strided view of it, or a transpose
+    of either. A lazy array (which reads its data on demand) is read as a whole. The result may share the storage of
+    the array, so don't modify it. Code that needs contiguous memory (e.g. HDF5 writers) passes `contiguous = true`.
+  - To write into it, get your own copy using [`copy_array`](@ref), or [`densify`](@ref) or [`sparsify`](@ref) with
+    `copy = true`.
+  - To change its representation, use [`densify`](@ref), [`sparsify`](@ref) or [`bestify`](@ref).
 """
 module MatrixFormats
 
-export base_array
 export bestify
 export colptr
 export copy_array
@@ -30,7 +42,6 @@ export embed_sparse_matrix_in_sparse_matrix
 export indtype_for_size
 export nzind
 export nzval
-export plain_array
 export reinterpreted_array
 export rowval
 export similar_array
@@ -177,7 +188,8 @@ end
 """
     copy_array(array::AbstractArray; eltype::Maybe{Type} = nothing, indtype::Maybe{Type} = nothing)::AbstractArray
 
-Create a copy of an array. This differs from `Base.copy` in the following:
+Create a copy of an array, which the caller may modify. See [`MatrixFormats`](@ref TanayLabUtilities.MatrixFormats) for
+when to use which function. This differs from `Base.copy` in the following:
 
   - Copying a read-only array returns a mutable array. In contrast, both `Base.copy` and `Base.deepcopy` of a
     [`ReadOnlyArray`](@ref) array will return a [`ReadOnlyArray`](@ref) array, which is technically correct, but is
@@ -570,7 +582,8 @@ end
 Return a sparse version of an array, possibly forcing a different `eltype` and/or `indtype`. If given a dense matrix,
 the default `indtype` will be [`indtype_for_size`](@ref) for the matrix. This will preserve the matrix layout (for
 example, `sparsify` of a transposed matrix will be a transposed matrix). If `copy`, this will create a copy even if it
-is already sparse and has the correct `eltype` and `indtype`. The copy is never read-only.
+is already sparse and has the correct `eltype` and `indtype`. The copy is never read-only. See
+[`MatrixFormats`](@ref TanayLabUtilities.MatrixFormats) for when to use which function.
 
 ```jldoctest
 using SparseArrays
@@ -804,7 +817,8 @@ end
 
 Return a dense version of an array, possibly forcing a different `eltype`. This will preserve the matrix layout (for
 example, `densify` of a transposed matrix will be a transposed matrix). If `copy`, this will create a copy even if it is
-already dense and has the correct `eltype`. The copy is never read-only.
+already dense and has the correct `eltype`. The copy is never read-only. See
+[`MatrixFormats`](@ref TanayLabUtilities.MatrixFormats) for when to use which function.
 
 ```jldoctest
 using SparseArrays
@@ -1089,11 +1103,8 @@ function sparse_matrix_csc(
 )::SparseMatrixCSC
     _, eltype, indtype = parse_sparse_array(matrix; eltype, indtype)
 
-    # The constructor reads a wrapped or lazy matrix element by element. A strided or sparse one is read efficiently.
-    matrix = base_array(matrix)
-    if !(matrix isa StridedArray || issparse(matrix))
-        matrix = plain_array(matrix)
-    end
+    # The constructor reads a wrapped or lazy matrix element by element, so it gets plain storage.
+    matrix = plain_array(matrix)
     if eltype != Base.eltype(matrix)
         matrix = SparseMatrixCSC{Base.eltype(matrix), indtype}(matrix)
         return SparseMatrixCSC{eltype, indtype}(size(matrix)..., matrix.colptr, matrix.rowval, eltype.(matrix.nzval))
@@ -1111,7 +1122,7 @@ function sparse_matrix_csc(
 )::Union{ReadOnlyArray, SparseMatrixCSC}
     if is_read_only_array(colptr) || is_read_only_array(rowval) || is_read_only_array(nzval)
         return ReadOnlyArray(
-            SparseMatrixCSC(n_columns, n_rows, mutable_array(colptr), mutable_array(rowval), mutable_array(nzval)),
+            SparseMatrixCSC(n_columns, n_rows, plain_array(colptr), plain_array(rowval), plain_array(nzval)),
         )
     else
         return SparseMatrixCSC(n_columns, n_rows, colptr, rowval, nzval)
@@ -1164,11 +1175,8 @@ function sparse_vector(
 )::SparseVector
     _, eltype, indtype = parse_sparse_array(vector; eltype, indtype)
 
-    # The constructor reads a wrapped or lazy vector element by element. A strided or sparse one is read efficiently.
-    vector = base_array(vector)
-    if !(vector isa StridedArray || issparse(vector))
-        vector = plain_array(vector)
-    end
+    # The constructor reads a wrapped or lazy vector element by element, so it gets plain storage.
+    vector = plain_array(vector)
     if eltype != Base.eltype(vector)
         vector = SparseVector{Base.eltype(vector), indtype}(vector)
         return SparseVector{eltype, indtype}(length(vector), vector.nzind, eltype.(vector.nzval))
@@ -1179,7 +1187,7 @@ end
 
 function sparse_vector(size::Integer, nzind::AbstractVector, nzval::AbstractVector)::Union{ReadOnlyArray, SparseVector}
     if is_read_only_array(nzind) || is_read_only_array(nzval)
-        return read_only_array(SparseVector(size, mutable_array(nzind), mutable_array(nzval)))
+        return read_only_array(SparseVector(size, plain_array(nzind), plain_array(nzval)))
     else
         return SparseVector(size, nzind, nzval)
     end
@@ -1204,7 +1212,7 @@ a vector of `Bool` for the data.
 """
 function sparse_mask_vector(size::Integer, indptr::AbstractVector)::Union{ReadOnlyArray, SparseVector{Bool}}
     if is_read_only_array(indptr)
-        return read_only_array(SparseVector(size, mutable_array(indptr), fill(true, length(indptr))))
+        return read_only_array(SparseVector(size, plain_array(indptr), fill(true, length(indptr))))
     else
         return SparseVector(size, indptr, fill(true, length(indptr)))
     end
@@ -1278,7 +1286,8 @@ end
 
 Return a "best" (dense or sparse) version of an array. The sparse format is chosen if it saves at least
 `min_sparse_saving_fraction` of the storage of the dense format. If `copy`, this will create a copy even if it is
-already in the best format. The copy is never read-only.
+already in the best format. The copy is never read-only. See [`MatrixFormats`](@ref TanayLabUtilities.MatrixFormats) for
+when to use which function.
 
 If `eltype` is specified, computes the savings (and create the "best" version) using this element type. In addition, if
 given a sparse matrix, we consider the [`indtype_for_size`](@ref) for it, and if that saves
@@ -1855,117 +1864,6 @@ function embed_sparse_matrix_in_sparse_matrix(
     end
 
     return SparseMatrixCSC(n_rows, n_columns, new_colptr, new_rowval, matrix.nzval)
-end
-
-"""
-    base_array(array::AbstractArray)::AbstractArray
-
-Return the simple base array of an wrapped array, as long as this array is index by the same integer indices.
-"""
-function base_array(array::AbstractArray)::AbstractArray
-    return array
-end
-
-function base_array(array::SparseArrays.ReadOnly)::AbstractArray
-    return base_array(parent(array))
-end
-
-function base_array(array::NamedArray)::AbstractArray
-    return base_array(array.array)
-end
-
-function base_array(array::SubArray)::AbstractArray
-    parent_base = base_array(parent(array))
-    if parent_base === parent(array)
-        return array
-    end
-    return view(parent_base, parentindices(array)...)
-end
-
-"""
-    plain_array(array::AbstractArray; transposed_as::Maybe{Type} = nothing)::AbstractArray
-
-Return the values of the `array` as plain storage (an `Array`, `SparseMatrixCSC` or `SparseVector`), or as a transpose
-of plain storage. This is for code that needs the storage itself, such as HDF5 writers or code that accesses the
-`SparseMatrixCSC` fields. The result may share the storage of the `array`, so it must not be modified.
-
-Read-only and named wrappers are removed without copying. A transpose (`Transpose`, the `Adjoint` of a real matrix, or a
-`PermutedDimsArray` that swaps the dimensions) is never copied. Instead its plain parent is wrapped again. By default
-this is the same wrapper [`flip`](@ref) uses: a `Transpose` for numbers, and a `PermutedDimsArray` otherwise. Set
-`transposed_as` to `Transpose`, `PermutedDimsArray` or `Adjoint` (for real numbers) to get a specific one, for code that
-only handles that one. Any other array (e.g. a view with gaps) is copied.
-
-```jldoctest
-matrix = [1 2; 3 4]
-@assert plain_array(read_only_array(matrix)) === matrix
-@assert parent(plain_array(transpose(matrix); transposed_as = PermutedDimsArray)) === matrix
-
-# output
-
-```
-"""
-function plain_array(array::AbstractArray; transposed_as::Maybe{Type} = nothing)::AbstractArray  # NOLINT
-    if issparse(array)
-        return ndims(array) == 1 ? SparseVector(array) : SparseMatrixCSC(array)
-    else
-        return Array(array)
-    end
-end
-
-function plain_array(
-    array::Union{Array, SparseMatrixCSC, SparseVector};
-    transposed_as::Maybe{Type} = nothing,  # NOLINT
-)::AbstractArray
-    return array
-end
-
-function plain_array(array::ReadOnlyArray; transposed_as::Maybe{Type} = nothing)::AbstractArray
-    return plain_array(parent(array); transposed_as)
-end
-
-function plain_array(array::NamedArray; transposed_as::Maybe{Type} = nothing)::AbstractArray
-    return plain_array(array.array; transposed_as)
-end
-
-function plain_array(array::Transpose; transposed_as::Maybe{Type} = nothing)::AbstractArray
-    return transposed_plain_array(parent(array), transposed_as)
-end
-
-function plain_array(array::Adjoint; transposed_as::Maybe{Type} = nothing)::AbstractArray
-    if eltype(array) <: Complex
-        return Array(array)  # UNTESTED # NOJET
-    else
-        return transposed_plain_array(parent(array), transposed_as)
-    end
-end
-
-function plain_array(
-    array::PermutedDimsArray{T, 2, P, IP, A};
-    transposed_as::Maybe{Type} = nothing,
-)::AbstractArray where {T, P, IP, A}
-    if P == (Columns, Rows)
-        return transposed_plain_array(parent(array), transposed_as)
-    else
-        return plain_array(parent(array); transposed_as)  # UNTESTED
-    end
-end
-
-# The transpose of the `matrix`, wrapping its plain storage. A transposed plain storage is flipped back to the storage.
-function transposed_plain_array(matrix::AbstractMatrix, transposed_as::Maybe{Type})::AbstractMatrix
-    plain_matrix = plain_array(matrix)
-    if plain_matrix isa Union{Transpose, PermutedDimsArray}
-        return parent(plain_matrix)
-    elseif transposed_as === nothing
-        return flip(plain_matrix)
-    elseif transposed_as === PermutedDimsArray
-        return PermutedDimsArray(plain_matrix, (Columns, Rows))
-    elseif transposed_as === Adjoint
-        @assert eltype(plain_matrix) <: Real
-        return Adjoint(plain_matrix)
-    else
-        @assert transposed_as === Transpose
-        return Transpose(plain_matrix)
-    end
 end
 
 # The owners of the memory wrapped by `reinterpreted_array`, by the `objectid` of the wrapping `Memory`. Every array

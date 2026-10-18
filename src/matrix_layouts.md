@@ -12,6 +12,8 @@ TanayLabUtilities.MatrixLayouts.require_minor_axis
 TanayLabUtilities.MatrixLayouts.other_axis
 TanayLabUtilities.MatrixLayouts.flip
 TanayLabUtilities.MatrixLayouts.flipped
+TanayLabUtilities.MatrixLayouts.base_array
+TanayLabUtilities.MatrixLayouts.plain_array
 TanayLabUtilities.MatrixLayouts.relayout!
 TanayLabUtilities.MatrixLayouts.relayout
 TanayLabUtilities.MatrixLayouts.@assert_vector
@@ -19,6 +21,8 @@ TanayLabUtilities.MatrixLayouts.@assert_matrix
 TanayLabUtilities.MatrixLayouts.@check_turbo_vector
 TanayLabUtilities.MatrixLayouts.@check_turbo_matrix
 TanayLabUtilities.MatrixLayouts.GLOBAL_INEFFICIENT_ACTION_HANDLER
+TanayLabUtilities.MatrixLayouts.RELAYOUT_BUDGET_KB
+TanayLabUtilities.MatrixLayouts.RELAYOUT_MIN_WRITE_KB
 ```
 
 ## Index

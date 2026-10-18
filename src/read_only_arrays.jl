@@ -27,7 +27,6 @@ debatable decisions made when defining the core array types and conventions.
 """
 module ReadOnlyArrays
 
-export mutable_array
 export is_read_only_array
 export read_only_array
 export ReadOnlyArray
@@ -176,7 +175,7 @@ end
 
 Return whether an `array` is immutable. See [`ReadOnlyArray`](@ref). A wrapper (`NamedArray`, `PermutedDimsArray`,
 `Transpose`, `Adjoint`, or a view) is read-only if the array it wraps is. An array type that rejects writes by itself
-should add a method returning `true`. This never calls [`mutable_array`](@ref), which may be costly.
+should add a method returning `true`. This never reads the data of the `array`.
 """
 function is_read_only_array(::AbstractArray)::Bool
     return false
@@ -188,146 +187,6 @@ end
 
 function is_read_only_array(array::Union{NamedArray, PermutedDimsArray, Transpose, Adjoint, SubArray})::Bool
     return is_read_only_array(parent(array))
-end
-
-"""
-    mutable_array(array::AbstractArray)::AbstractArray
-
-Grant mutable access to an array, even if it is a read-only array. If the array is already mutable, it is returned
-as-is.
-
-!!! note
-
-    **This should be used with great care** because code depends on read-only arrays not changing their values.
-
-```jldoctest
-base = [0 1 2; 3 4 0]
-
-@assert mutable_array(base) === base;
-
-read_only = read_only_array(base)
-@assert mutable_array(read_only) === base;
-
-# Named
-
-using NamedArrays
-
-named = NamedArray(base)
-@assert !is_read_only_array(named);
-
-@assert mutable_array(named) === named;
-@assert mutable_array(read_only_array(named)).array === named.array;
-
-# Permuted
-
-permuted = PermutedDimsArray(base, (2, 1))
-
-@assert mutable_array(permuted) === permuted;
-@assert mutable_array(read_only_array(permuted)) === permuted;
-
-unpermuted = PermutedDimsArray(base, (1, 2))
-@assert !is_read_only_array(unpermuted);
-
-@assert mutable_array(unpermuted) === unpermuted;
-@assert mutable_array(read_only_array(unpermuted)) === unpermuted;
-
-# LinearAlgebra
-
-using LinearAlgebra
-
-transposed = transpose(base)
-@assert !is_read_only_array(transposed);
-
-@assert mutable_array(transposed) === transposed;
-@assert mutable_array(read_only_array(transposed)) === transposed;
-
-adjointed = adjoint(base)
-@assert !is_read_only_array(adjointed);
-
-@assert mutable_array(adjointed) === adjointed;
-@assert mutable_array(read_only_array(adjointed)) === adjointed;
-
-# Sparse
-
-using SparseArrays
-
-sparse = SparseMatrixCSC(base)
-
-@assert mutable_array(sparse) === sparse;
-@assert mutable_array(read_only_array(sparse)) === sparse;
-
-# Nested
-
-nested = SparseArrays.ReadOnly(transpose(read_only_array(base)))
-@assert parent(mutable_array(nested)) === base;
-
-# Views
-
-viewed = view(read_only_array(base), :, 2:3)
-@assert is_read_only_array(viewed);
-@assert parent(mutable_array(viewed)) === base;
-@assert mutable_array(viewed) == viewed;
-
-# output
-
-```
-"""
-function mutable_array(array::AbstractArray)::AbstractArray
-    return array
-end
-
-function mutable_array(array::PermutedDimsArray{T, 2, P, IP, A})::PermutedDimsArray where {T, P, IP, A}
-    parent_array = parent(array)
-    mutable_parent_array = mutable_array(parent_array)
-    if mutable_parent_array === parent_array
-        return array
-    else
-        return PermutedDimsArray(mutable_parent_array, P)  # NOJET
-    end
-end
-
-function mutable_array(array::Transpose)::Transpose
-    parent_array = parent(array)
-    mutable_parent_array = mutable_array(parent_array)
-    if mutable_parent_array === parent_array
-        return array
-    else
-        return Transpose(mutable_parent_array)
-    end
-end
-
-function mutable_array(array::Adjoint)::Adjoint
-    parent_array = parent(array)
-    mutable_parent_array = mutable_array(parent_array)
-    if mutable_parent_array === parent_array
-        return array
-    else
-        return Adjoint(mutable_parent_array)
-    end
-end
-
-function mutable_array(array::SparseArrays.ReadOnly)::AbstractArray
-    return mutable_array(parent(array))
-end
-
-function mutable_array(array::SubArray)::AbstractArray
-    parent_array = parent(array)
-    mutable_parent_array = mutable_array(parent_array)
-    if mutable_parent_array === parent_array
-        return array
-    else
-        return view(mutable_parent_array, parentindices(array)...)
-    end
-end
-
-function mutable_array(array::NamedArray)::NamedArray
-    parent_array = parent(array)
-    mutable_parent_array = mutable_array(parent_array)
-    if mutable_parent_array === parent_array
-        return array
-    else
-        return NamedArray(mutable_parent_array, array.dicts, array.dimnames)
-    end
 end
 
 end # module

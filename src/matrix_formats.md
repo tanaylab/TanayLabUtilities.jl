@@ -4,8 +4,6 @@
 TanayLabUtilities.MatrixFormats
 TanayLabUtilities.MatrixFormats.copy_array
 TanayLabUtilities.MatrixFormats.similar_array
-TanayLabUtilities.MatrixFormats.base_array
-TanayLabUtilities.MatrixFormats.plain_array
 TanayLabUtilities.MatrixFormats.reinterpreted_array
 TanayLabUtilities.MatrixFormats.sparse_matrix_csc
 TanayLabUtilities.MatrixFormats.sparse_vector

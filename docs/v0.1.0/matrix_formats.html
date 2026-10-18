@@ -278,6 +278,60 @@
 </p>
 <p>The code here tries to put this under some control so we can write robust code which &quot;does the right thing&quot;, in most cases, at least when it comes to converting between formats. This means we are forced to provide alternatives to some built-in functions (for example, copying arrays). Sigh.
 </p>
+<p>
+<strong>Which function to use
+</strong>
+</p>
+<p>Pick the function by what you will do with the array:
+</p>
+<ul>
+<li>To inspect it (element type, sparsity, number of non-zeros, 
+<code>brief
+</code>), use 
+<a href="matrix_layouts.html#TanayLabUtilities.MatrixLayouts.base_array">
+<code>base_array
+</code>
+</a>. It removes the read-only and named wrappers. It never copies and never reads the data.
+</li>
+<li>To read all of its values, use 
+<a href="matrix_layouts.html#TanayLabUtilities.MatrixLayouts.plain_array">
+<code>plain_array
+</code>
+</a>. It returns plain storage, a strided view of it, or a transpose of either. A lazy array (which reads its data on demand) is read as a whole. The result may share the storage of the array, so don&#39;t modify it. Code that needs contiguous memory (e.g. HDF5 writers) passes 
+<code>contiguous = true
+</code>.
+</li>
+<li>To write into it, get your own copy using 
+<a href="matrix_formats.html#TanayLabUtilities.MatrixFormats.copy_array">
+<code>copy_array
+</code>
+</a>, or 
+<a href="matrix_formats.html#TanayLabUtilities.MatrixFormats.densify">
+<code>densify
+</code>
+</a> or 
+<a href="matrix_formats.html#TanayLabUtilities.MatrixFormats.sparsify">
+<code>sparsify
+</code>
+</a> with 
+<code>copy = true
+</code>.
+</li>
+<li>To change its representation, use 
+<a href="matrix_formats.html#TanayLabUtilities.MatrixFormats.densify">
+<code>densify
+</code>
+</a>, 
+<a href="matrix_formats.html#TanayLabUtilities.MatrixFormats.sparsify">
+<code>sparsify
+</code>
+</a> or 
+<a href="matrix_formats.html#TanayLabUtilities.MatrixFormats.bestify">
+<code>bestify
+</code>
+</a>.
+</li>
+</ul>
 </div>
 </section>
 </details>
@@ -298,7 +352,11 @@
 <code class="language-julia hljs">copy_array(array::AbstractArray; eltype::Maybe{Type} = nothing, indtype::Maybe{Type} = nothing)::AbstractArray
 </code>
 </pre>
-<p>Create a copy of an array. This differs from 
+<p>Create a copy of an array, which the caller may modify. See 
+<a href="matrix_formats.html#TanayLabUtilities.MatrixFormats">
+<code>MatrixFormats
+</code>
+</a> for when to use which function. This differs from 
 <code>Base.copy
 </code> in the following:
 </p>
@@ -638,9 +696,9 @@ adjointed = adjoint(base)
 </article>
 <article>
 <details class="docstring" open="true">
-<summary id="TanayLabUtilities.MatrixFormats.base_array">
-<a class="docstring-binding" href="#TanayLabUtilities.MatrixFormats.base_array">
-<code>TanayLabUtilities.MatrixFormats.base_array
+<summary id="TanayLabUtilities.MatrixFormats.reinterpreted_array">
+<a class="docstring-binding" href="#TanayLabUtilities.MatrixFormats.reinterpreted_array">
+<code>TanayLabUtilities.MatrixFormats.reinterpreted_array
 </code>
 </a> — 
 <span class="docstring-category">Function
@@ -649,11 +707,61 @@ adjointed = adjoint(base)
 <section>
 <div>
 <pre>
-<code class="language-julia hljs">base_array(array::AbstractArray)::AbstractArray
+<code class="language-julia hljs">reinterpreted_array(
+    ::Type{T},
+    bytes::AbstractVector{UInt8},
+    dims::Union{Integer, Tuple{Vararg{Integer}}};
+    offset::Integer = 0,
+)::Array{T} where {T}
 </code>
 </pre>
-<p>Return the simple base array of an wrapped array, as long as this array is index by the same integer indices.
+<p>Return an 
+<code>Array{T}
+</code> of shape 
+<code>dims
+</code> that shares the memory of the 
+<code>bytes
+</code>, starting at byte 
+<code>offset
+</code>. Unlike 
+<code>reinterpret
+</code>, the result is a plain 
+<code>Array
+</code>. The 
+<code>bytes
+</code> may be a 
+<code>Vector{UInt8}
+</code>, or a contiguous view of one.
 </p>
+<p>The 
+<code>bytes
+</code> stay alive as long as any array sharing the result&#39;s memory does. This includes a 
+<code>reshape
+</code> or a 
+<code>view
+</code> of the result. A global table holds the 
+<code>bytes
+</code> until the shared memory is collected.
+</p>
+<p>The 
+<code>T
+</code> must be a bits type. The data must fit in the 
+<code>bytes
+</code>, and its start must be aligned for 
+<code>T
+</code>.
+</p>
+<pre>
+<code class="language-julia hljs">bytes = Vector{UInt8}(reinterpret(UInt8, Float64[1, 2]))
+reinterpreted_array(Float64, bytes, 2)
+
+# output
+
+2-element Vector{Float64}:
+ 1.0
+ 2.0
+</code>
+</pre>
 </div>
 </section>
 </details>
@@ -1084,7 +1192,11 @@ sparsify(
 <code>eltype
 </code> and 
 <code>indtype
-</code>.
+</code>. The copy is never read-only. See 
+<a href="matrix_formats.html#TanayLabUtilities.MatrixFormats">
+<code>MatrixFormats
+</code>
+</a> for when to use which function.
 </p>
 <pre>
 <code class="language-julia hljs">using SparseArrays
@@ -1117,10 +1229,12 @@ sparse = SparseMatrixCSC([0 1 2; 3 4 0])
 read_only = read_only_array(sparse)
 @assert sparsify(read_only) === read_only
 @assert brief(read_only) == &quot;2 x 3 x Int64 in Columns (ReadOnly, Sparse 4 (67%) [Int64])&quot;
+@assert brief(sparsify(read_only; copy = true)) == &quot;2 x 3 x Int64 in Columns (Sparse 4 (67%) [Int64])&quot;
 
 read_only = read_only_array(dense)
 @assert sparsify(read_only) == read_only
 @assert brief(sparsify(read_only)) == &quot;3 x 4 x Float64 in Columns (ReadOnly, Sparse 12 (100%) [UInt16])&quot;
+@assert brief(sparsify(read_only; copy = true)) == &quot;3 x 4 x Float64 in Columns (Sparse 12 (100%) [UInt16])&quot;
 
 # Named
 
@@ -1237,7 +1351,11 @@ densify(vector::AbstractVector; copy::Bool = false, eltype::Maybe{Type} = nothin
 <code>copy
 </code>, this will create a copy even if it is already dense and has the correct 
 <code>eltype
-</code>.
+</code>. The copy is never read-only. See 
+<a href="matrix_formats.html#TanayLabUtilities.MatrixFormats">
+<code>MatrixFormats
+</code>
+</a> for when to use which function.
 </p>
 <pre>
 <code class="language-julia hljs">using SparseArrays
@@ -1255,6 +1373,13 @@ dense = rand(3, 4)
 @assert isapprox(densify(dense; eltype = Float32), dense)
 @assert brief(densify(dense; eltype = Float32)) == &quot;3 x 4 x Float32 in Columns (Dense)&quot;
 
+# No major axis
+
+reshaped = reshape(1:12, 3, 4)
+@assert brief(reshaped) == &quot;3 x 4 x Int64 w/o major axis (ReshapedArray)&quot;
+@assert densify(reshaped) == reshaped
+@assert brief(densify(reshaped)) == &quot;3 x 4 x Int64 in Columns (Dense)&quot;
+
 # Sparse
 
 sparse = SparseMatrixCSC([0 1 2; 3 4 0])
@@ -1269,9 +1394,11 @@ read_only = read_only_array(sparse)
 @assert densify(read_only) == read_only
 @assert brief(read_only) == &quot;2 x 3 x Int64 in Columns (ReadOnly, Sparse 4 (67%) [Int64])&quot;
 @assert brief(densify(read_only)) == &quot;2 x 3 x Int64 in Columns (ReadOnly, Dense)&quot;
+@assert brief(densify(read_only; copy = true)) == &quot;2 x 3 x Int64 in Columns (Dense)&quot;
 
 read_only = read_only_array(dense)
-@assert densify(read_only) == dense
+@assert densify(read_only) === read_only
+@assert brief(densify(read_only; copy = true)) == &quot;3 x 4 x Float64 in Columns (Dense)&quot;
 
 # Named
 
@@ -1392,7 +1519,11 @@ bestify(
 <code>min_sparse_saving_fraction
 </code> of the storage of the dense format. If 
 <code>copy
-</code>, this will create a copy even if it is already in the best format.
+</code>, this will create a copy even if it is already in the best format. The copy is never read-only. See 
+<a href="matrix_formats.html#TanayLabUtilities.MatrixFormats">
+<code>MatrixFormats
+</code>
+</a> for when to use which function.
 </p>
 <p>If 
 <code>eltype
@@ -1433,10 +1564,12 @@ read_only = read_only_array(dense)
 
 @assert bestify(read_only) == read_only
 @assert brief(bestify(read_only)) == &quot;5 x 5 x Int32 in Columns (ReadOnly, Sparse 5 (20%) [UInt16])&quot;
+@assert brief(bestify(read_only; copy = true)) == &quot;5 x 5 x Int32 in Columns (Sparse 5 (20%) [UInt16])&quot;
 
 read_only = read_only_array(sparse)
 @assert bestify(read_only) === read_only
 @assert brief(read_only) == &quot;5 x 5 x Int32 in Columns (ReadOnly, Sparse 5 (20%) [UInt16])&quot;
+@assert brief(bestify(read_only; copy = true)) == &quot;5 x 5 x Int32 in Columns (Sparse 5 (20%) [UInt16])&quot;
 
 @assert bestify(read_only; min_sparse_saving_fraction = 0.6) == read_only
 @assert brief(bestify(read_only; min_sparse_saving_fraction = 0.6)) == &quot;5 x 5 x Int32 in Columns (ReadOnly, Dense)&quot;
@@ -1743,12 +1876,6 @@ sparse_vector = SparseVector([0, 1, 2])
 </a>
 </li>
 <li>
-<a href="matrix_formats.html#TanayLabUtilities.MatrixFormats.base_array">
-<code>TanayLabUtilities.MatrixFormats.base_array
-</code>
-</a>
-</li>
-<li>
 <a href="matrix_formats.html#TanayLabUtilities.MatrixFormats.bestify">
 <code>TanayLabUtilities.MatrixFormats.bestify
 </code>
@@ -1805,6 +1932,12 @@ sparse_vector = SparseVector([0, 1, 2])
 <li>
 <a href="matrix_formats.html#TanayLabUtilities.MatrixFormats.nzval">
 <code>TanayLabUtilities.MatrixFormats.nzval
+</code>
+</a>
+</li>
+<li>
+<a href="matrix_formats.html#TanayLabUtilities.MatrixFormats.reinterpreted_array">
+<code>TanayLabUtilities.MatrixFormats.reinterpreted_array
 </code>
 </a>
 </li>

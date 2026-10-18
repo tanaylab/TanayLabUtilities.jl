@@ -23,19 +23,17 @@ end
     return x + y
 end
 
-# A read-only array type whose `mutable_array` is costly, like a lazy array that reads all of its data to provide it.
+# A read-only array type whose reads are costly, like a lazy array that reads its data on demand.
 struct CostlyReadOnly <: AbstractVector{Int}
     values::Vector{Int}
-    n_mutable_calls::Base.RefValue{Int}
+    n_reads::Base.RefValue{Int}
 end
 
 Base.size(array::CostlyReadOnly) = size(array.values)
 
-Base.getindex(array::CostlyReadOnly, index::Int) = array.values[index]
-
-function TanayLabUtilities.ReadOnlyArrays.mutable_array(array::CostlyReadOnly)::Vector{Int}
-    array.n_mutable_calls[] += 1
-    return copy(array.values)
+function Base.getindex(array::CostlyReadOnly, index::Int)::Int
+    array.n_reads[] += 1
+    return array.values[index]
 end
 
 function TanayLabUtilities.ReadOnlyArrays.is_read_only_array(::CostlyReadOnly)::Bool
@@ -68,9 +66,10 @@ function Base.getindex(matrix::CountingMatrix, row::Int, column::Int)::Float64
     return matrix.values[row, column]
 end
 
-function TanayLabUtilities.MatrixFormats.plain_array(
+function TanayLabUtilities.MatrixLayouts.plain_array(
     matrix::CountingMatrix;
     transposed_as::Maybe{Type} = nothing,  # NOLINT
+    contiguous::Bool = false,  # NOLINT
 )::Matrix{Float64}
     return matrix.values
 end
@@ -1139,17 +1138,51 @@ end
             result = plain_array(read_only_array(flip(sparse_matrix)); transposed_as = Adjoint)
             @test result isa Adjoint
             @test parent(result) === sparse_matrix
+            result = plain_array(PermutedDimsArray(dense, (2, 1)); transposed_as = Transpose)
+            @test result isa Transpose
+            @test parent(result) === dense
             result = plain_array(PermutedDimsArray(strings, (2, 1)))
             @test result isa PermutedDimsArray
             @test parent(result) === strings
             @test plain_array(transpose(PermutedDimsArray(dense, (2, 1)))) === dense
         end
 
-        @testset "strided views are copied" begin
-            strided = view(dense, :, 1:2:3)
-            result = plain_array(strided)
+        @testset "strided views are kept" begin
+            for strided in (view(dense, :, 1:2:3), view(dense, :, 1:2), view(read_only_array(dense), :, 1:2:3))
+                result = plain_array(strided)
+                @test result isa SubArray
+                @test parent(result) === dense
+                @test result == strided
+            end
+        end
+
+        @testset "contiguous copies only views with gaps" begin
+            contiguous_view = view(dense, :, 1:2)
+            @test plain_array(contiguous_view; contiguous = true) === contiguous_view
+            gapped_view = view(dense, :, 1:2:3)
+            result = plain_array(gapped_view; contiguous = true)
             @test result isa Matrix{Float64}
-            @test result == strided
+            @test result == gapped_view
+            result = plain_array(transpose(gapped_view); contiguous = true)
+            @test result isa Transpose
+            @test parent(result) isa Matrix{Float64}
+            @test parent(result) == gapped_view
+        end
+
+        @testset "other arrays are copied" begin
+            result = plain_array(falses(2))
+            @test result isa Vector{Bool}
+            @test result == [false, false]
+        end
+
+        @testset "views of other arrays copy only the view" begin
+            counting = CountingMatrix(dense, Ref(0))
+            result = plain_array(view(counting, :, 2))
+            @test result == [2.0, 5.0]
+            @test counting.n_reads[] == 2
+        end
+
+        @testset "sparse views are copied" begin
             sparse_columns = view(sparse_matrix, :, 1:2:3)
             result = plain_array(sparse_columns)
             @test result isa SparseMatrixCSC
@@ -1241,19 +1274,14 @@ end
 @testset "read_only_arrays" begin
     using NamedArrays
 
-    @testset "is_read_only_array does not call mutable_array" begin
+    @testset "is_read_only_array does not read the data" begin
         costly = CostlyReadOnly([1, 2, 3], Ref(0))
         @test is_read_only_array(costly)
         @test is_read_only_array(NamedArray(costly))
         @test is_read_only_array(view(costly, 1:2))
-        @test costly.n_mutable_calls[] == 0
-        @test mutable_array(NamedArray(costly)).array == [1, 2, 3]
-        @test costly.n_mutable_calls[] == 1
-    end
-
-    @testset "mutable_array of a view of a mutable array is the view" begin
-        mutable_view = view([1, 2, 3], 1:2)
-        @test mutable_array(mutable_view) === mutable_view
+        @test costly.n_reads[] == 0
+        @test costly == [1, 2, 3]
+        @test costly.n_reads[] == 3
     end
 end
 

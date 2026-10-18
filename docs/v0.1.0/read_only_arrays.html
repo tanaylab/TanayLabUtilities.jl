@@ -439,102 +439,20 @@ sparse_read_only = read_only_array(sparse)
 <a href="read_only_arrays.html#TanayLabUtilities.ReadOnlyArrays.ReadOnlyArray">
 <code>ReadOnlyArray
 </code>
-</a>
+</a>. A wrapper (
+<code>NamedArray
+</code>, 
+<code>PermutedDimsArray
+</code>, 
+<code>Transpose
+</code>, 
+<code>Adjoint
+</code>, or a view) is read-only if the array it wraps is. An array type that rejects writes by itself should add a method returning 
+<code>true
+</code>. This never reads the data of the 
+<code>array
+</code>.
 </p>
-</div>
-</section>
-</details>
-</article>
-<article>
-<details class="docstring" open="true">
-<summary id="TanayLabUtilities.ReadOnlyArrays.mutable_array">
-<a class="docstring-binding" href="#TanayLabUtilities.ReadOnlyArrays.mutable_array">
-<code>TanayLabUtilities.ReadOnlyArrays.mutable_array
-</code>
-</a> — 
-<span class="docstring-category">Function
-</span>
-</summary>
-<section>
-<div>
-<pre>
-<code class="language-julia hljs">mutable_array(array::AbstractArray)::AbstractArray
-</code>
-</pre>
-<p>Grant mutable access to an array, even if it is a read-only array. If the array is already mutable, it is returned as-is.
-</p>
-<div class="admonition is-info" id="Note-ae9e2d30c3a488aa">
-<header class="admonition-header">Note
-<a class="admonition-anchor" href="#Note-ae9e2d30c3a488aa" title="Permalink">
-</a>
-</header>
-<div class="admonition-body">
-<p>
-<strong>This should be used with great care
-</strong> because code depends on read-only arrays not changing their values.
-</p>
-</div>
-</div>
-<pre>
-<code class="language-julia hljs">base = [0 1 2; 3 4 0]
-
-@assert mutable_array(base) === base;
-
-read_only = read_only_array(base)
-@assert mutable_array(read_only) === base;
-
-# Named
-
-using NamedArrays
-
-named = NamedArray(base)
-@assert !is_read_only_array(named);
-
-@assert mutable_array(named) === named;
-@assert mutable_array(read_only_array(named)).array === named.array;
-
-# Permuted
-
-permuted = PermutedDimsArray(base, (2, 1))
-
-@assert mutable_array(permuted) === permuted;
-@assert mutable_array(read_only_array(permuted)) === permuted;
-
-unpermuted = PermutedDimsArray(base, (1, 2))
-@assert !is_read_only_array(unpermuted);
-
-@assert mutable_array(unpermuted) === unpermuted;
-@assert mutable_array(read_only_array(unpermuted)) === unpermuted;
-
-# LinearAlgebra
-
-using LinearAlgebra
-
-transposed = transpose(base)
-@assert !is_read_only_array(transposed);
-
-@assert mutable_array(transposed) === transposed;
-@assert mutable_array(read_only_array(transposed)) === transposed;
-
-adjointed = adjoint(base)
-@assert !is_read_only_array(adjointed);
-
-@assert mutable_array(adjointed) === adjointed;
-@assert mutable_array(read_only_array(adjointed)) === adjointed;
-
-# Sparse
-
-using SparseArrays
-
-sparse = SparseMatrixCSC(base)
-
-@assert mutable_array(sparse) === sparse;
-@assert mutable_array(read_only_array(sparse)) === sparse;
-
-# output
-
-</code>
-</pre>
 </div>
 </section>
 </details>
@@ -563,12 +481,6 @@ sparse = SparseMatrixCSC(base)
 <li>
 <a href="read_only_arrays.html#TanayLabUtilities.ReadOnlyArrays.is_read_only_array">
 <code>TanayLabUtilities.ReadOnlyArrays.is_read_only_array
-</code>
-</a>
-</li>
-<li>
-<a href="read_only_arrays.html#TanayLabUtilities.ReadOnlyArrays.mutable_array">
-<code>TanayLabUtilities.ReadOnlyArrays.mutable_array
 </code>
 </a>
 </li>
