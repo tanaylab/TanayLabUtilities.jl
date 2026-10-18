@@ -24,6 +24,7 @@ pages = [
     "grouped_correlations.md",
     "chi_squared.md",
     "sparse_statistics.md",
+    "sparse_columns.md",
     "cross_validations.md",
     "global_weak_cache.md",
     "kmeans.md",

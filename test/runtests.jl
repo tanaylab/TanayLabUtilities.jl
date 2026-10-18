@@ -242,6 +242,20 @@ end
         end
     end
 
+    @testset "views of sparse arrays" begin
+        dense_matrix = Float64[0 1 0; 2 0 3; 0 4 0; 5 0 6; 0 0 7]
+        rows = [1, 2, 4, 5]
+        sparse_rows = view(sparse(dense_matrix), rows, :)
+        @test sparse_median(sparse_rows; dims = Rows) ≈ vec(median(dense_matrix[rows, :]; dims = 1))
+        @test sparse_quantile(sparse_rows, 0.25; dims = Rows) ≈
+              [quantile(dense_matrix[rows, column], 0.25) for column in 1:3]
+        @test sparse_var(sparse_rows; dims = Rows) ≈ vec(var(dense_matrix[rows, :]; dims = 1))
+        @test sparse_std(sparse_rows; dims = Rows) ≈ vec(std(dense_matrix[rows, :]; dims = 1))
+        sparse_column = view(sparse(dense_matrix), rows, 3)
+        @test sparse_median(sparse_column) ≈ median(dense_matrix[rows, 3])
+        @test sparse_var(sparse_column) ≈ var(dense_matrix[rows, 3])
+    end
+
     @testset "positive flag matches when all values are non-negative" begin
         sparse_vec = sparse([0, 0, 3, 0, 1, 4, 0, 1])
         for p in (0.0, 0.25, 0.5, 0.75, 1.0)
@@ -413,6 +427,47 @@ end
             expected = quantile(Vector(sparse_matrix[:, 1]), p)
             @test sparse_quantile(sparse_matrix, p; dims = Rows)[1] ≈ expected
             @test sparse_quantile(sparse_matrix[:, 1], p) ≈ expected
+        end
+    end
+end
+
+@testset "sparse_columns" begin
+    matrix = sprand(Random.MersenneTwister(1), 200, 7, 0.3)
+    matrix[:, 7] .= 0
+    dropzeros!(matrix)
+    row_indices_per_case = (Int[], [17], [3, 8, 12, 17, 150], collect(1:2:200), collect(1:200))
+
+    @testset "stored_values_at_rows" begin
+        for row_indices in row_indices_per_case, column_index in 1:7
+            expected = [
+                (position, matrix[row_index, column_index]) for
+                (position, row_index) in enumerate(row_indices) if matrix[row_index, column_index] != 0
+            ]
+            @test collect(stored_values_at_rows(matrix, column_index, row_indices)) == expected
+        end
+        @test_throws "row indices are not strictly increasing" stored_values_at_rows(matrix, 1, [3, 2])
+        @test_throws "row indices are not strictly increasing" stored_values_at_rows(matrix, 1, [3, 3])
+    end
+
+    @testset "gather_sparse_column!" begin
+        for row_indices in row_indices_per_case, column_index in 1:7
+            destination = fill(-1.0, length(row_indices))
+            is_any_nonzero = gather_sparse_column!(destination, matrix, column_index, row_indices)
+            @test destination == matrix[row_indices, column_index]
+            @test is_any_nonzero == any(!iszero, destination)
+        end
+    end
+
+    @testset "sum_sparse_columns_per_group!" begin
+        column_indices_per_group = [[1, 4], [2], [3, 5, 6, 7]]
+        for row_indices in row_indices_per_case
+            destination = fill(1.0, 3, length(row_indices))
+            sum_sparse_columns_per_group!(destination, matrix, row_indices, column_indices_per_group)
+            for (group_index, column_indices) in enumerate(column_indices_per_group)
+                for (position, row_index) in enumerate(row_indices)
+                    @test destination[group_index, position] ≈ 1.0 + sum(matrix[row_index, column_indices])
+                end
+            end
         end
     end
 end

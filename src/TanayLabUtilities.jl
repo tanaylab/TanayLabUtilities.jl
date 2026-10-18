@@ -82,6 +82,9 @@ include("extended_read_write_locks.jl")
 include("sparse_statistics.jl")
 @reexport using .SparseStatistics
 
+include("sparse_columns.jl")
+@reexport using .SparseColumns
+
 include("downsample.jl")
 @reexport using .Downsample
 

@@ -400,7 +400,7 @@ end
 
 function compute_sparse_var_of_vector(vector::AbstractVector{<:Real}, corrected::Bool)::Float64
     if issparse(vector)
-        return welford_variance(nzval(vector), length(vector), corrected)
+        return welford_variance(nzval(plain_array(vector)), length(vector), corrected)
     else
         return welford_variance(vector, length(vector), corrected)
     end
@@ -408,7 +408,7 @@ end
 
 function compute_sparse_var_of_flat_matrix(matrix::AbstractMatrix{<:Real}, corrected::Bool)::Float64
     if issparse(matrix)
-        return welford_variance(nzval(matrix), length(matrix), corrected)
+        return welford_variance(nzval(plain_array(matrix)), length(matrix), corrected)
     else
         return welford_variance(vec(matrix), length(matrix), corrected)
     end
@@ -436,7 +436,7 @@ function compute_sparse_var_of_matrix(
     end
 
     if issparse(matrix) && major_axis(matrix) == process_axis
-        compute_sparse_var_of_sparse_matrix!(result, matrix, corrected; dims, progress, progress_chunk)
+        compute_sparse_var_of_sparse_matrix!(result, plain_array(matrix), corrected; dims, progress, progress_chunk)
     else
         compute_sparse_var_of_dense_matrix!(result, matrix, corrected; dims, progress, progress_chunk)
     end
@@ -541,7 +541,7 @@ function compute_sparse_quantile_of_vector(
     scratch::Maybe{AbstractVector{<:AbstractFloat}},
 )::Float64
     if issparse(vector)
-        nonzero_values = nzval(vector)
+        nonzero_values = nzval(plain_array(vector))
         n_nonzero = length(nonzero_values)
         n_implicit_zero = length(vector) - n_nonzero
     else
@@ -568,7 +568,7 @@ function compute_sparse_quantile_of_flat_matrix(
     scratch::Maybe{AbstractVector{<:AbstractFloat}},
 )::Float64
     if issparse(matrix)
-        nonzero_values = nzval(matrix)
+        nonzero_values = nzval(plain_array(matrix))
         n_nonzero = length(nonzero_values)
         n_implicit_zero = length(matrix) - n_nonzero
     else
@@ -612,7 +612,16 @@ function compute_sparse_quantile_of_matrix(
     end
 
     if issparse(matrix) && major_axis(matrix) == process_axis
-        compute_sparse_quantile_of_sparse_matrix!(result, matrix, p; dims, positive, scratch, progress, progress_chunk)
+        compute_sparse_quantile_of_sparse_matrix!(
+            result,
+            plain_array(matrix),
+            p;
+            dims,
+            positive,
+            scratch,
+            progress,
+            progress_chunk,
+        )
     else
         compute_sparse_quantile_of_dense_matrix!(result, matrix, p; dims, positive, scratch, progress, progress_chunk)
     end
@@ -957,7 +966,7 @@ function auc_per_group!(;
         if issparse(feature_per_sample)
             sparse_rank_sum_per_group!(;
                 rank_sum_per_group,
-                feature_per_sample,
+                feature_per_sample = plain_array(feature_per_sample),
                 group_index_per_sample,
                 n_samples_per_group,
                 n_included_samples,
