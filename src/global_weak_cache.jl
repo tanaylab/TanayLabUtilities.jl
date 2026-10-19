@@ -7,9 +7,9 @@ export get_through_global_weak_cache
 
 using Base.Threads
 
-GLOBAL_LOCK = ReentrantLock()
+const GLOBAL_LOCK = ReentrantLock()
 
-GLOBAL_CACHE = Dict{Tuple{AbstractString, Any}, Tuple{Float64, UInt, WeakRef}}()
+const GLOBAL_CACHE = Dict{Tuple{AbstractString, Any}, Tuple{Float64, UInt, WeakRef}}()
 
 """
     get_through_global_weak_cache(getter::Function, path::AbstractString, key::Any)::Any
@@ -72,27 +72,26 @@ function get_through_global_weak_cache(
         current_inode = file_stat.inode
         cached_mtime = nothing
         cached_inode = nothing
-        cached_weak_ref = nothing
+        cached_value = nothing
 
         if !purge
             cached = get(GLOBAL_CACHE, (path, key), nothing)
             if cached !== nothing
                 cached_mtime, cached_inode, cached_weak_ref = cached
+                # Read once: the GC may clear the weak reference at any time.
+                cached_value = cached_weak_ref.value
             end
         end
 
         is_invalid =
-            cached_weak_ref === nothing ||
-            cached_weak_ref.value === nothing ||
-            current_inode != cached_inode ||
-            (check_mtime && current_mtime != cached_mtime)
+            cached_value === nothing || current_inode != cached_inode || (check_mtime && current_mtime != cached_mtime)
 
         if is_invalid
             @debug "Get $(key) for $(path)"
             value = getter(key)
         else
             @debug "Reuse $(key) for $(path)"
-            value = cached_weak_ref.value
+            value = cached_value
         end
         GLOBAL_CACHE[(path, key)] = (current_mtime, current_inode, WeakRef(value))
 

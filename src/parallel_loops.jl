@@ -5,25 +5,31 @@ module ParallelLoops
 
 export DebugProgress
 export DebugProgressUnknown
+export column_scratch
 export is_in_parallel_loop
+export parallel_foreach_column
 export parallel_loop_with_rng
 export parallel_loop_wo_rng
+export read_column!
 
 using ..Brief
 using ..Types
 using ..FlameTime
+using ..Handlers
+using ..MatrixLayouts
 
 using Base.Threads
 using LinearAlgebra
 using Logging
 using ProgressMeter
+using SparseArrays
 
+import Base.Threads.maxthreadid
 import ProgressMeter.AbstractProgress  # NOLINT
 using Random
 
 import Random.default_rng
-
-TOTAL_MEMORY = 0
+import SparseArrays.AbstractSparseMatrixCSC  # NOLINT
 
 """
     is_in_parallel_loop()::Bool
@@ -451,6 +457,207 @@ function parallel_loop_with_rng(
 
     return nothing
 end
+
+"""
+    parallel_foreach_column(
+        visit::Function,
+        matrix::AbstractMatrix;
+        columns::AbstractVector{<:Integer} = 1:size(matrix, 2),
+        contiguous::Bool = false,
+        name::AbstractString = ".columns",
+        policy::Symbol = :greedy_sticky,
+        weights::Maybe{AbstractVector{<:Integer}} = nothing,
+        progress::Maybe{AbstractProgress} = nothing,
+    )::Nothing
+
+Run `visit(position, column_index, column)` in parallel for each of the `columns` of the `matrix`. The `position` is the
+index of the `column_index` in `columns`, so `visit` can write its results by position. This is [`plain_array`](@ref)
+one column at a time: the `column` holds the values of the column in plain storage, so `visit` needs no `plain_array` of
+its own. The `column` is valid only during the call to `visit`, and must not be modified.
+
+A dense `column` is a view of a column of plain storage, or a buffer holding the column. A sparse `column` is read
+through `nonzeroinds` and `nonzeros`. It is a view of a column of a `SparseMatrixCSC`, or a `SparseVector` holding the
+column.
+
+A lazy matrix (which reads its data on demand) is read one column at a time through [`column_scratch`](@ref) and
+[`read_column!`](@ref), so all of it is never held in memory. Any other matrix is read once through `plain_array`, which
+copies nothing for plain storage, read-only and named wrappers, and strided views. A matrix stored in rows (e.g. a
+transpose) is read against the grain, which invokes the [`GLOBAL_INEFFICIENT_ACTION_HANDLER`](@ref). A sparse one is
+relayouted to columns first.
+
+Set `contiguous` to copy each column with gaps (of a strided view or of a transpose) into a buffer, for code that needs
+contiguous memory.
+
+Buffers are allocated before the loop, one per thread, and dropped after it. They are indexed by `threadid()`, so the
+`policy` must keep each task on its thread (`:greedy_sticky`, `:static` or `:serial`). If this is invoked from inside
+another parallel loop, it runs serially (see [`parallel_loop_wo_rng`](@ref)) and allocates a single buffer. Since this
+allocates inside the other loop, it invokes the [`GLOBAL_INEFFICIENT_ACTION_HANDLER`](@ref).
+
+For a sparse matrix, the `weights` default to the number of stored values in each of the `columns`. The `weights`, the
+`name`, the `policy` and the `progress` are passed to [`parallel_loop_wo_rng`](@ref).
+
+```jldoctest
+using SparseArrays
+
+matrix = sparse([0 1 2; 3 0 4])
+n_stored_per_column = zeros(Int, 2)
+parallel_foreach_column(matrix; columns = [3, 1]) do position, column_index, column
+    n_stored_per_column[position] = length(nonzeros(column))
+    return nothing
+end
+@assert n_stored_per_column == [2, 1]
+
+# output
+
+```
+"""
+function parallel_foreach_column(
+    visit::Function,
+    matrix::AbstractMatrix;
+    columns::AbstractVector{<:Integer} = 1:size(matrix, 2),
+    contiguous::Bool = false,
+    name::AbstractString = ".columns",
+    policy::Symbol = :greedy_sticky,
+    weights::Maybe{AbstractVector{<:Integer}} = nothing,
+    progress::Maybe{AbstractProgress} = nothing,
+)::Nothing
+    @assert policy in (:greedy_sticky, :static, :serial)
+    if isempty(columns)
+        return nothing
+    end
+
+    base_matrix = base_array(matrix)
+    if weights === nothing && base_matrix isa AbstractSparseMatrixCSC
+        column_pointers = SparseArrays.getcolptr(base_matrix)
+        weights = [Int(column_pointers[column_index + 1] - column_pointers[column_index]) for column_index in columns]
+    end
+    is_serial = policy == :serial || nthreads() == 1 || is_in_parallel_loop()
+
+    scratch = column_scratch(base_matrix)
+    if scratch !== nothing
+        scratch_per_thread = new_scratch_per_thread(scratch, () -> column_scratch(base_matrix), matrix, is_serial)
+        foreach_column_through_scratch(
+            visit,
+            (thread_scratch, column_index) -> read_column!(thread_scratch, base_matrix, column_index),  # NOLINT
+            columns,
+            scratch_per_thread;
+            name,
+            policy,
+            weights,
+            progress,
+        )
+        return nothing
+    end
+
+    storage = plain_array(matrix)
+    @assert_matrix(storage, Columns)
+    if issparse(storage) && major_axis(storage) != Columns
+        storage = SparseMatrixCSC(storage)
+    end
+    foreach_plain_column(visit, storage, matrix, columns, contiguous, is_serial; name, policy, weights, progress)
+    return nothing
+end
+
+# Run `visit(position, column_index, column)` for each of the `columns` of the plain `storage` of the `matrix`, where
+# the `column` is a view of the storage, or a copy of it in a buffer if it has gaps and must be `contiguous`.
+function foreach_plain_column(
+    visit::Function,
+    storage::AbstractMatrix,
+    matrix::AbstractMatrix,
+    columns::AbstractVector{<:Integer},
+    contiguous::Bool,
+    is_serial::Bool;
+    name::AbstractString,
+    policy::Symbol,
+    weights::Maybe{AbstractVector{<:Integer}},
+    progress::Maybe{AbstractProgress},
+)::Nothing
+    if contiguous && !issparse(storage) && !is_contiguous_array(view(storage, :, first(columns)))
+        create_buffer = () -> Vector{eltype(storage)}(undef, size(storage, 1))
+        buffer_per_thread = new_scratch_per_thread(create_buffer(), create_buffer, matrix, is_serial)
+        foreach_column_through_scratch(
+            visit,
+            (buffer, column_index) -> copyto!(buffer, view(storage, :, column_index)),
+            columns,
+            buffer_per_thread;
+            name,
+            policy,
+            weights,
+            progress,
+        )
+    else
+        parallel_loop_wo_rng(1:length(columns); name, policy, weights, progress) do position
+            column_index = columns[position]
+            visit(position, column_index, view(storage, :, column_index))
+            return nothing
+        end
+    end
+    return nothing
+end
+
+# The scratch of each thread, starting with the `first_scratch`, the rest made by `create_scratch`. A serial loop shares
+# the `first_scratch` between all threads. If it is nested inside another parallel loop, this allocation is inside that
+# loop, which invokes the `GLOBAL_INEFFICIENT_ACTION_HANDLER`.
+function new_scratch_per_thread(
+    first_scratch::Any,
+    create_scratch::Function,
+    matrix::AbstractMatrix,
+    is_serial::Bool,
+)::AbstractVector
+    if !is_serial
+        return [thread_index == 1 ? first_scratch : create_scratch() for thread_index in 1:maxthreadid()]
+    end
+    if is_in_parallel_loop()
+        handle_abnormal(GLOBAL_INEFFICIENT_ACTION_HANDLER) do
+            return """
+                allocating column scratch inside a parallel loop
+                for matrix: $(brief(matrix))
+                """
+        end
+    end
+    return fill(first_scratch, maxthreadid())
+end
+
+# Run `visit(position, column_index, column)` for each of the `columns`, where `read_column(scratch, column_index)`
+# returns the column, using the scratch of the current thread.
+function foreach_column_through_scratch(
+    visit::Function,
+    read_column::Function,
+    columns::AbstractVector{<:Integer},
+    scratch_per_thread::AbstractVector;
+    name::AbstractString,
+    policy::Symbol,
+    weights::Maybe{AbstractVector{<:Integer}},
+    progress::Maybe{AbstractProgress},
+)::Nothing
+    parallel_loop_wo_rng(1:length(columns); name, policy, weights, progress) do position
+        column_index = columns[position]
+        visit(position, column_index, read_column(scratch_per_thread[threadid()], column_index))
+        return nothing
+    end
+    return nothing
+end
+
+"""
+    column_scratch(matrix::AbstractMatrix)::Any
+
+The scratch [`parallel_foreach_column`](@ref) needs for reading the columns of the `matrix` one at a time through
+[`read_column!`](@ref), or `nothing` if it reads the matrix through [`plain_array`](@ref) instead. This is `nothing`
+except for a lazy matrix type (which reads its data on demand), which adds a method for both functions. Such a type
+returns `nothing` when all its data is already in memory, since `plain_array` then returns it without reading it.
+"""
+function column_scratch(::AbstractMatrix)::Any
+    return nothing
+end
+
+"""
+    read_column!(scratch::Any, matrix::AbstractMatrix, column_index::Integer)::AbstractVector
+
+Return the values of the column `column_index` of a lazy `matrix`, using the `scratch` from [`column_scratch`](@ref).
+The result is valid until the next call with the same `scratch`. See [`parallel_foreach_column`](@ref) for the kinds of
+columns it may return.
+"""
+function read_column! end
 
 function is_debug_enabled_for_caller(group::Maybe{Symbol} = nothing)
     if get(ENV, "JULIA_DEBUG", "") == ""

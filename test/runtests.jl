@@ -78,9 +78,64 @@ function TanayLabUtilities.MatrixLayouts.plain_array(
     return matrix.values
 end
 
+# A lazy matrix that reads its columns one at a time. Reading it element by element, or all of it, fails.
+struct LazyColumnsMatrix <: AbstractMatrix{Float64}
+    values::Matrix{Float64}
+    n_scratches::Threads.Atomic{Int}
+end
+
+Base.size(matrix::LazyColumnsMatrix) = size(matrix.values)
+
+function Base.getindex(::LazyColumnsMatrix, ::Int, ::Int)::Float64
+    return error("read a lazy matrix element by element")
+end
+
+function TanayLabUtilities.ParallelLoops.column_scratch(matrix::LazyColumnsMatrix)::Vector{Float64}
+    Threads.atomic_add!(matrix.n_scratches, 1)
+    return Vector{Float64}(undef, size(matrix, 1))
+end
+
+function TanayLabUtilities.ParallelLoops.read_column!(
+    scratch::Vector{Float64},
+    matrix::LazyColumnsMatrix,
+    column_index::Integer,
+)::Vector{Float64}
+    return copyto!(scratch, view(matrix.values, :, column_index))
+end
+
+# The sum of each of the `columns` of the `matrix`, computed by `parallel_foreach_column`.
+function column_sums(
+    matrix::AbstractMatrix;
+    columns::AbstractVector{<:Integer} = 1:size(matrix, 2),
+    kwargs...,
+)::Vector{Float64}
+    sums = zeros(length(columns))
+    parallel_foreach_column(matrix; columns, kwargs...) do position, _, column
+        sums[position] = sum(column)
+        return nothing
+    end
+    return sums
+end
+
+# Like `column_sums`, serially, into preallocated `sums`, so it allocates only what `parallel_foreach_column` does.
+function sum_columns!(sums::Vector{Float64}, matrix::AbstractMatrix, columns::AbstractVector{<:Integer})::Nothing
+    parallel_foreach_column(matrix; columns, policy = :serial) do position, _, column
+        sums[position] = sum(column)
+        return nothing
+    end
+    return nothing
+end
+
 @testset "doctests" begin
     DocMeta.setdocmeta!(TanayLabUtilities, :DocTestSetup, :(using TanayLabUtilities); recursive = true)
     return doctest(TanayLabUtilities; manual = false)
+end
+
+@testset "types" begin
+    maybe_value(is_present::Bool)::Maybe{Int} = is_present ? 1 : nothing
+    unsure_value(is_known::Bool)::Unsure{Int} = is_known ? 1 : missing
+    @test Base.return_types(maybe_value, (Bool,)) == [Maybe{Int}]
+    @test Base.return_types(unsure_value, (Bool,)) == [Unsure{Int}]
 end
 
 @testset "chi_squared" begin
@@ -931,6 +986,104 @@ end
             return nothing
         end
         @test progress.counter == n_items
+    end
+
+    @testset "parallel_foreach_column" begin
+        values = Float64[row + column / 10 for row in 1:7, column in 1:5]
+        expected_sums = vec(sum(values; dims = 1))
+        sparse_values = sparse(Float64[row == column || row == 7 ? row + column / 10 : 0 for row in 1:7, column in 1:5])
+        expected_sparse_sums = vec(sum(sparse_values; dims = 1))
+
+        @testset "dense columns are views of the storage" begin
+            @test column_sums(values) == expected_sums
+            @test column_sums(read_only_array(values)) == expected_sums
+            is_view_per_column = fill(false, 5)
+            parallel_foreach_column(read_only_array(values)) do _, column_index, column
+                is_view_per_column[column_index] = parent(column) === values
+                return nothing
+            end
+            @test all(is_view_per_column)
+        end
+
+        @testset "sparse columns are views of the storage" begin
+            @test column_sums(sparse_values) == expected_sparse_sums
+            is_view_per_column = fill(false, 5)
+            parallel_foreach_column(sparse_values) do _, column_index, column
+                is_view_per_column[column_index] = parent(nonzeros(column)) === nonzeros(sparse_values)
+                return nothing
+            end
+            @test all(is_view_per_column)
+        end
+
+        @testset "column subsets are visited by position" begin
+            @test column_sums(values; columns = [4, 2]) == expected_sums[[4, 2]]
+            @test column_sums(sparse_values; columns = [5, 1, 3]) == expected_sparse_sums[[5, 1, 3]]
+        end
+
+        @testset "strided views are kept unless contiguous" begin
+            strided_values = view(values, 1:2:7, :)
+            expected_strided_sums = vec(sum(strided_values; dims = 1))
+            @test column_sums(strided_values) == expected_strided_sums
+            @test column_sums(strided_values; contiguous = true) == expected_strided_sums
+            is_vector_per_column = fill(false, 5)
+            parallel_foreach_column(strided_values; contiguous = true) do _, column_index, column
+                is_vector_per_column[column_index] = column isa Vector{Float64}
+                return nothing
+            end
+            @test all(is_vector_per_column)
+        end
+
+        @testset "rows are read against the grain" begin
+            transposed_values = transpose(Matrix(transpose(values)))
+            transposed_sparse_values = transpose(SparseMatrixCSC(transpose(sparse_values)))
+            @test_throws "inefficient major axis: Rows" column_sums(transposed_values)
+            TanayLabUtilities.MatrixLayouts.GLOBAL_INEFFICIENT_ACTION_HANDLER = IgnoreHandler
+            try
+                @test column_sums(transposed_values) == expected_sums
+                @test column_sums(transposed_values; contiguous = true) == expected_sums
+                @test column_sums(transposed_sparse_values) == expected_sparse_sums
+            finally
+                TanayLabUtilities.MatrixLayouts.GLOBAL_INEFFICIENT_ACTION_HANDLER = ErrorHandler
+            end
+        end
+
+        @testset "lazy matrices are read through one scratch per thread" begin
+            lazy_values = LazyColumnsMatrix(values, Threads.Atomic{Int}(0))
+            @test column_sums(lazy_values) == expected_sums
+            @test lazy_values.n_scratches[] == (Threads.nthreads() == 1 ? 1 : Threads.maxthreadid())
+            lazy_values.n_scratches[] = 0
+            @test column_sums(lazy_values; policy = :serial) == expected_sums
+            @test lazy_values.n_scratches[] == 1
+        end
+
+        @testset "nested loops run serially and report only when they allocate" begin
+            n_outer = 2 * Threads.nthreads()
+            is_reported_per_outer = fill(false, n_outer)
+            sums_per_outer = Vector{Vector{Float64}}(undef, n_outer)
+            parallel_loop_wo_rng(1:n_outer; policy = :static) do outer_index
+                sums_per_outer[outer_index] = column_sums(values)
+                try
+                    column_sums(LazyColumnsMatrix(values, Threads.Atomic{Int}(0)))
+                catch exception
+                    is_reported_per_outer[outer_index] = contains(exception.msg, "allocating column scratch")
+                end
+                return nothing
+            end
+            @test all(sums == expected_sums for sums in sums_per_outer)
+            @test all(is_reported_per_outer) == (Threads.nthreads() > 1)
+        end
+
+        @testset "nothing is allocated per column" begin
+            wide_values = rand(7, 200)
+            sums = zeros(200)
+            for matrix in (wide_values, LazyColumnsMatrix(wide_values, Threads.Atomic{Int}(0)))
+                sum_columns!(sums, matrix, 1:10)
+                sum_columns!(sums, matrix, 1:200)
+                n_few_bytes = @allocated sum_columns!(sums, matrix, 1:10)
+                n_many_bytes = @allocated sum_columns!(sums, matrix, 1:200)
+                @test n_many_bytes - n_few_bytes < 1000
+            end
+        end
     end
 end
 

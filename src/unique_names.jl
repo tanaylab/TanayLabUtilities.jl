@@ -7,8 +7,8 @@ export unique_name
 
 using Distributed
 
-UNIQUE_NAME_PREFIXES = Dict{AbstractString, Int64}()
-UNIQUE_NAME_LOCK = ReentrantLock()
+const UNIQUE_NAME_PREFIXES = Dict{AbstractString, Int64}()
+const UNIQUE_NAME_LOCK = ReentrantLock()
 
 """
     unique_name(prefix::AbstractString, separator::AbstractString = "#")::AbstractString
@@ -81,7 +81,6 @@ function unique_name(prefix::AbstractString, separator::AbstractString = "#")::A
     end
 
     counter = lock(UNIQUE_NAME_LOCK) do
-        global UNIQUE_NAME_PREFIXES
         counter = get(UNIQUE_NAME_PREFIXES, prefix, 0)
         counter += 1
         UNIQUE_NAME_PREFIXES[prefix] = counter

@@ -47,10 +47,35 @@ mutable struct RUsage
     ru_nivcsw::Int64               # Involuntary context switches
 end
 
-FLAME_MEASUREMENTS_FILE = nothing
-FLAME_MEASUREMENTS_DICT = nothing
-FLAME_PREFIX = "Main"
-FLAME_MEASUREMENTS_LOCK = SpinLock()
+mutable struct SerialMeasurement
+    invocations::Int64
+    iterations::Int64
+    elapsed_ns::Int64
+    gc_ns::Int64
+    gc_full_sweeps::Int64
+    gc_pauses::Int64
+    user_cpu_us::Int64
+    system_cpu_us::Int64
+    soft_page_faults::Int64
+    hard_page_faults::Int64
+    read_blocks::Int64
+    write_blocks::Int64
+    voluntary_context_switches::Int64
+    involuntary_context_switches::Int64
+end
+
+mutable struct ParallelMeasurement
+    invocations::Int64
+    iterations::Int64
+    elapsed_ns::Int64
+    scaled_elapsed_ns::Int64
+end
+
+FLAME_MEASUREMENTS_FILE::Maybe{AbstractString} = nothing
+FLAME_MEASUREMENTS_DICT::Maybe{Dict{Tuple{AbstractString, Bool}, Union{SerialMeasurement, ParallelMeasurement}}} =
+    nothing
+FLAME_PREFIX::AbstractString = "Main"
+const FLAME_MEASUREMENTS_LOCK = SpinLock()
 
 function __init__()::Nothing
     path = get(ENV, "TLU_FLAME_MEASUREMENTS_FILE", nothing)
@@ -63,11 +88,11 @@ function __init__()::Nothing
         FLAME_MEASUREMENTS_DICT =  # UNTESTED
             Dict{Tuple{AbstractString, Bool}, Union{SerialMeasurement, ParallelMeasurement}}()
         FLAME_MEASUREMENTS_FILE = path  # NOLINT # UNTESTED
-        FLAME_PREFIX = Base.source_path()  # UNTESTED
-        if FLAME_PREFIX === nothing  # UNTESTED
+        source_path = Base.source_path()  # UNTESTED
+        if source_path === nothing  # UNTESTED
             FLAME_PREFIX = "Main"  # UNTESTED
         else
-            FLAME_PREFIX = Base.basename(FLAME_PREFIX)  # UNTESTED
+            FLAME_PREFIX = Base.basename(source_path)  # UNTESTED
         end
         @info "Will append flameview measurements into: $(path) under: $(FLAME_PREFIX)" _group = :tlu_env  # UNTESTED
         atexit(__end__)  # UNTESTED
@@ -76,10 +101,12 @@ function __init__()::Nothing
 end
 
 function __end__()::Nothing
-    @assert FLAME_MEASUREMENTS_DICT !== nothing
-    @assert FLAME_MEASUREMENTS_FILE !== nothing
-    open(FLAME_MEASUREMENTS_FILE, "a") do file
-        for ((stack, is_in_parallel), measurement) in FLAME_MEASUREMENTS_DICT
+    measurements_dict = FLAME_MEASUREMENTS_DICT
+    measurements_file = FLAME_MEASUREMENTS_FILE
+    @assert measurements_dict !== nothing
+    @assert measurements_file !== nothing
+    open(measurements_file, "a") do file
+        for ((stack, is_in_parallel), measurement) in measurements_dict
             print(file, "$(stack) $(is_in_parallel)")
             if is_in_parallel
                 @assert measurement isa ParallelMeasurement
@@ -128,23 +155,6 @@ function get_rusage()  # UNTESTED
     return rusage[]
 end
 
-mutable struct SerialMeasurement
-    invocations::Int64
-    iterations::Int64
-    elapsed_ns::Int64
-    gc_ns::Int64
-    gc_full_sweeps::Int64
-    gc_pauses::Int64
-    user_cpu_us::Int64
-    system_cpu_us::Int64
-    soft_page_faults::Int64
-    hard_page_faults::Int64
-    read_blocks::Int64
-    write_blocks::Int64
-    voluntary_context_switches::Int64
-    involuntary_context_switches::Int64
-end
-
 function Base.copy(measurement::SerialMeasurement)::SerialMeasurement  # UNTESTED
     return SerialMeasurement(
         measurement.invocations,
@@ -188,13 +198,6 @@ end
 
 function sort_weight(measurement::SerialMeasurement)::Int64  # UNTESTED
     return measurement.elapsed_ns
-end
-
-mutable struct ParallelMeasurement
-    invocations::Int64
-    iterations::Int64
-    elapsed_ns::Int64
-    scaled_elapsed_ns::Int64
 end
 
 function Base.copy(measurement::ParallelMeasurement)::ParallelMeasurement  # UNTESTED
@@ -699,7 +702,7 @@ function measurement_text(  # UNTESTED
     return join(texts)
 end
 
-DID_WARN_ABOUT_EXPENSIVE_OPERATIONS_IN_PARALLEL = Set{Tuple{AbstractString, AbstractString}}()
+const DID_WARN_ABOUT_EXPENSIVE_OPERATIONS_IN_PARALLEL = Set{Tuple{AbstractString, AbstractString}}()
 
 function warn_about_expensive_operation_in_parallel(name::AbstractString)::Nothing  # UNTESTED
     private_storage = task_local_storage()

@@ -25,7 +25,7 @@ export mmap_with_small_pages
 
 import Mmap
 
-IS_OLD_LINUX_KERNEL = false
+IS_OLD_LINUX_KERNEL::Bool = false
 
 function __init__()::Nothing
     global IS_OLD_LINUX_KERNEL

@@ -43,11 +43,11 @@ Otherwise this can be set to the number of seconds to hold cache entries for. A 
 significantly improve performance while still allowing multiple processes to (eventually) react to external changes to
 the file system. This is provided for completeness.
 """
-IS_PATH_CACHE_TIMEOUT = -1
+IS_PATH_CACHE_TIMEOUT::Float64 = -1
 
-IS_PATH_CACHE_LOCK = MostlyReadWriteLock()
+const IS_PATH_CACHE_LOCK = MostlyReadWriteLock()
 
-IS_PATH_CACHE_DICT = SortedDict{AbstractString, Union{DirectoryFiles, DirectoryRedirect}}()
+const IS_PATH_CACHE_DICT = SortedDict{AbstractString, Union{DirectoryFiles, DirectoryRedirect}}()
 
 function __init__()::Nothing
     timeout = get(ENV, "TLU_IS_PATH_CACHE_TIMEOUT", nothing)

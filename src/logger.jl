@@ -187,7 +187,7 @@ function logged_wrapper(  # UNTESTED
     )
 end
 
-NEXT_TASK_ID = Atomic{Int}(1)
+const NEXT_TASK_ID = Atomic{Int}(1)
 
 function metafmt(
     show_time::Bool,

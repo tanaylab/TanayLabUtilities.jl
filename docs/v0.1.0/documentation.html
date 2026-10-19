@@ -153,6 +153,10 @@
 </a>
 </li>
 <li>
+<a class="tocitem" href="sparse_columns.html">Sparse Columns
+</a>
+</li>
+<li>
 <a class="tocitem" href="cross_validations.html">Cross Validations
 </a>
 </li>
@@ -274,7 +278,9 @@ end
 <a href="documentation.html#TanayLabUtilities.Documentation.function_default">
 <code>function_default
 </code>
-</a>, etc.
+</a>, etc. A default which refers to other arguments (e.g., 
+<code>title = name
+</code>) can only be computed when the function is called, so it isn&#39;t stashed.
 </p>
 <pre>
 <code class="language-julia hljs">@doc &quot;Foo, default x: $(DEFAULT.x), default y: $(DEFAULT.y).&quot; @documented function foo(

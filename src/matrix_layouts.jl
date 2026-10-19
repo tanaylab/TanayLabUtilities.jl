@@ -32,6 +32,7 @@ export Columns
 export Rows
 export axis_name
 export base_array
+export is_contiguous_array
 export major_axis
 export minor_axis
 export other_axis
@@ -65,13 +66,13 @@ using SparseArrays
 A symbolic name for the rows axis. It is more readable to write, say, `size(matrix, Rows)`, instead of
 `size(matrix, 1)`.
 """
-Rows = 1
+const Rows = 1
 
 """
-A symbolic name for the rows axis. It is more readable to write, say, `size(matrix, Columns)`, instead of
+A symbolic name for the columns axis. It is more readable to write, say, `size(matrix, Columns)`, instead of
 `size(matrix, 2)`.
 """
-Columns = 2
+const Columns = 2
 
 """
     axis_name(axis::Maybe{Integer})::String
@@ -325,11 +326,11 @@ other_axis(3)
 ERROR: invalid matrix axis: 3
 ```
 """
-function other_axis(axis::Maybe{Integer})::Maybe{Int8}
-    if axis === nothing
-        return nothing
-    end
+function other_axis(::Nothing)::Nothing
+    return nothing
+end
 
+function other_axis(axis::Integer)::Int8
     if axis == Rows || axis == Columns
         return Int8(3 - axis)
     end
@@ -1766,7 +1767,27 @@ function plain_copy(array::AbstractArray)::AbstractArray
     end
 end
 
-# Whether the elements of the strided `array` are adjacent in memory, in column-major order.
+"""
+    is_contiguous_array(array::AbstractArray)::Bool
+
+Whether the elements of the `array` are adjacent in memory, in column-major order. This is `false` for any array that
+isn't strided (e.g. a transpose, or a lazy array).
+
+```jldoctest
+matrix = [1 2 3; 4 5 6]
+@assert is_contiguous_array(matrix)
+@assert is_contiguous_array(view(matrix, :, 2:3))
+@assert !is_contiguous_array(view(matrix, 1, :))
+@assert !is_contiguous_array(transpose(matrix))
+
+# output
+
+```
+"""
+function is_contiguous_array(::AbstractArray)::Bool
+    return false
+end
+
 function is_contiguous_array(array::StridedArray)::Bool
     expected_stride = 1
     for dimension in 1:ndims(array)
