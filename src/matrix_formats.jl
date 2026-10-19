@@ -107,11 +107,14 @@ end
 
 function brief_array(array::AbstractArray, prefixes::Vector{String}; transposed::Bool)::String
     if issparse(array)
-        push!(
-            prefixes,
-            "Sparse $(delimited_number(nnz(array))) ($(percent(nnz(array), length(array)))) " *
-            "[$(SparseArrays.indtype(array))]",
-        )
+        # A view of some of the rows of a sparse matrix has no `nnz`, since counting would scan all its stored values.
+        if hasmethod(nnz, Tuple{typeof(array)})
+            n_stored = nnz(array)
+            stored = "$(delimited_number(n_stored)) ($(percent(n_stored, length(array))))"
+        else
+            stored = "?"
+        end
+        push!(prefixes, "Sparse $(stored) [$(SparseArrays.indtype(array))]")
         return format_brief_array(array, prefixes; transposed)
     else
         push!(prefixes, string(nameof(typeof(array))))

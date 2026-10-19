@@ -1267,6 +1267,13 @@ end
 @testset "matrix_formats" begin
     using NamedArrays
 
+    @testset "brief of a view of a sparse matrix" begin
+        sparse_matrix = sparse([0 1 0; 2 0 3])
+        @test brief(view(sparse_matrix, [2, 1], :)) == "2 x 3 x Int64 in Columns (Sparse ? [Int64])"
+        @test brief(view(sparse_matrix, 1:2, :)) == "2 x 3 x Int64 in Columns (Sparse ? [Int64])"
+        @test brief(view(sparse_matrix, :, 3)) == "2 x Int64 (Sparse 1 (50%) [Int64])"
+    end
+
     matrix = sparse([0 1 0; 2 0 3])
 
     @testset "sparse queries see through wrappers" begin
