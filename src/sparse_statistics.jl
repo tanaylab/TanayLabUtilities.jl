@@ -48,6 +48,10 @@ using ..ParallelLoops
 using ..Types
 
 import ..MatrixLayouts.check_efficient_action
+import ..ParallelLoops.is_serial_loop
+import ..ParallelLoops.new_scratch_per_thread
+import Base.Threads.threadid
+import SparseArrays.SparseVectorUnion
 
 """
     sparse_quantile(
@@ -82,14 +86,15 @@ of the stored non-zero values.
 If `positive` is `true`, all input values are assumed to be non-negative; this lets the implementation skip the scan
 that locates the boundary between negative and non-negative values. No validation is performed on this assumption.
 
-If `scratch` is given, no allocation is performed. The required `scratch` length is `nnz(input)` for sparse data and
-`length(input)` for dense vectors (or `n_rows * n_columns` for dense matrices). If `result` is given for the matrix
-variant (length `n_columns` for `dims = Rows`, or `n_rows` for `dims = Columns`), no result allocation is performed
-either.
+If `scratch` is given for a `vector`, or for a whole `matrix` (without `dims`), no allocation is performed. The required
+`scratch` length is `nnz(input)` for sparse data and `length(input)` for dense data. A `scratch` can't be given with
+`dims`, which allocates its own buffers (one column per thread for `dims = Rows`). If `result` is given for the matrix
+variant (length `n_columns` for `dims = Rows`, or `n_rows` for `dims = Columns`), no result allocation is performed.
 
-When operating on a `matrix`, the iteration is parallelized via [`parallel_loop_wo_rng`](@ref). Operating against the
-[`major_axis`](@ref) of a sparse `matrix` will trigger the [`GLOBAL_INEFFICIENT_ACTION_HANDLER`](@ref) and fall back to
-allocating per-iteration views.
+When operating on a `matrix`, the iteration is parallelized. The columns (`dims = Rows`) are read via
+[`parallel_foreach_column`](@ref), so a lazy `matrix` is read one column at a time. The rows (`dims = Columns`) are read
+via [`parallel_loop_wo_rng`](@ref). Operating against the [`major_axis`](@ref) of a `matrix` will trigger the
+[`GLOBAL_INEFFICIENT_ACTION_HANDLER`](@ref).
 
 If `progress` is given (matrix variant only), it is advanced once per processed slice; that is, by `n_columns` ticks
 when `dims = Rows`, and by `n_rows` ticks when `dims = Columns`. The `progress_chunk` is passed through to
@@ -277,8 +282,10 @@ The implementation runs Welford's algorithm over the stored non-zero values and 
 stream `(n_zero, 0, 0)` using the standard pairwise variance combiner. This is `O(nnz)` for sparse inputs, numerically
 stable, and allocation-free apart from the result vector. No `scratch` buffer is needed.
 
-When operating on a `matrix`, the iteration is parallelized via [`parallel_loop_wo_rng`](@ref). Operating against the
-[`major_axis`](@ref) of a sparse `matrix` will trigger the [`GLOBAL_INEFFICIENT_ACTION_HANDLER`](@ref).
+When operating on a `matrix`, the iteration is parallelized. The columns (`dims = Rows`) are read via
+[`parallel_foreach_column`](@ref), so a lazy `matrix` is read one column at a time. The rows (`dims = Columns`) are read
+via [`parallel_loop_wo_rng`](@ref). Operating against the [`major_axis`](@ref) of a `matrix` will trigger the
+[`GLOBAL_INEFFICIENT_ACTION_HANDLER`](@ref).
 
 If `progress` is given (matrix variant only), it is advanced once per processed slice (`n_columns` ticks for
 `dims = Rows`, `n_rows` for `dims = Columns`). The `progress_chunk` is passed through to [`parallel_loop_wo_rng`](@ref).
@@ -423,11 +430,6 @@ function compute_sparse_var_of_matrix(
     progress_chunk::Maybe{Integer},
 )::AbstractVector{<:AbstractFloat}
     n_rows, n_columns = size(matrix)
-    process_axis = other_axis(dims)
-    if major_axis(matrix) !== nothing
-        check_efficient_action(@source_location()..., "matrix", matrix, process_axis)
-    end
-
     result_length = dims == Rows ? n_columns : n_rows
     if result === nothing
         result = Vector{Float64}(undef, result_length)
@@ -435,69 +437,70 @@ function compute_sparse_var_of_matrix(
         @assert length(result) == result_length "result length: $(length(result)) is not the expected: $(result_length)"
     end
 
-    if issparse(matrix) && major_axis(matrix) == process_axis
-        compute_sparse_var_of_sparse_matrix!(result, plain_array(matrix), corrected; dims, progress, progress_chunk)
-    else
-        compute_sparse_var_of_dense_matrix!(result, matrix, corrected; dims, progress, progress_chunk)
+    if dims == Rows
+        parallel_foreach_column(matrix; name = "sparse_var", progress, progress_chunk) do _, column_index, column
+            result[column_index] = welford_variance(stored_column_values(column), n_rows, corrected)
+            return nothing
+        end
+        return result
     end
 
+    if major_axis(matrix) !== nothing
+        check_efficient_action(@source_location()..., "matrix", matrix, Rows)
+    end
+    if issparse(matrix) && major_axis(matrix) == Rows
+        compute_sparse_var_of_sparse_rows!(result, plain_array(matrix), corrected; progress, progress_chunk)
+    else
+        compute_sparse_var_of_dense_rows!(result, matrix, corrected; progress, progress_chunk)
+    end
     return result
 end
 
-function compute_sparse_var_of_sparse_matrix!(
+# The values of a `parallel_foreach_column` column which may be non-zero: all the values of a dense column, or the
+# stored values of a sparse one.
+function stored_column_values(column::AbstractVector)::AbstractVector
+    return column
+end
+
+function stored_column_values(column::SparseVectorUnion)::AbstractVector
+    return nonzeros(column)
+end
+
+function compute_sparse_var_of_sparse_rows!(
     result::AbstractVector{<:AbstractFloat},
     matrix::AbstractMatrix{<:Real},
     corrected::Bool;
-    dims::Integer,
     progress::Maybe{AbstractProgress},
     progress_chunk::Maybe{Integer},
 )::Nothing
     n_rows, n_columns = size(matrix)
-    if dims == Rows
-        column_major_matrix = matrix
-        n_iterations = n_columns
-        n_total_per_iteration = n_rows
-    else
-        column_major_matrix = flip(matrix)
-        n_iterations = n_rows
-        n_total_per_iteration = n_columns
-    end
-
+    column_major_matrix = flip(matrix)
     column_offsets = colptr(column_major_matrix)
     nonzero_values = nzval(column_major_matrix)
 
-    parallel_loop_wo_rng(1:n_iterations; name = "sparse_var", progress, progress_chunk) do iteration_index
-        slice_first = Int(column_offsets[iteration_index])
-        slice_last = Int(column_offsets[iteration_index + 1]) - 1
+    parallel_loop_wo_rng(1:n_rows; name = "sparse_var", progress, progress_chunk) do row_index
+        slice_first = Int(column_offsets[row_index])
+        slice_last = Int(column_offsets[row_index + 1]) - 1
         @views slice = nonzero_values[slice_first:slice_last]
-        result[iteration_index] = welford_variance(slice, n_total_per_iteration, corrected)
+        result[row_index] = welford_variance(slice, n_columns, corrected)
         return nothing
     end
 
     return nothing
 end
 
-function compute_sparse_var_of_dense_matrix!(
+function compute_sparse_var_of_dense_rows!(
     result::AbstractVector{<:AbstractFloat},
     matrix::AbstractMatrix{<:Real},
     corrected::Bool;
-    dims::Integer,
     progress::Maybe{AbstractProgress},
     progress_chunk::Maybe{Integer},
 )::Nothing
     n_rows, n_columns = size(matrix)
-    if dims == Rows
-        parallel_loop_wo_rng(1:n_columns; name = "sparse_var", progress, progress_chunk) do column_index
-            @views slice = matrix[:, column_index]
-            result[column_index] = welford_variance(slice, n_rows, corrected)
-            return nothing
-        end
-    else
-        parallel_loop_wo_rng(1:n_rows; name = "sparse_var", progress, progress_chunk) do row_index
-            @views slice = matrix[row_index, :]
-            result[row_index] = welford_variance(slice, n_columns, corrected)
-            return nothing
-        end
+    parallel_loop_wo_rng(1:n_rows; name = "sparse_var", progress, progress_chunk) do row_index
+        @views slice = matrix[row_index, :]
+        result[row_index] = welford_variance(slice, n_columns, corrected)
+        return nothing
     end
     return nothing
 end
@@ -599,11 +602,7 @@ function compute_sparse_quantile_of_matrix(
     progress_chunk::Maybe{Integer},
 )::AbstractVector{<:AbstractFloat}
     n_rows, n_columns = size(matrix)
-    process_axis = other_axis(dims)
-    if major_axis(matrix) !== nothing
-        check_efficient_action(@source_location()..., "matrix", matrix, process_axis)
-    end
-
+    @assert scratch === nothing "a scratch is only used for a vector or for a whole matrix (without dims)"
     result_length = dims == Rows ? n_columns : n_rows
     if result === nothing
         result = Vector{Float64}(undef, result_length)
@@ -611,110 +610,78 @@ function compute_sparse_quantile_of_matrix(
         @assert length(result) == result_length "result length: $(length(result)) is not the expected: $(result_length)"
     end
 
-    if issparse(matrix) && major_axis(matrix) == process_axis
-        compute_sparse_quantile_of_sparse_matrix!(
-            result,
-            plain_array(matrix),
-            p;
-            dims,
-            positive,
-            scratch,
-            progress,
-            progress_chunk,
+    if dims == Rows
+        create_buffer = () -> Vector{Float64}(undef, n_rows)
+        buffer_per_thread = new_scratch_per_thread(
+            create_buffer(),
+            create_buffer,
+            matrix,
+            is_serial_loop(:greedy_sticky);
+            report = false,  # TODOX
         )
-    else
-        compute_sparse_quantile_of_dense_matrix!(result, matrix, p; dims, positive, scratch, progress, progress_chunk)
+        parallel_foreach_column(matrix; name = "sparse_quantile", progress, progress_chunk) do _, column_index, column
+            values = stored_column_values(column)
+            n_values = length(values)
+            @views buffer = buffer_per_thread[threadid()][1:n_values]
+            copyto!(buffer, values)
+            result[column_index] = sparse_quantile_from_buffer!(buffer, n_values, n_rows - n_values, p, positive)
+            return nothing
+        end
+        return result
     end
 
+    if major_axis(matrix) !== nothing
+        check_efficient_action(@source_location()..., "matrix", matrix, Rows)
+    end
+    if issparse(matrix) && major_axis(matrix) == Rows
+        compute_sparse_quantile_of_sparse_rows!(result, plain_array(matrix), p; positive, progress, progress_chunk)
+    else
+        compute_sparse_quantile_of_dense_rows!(result, matrix, p; positive, progress, progress_chunk)
+    end
     return result
 end
 
-function compute_sparse_quantile_of_sparse_matrix!(
+function compute_sparse_quantile_of_sparse_rows!(
     result::AbstractVector{<:AbstractFloat},
     matrix::AbstractMatrix{<:Real},
     p::Real;
-    dims::Integer,
     positive::Bool,
-    scratch::Maybe{AbstractVector{<:AbstractFloat}},
     progress::Maybe{AbstractProgress},
     progress_chunk::Maybe{Integer},
 )::Nothing
     n_rows, n_columns = size(matrix)
-    if dims == Rows
-        column_major_matrix = matrix
-        n_iterations = n_columns
-        n_total_per_iteration = n_rows
-    else
-        column_major_matrix = flip(matrix)
-        n_iterations = n_rows
-        n_total_per_iteration = n_columns
-    end
-
+    column_major_matrix = flip(matrix)
     column_offsets = colptr(column_major_matrix)
-    nonzero_values = nzval(column_major_matrix)
-    n_nonzero = length(nonzero_values)
+    scratch = Vector{Float64}(nzval(column_major_matrix))
 
-    if scratch === nothing
-        scratch = Vector{Float64}(undef, n_nonzero)
-    else
-        @assert length(scratch) >= n_nonzero "scratch length: $(length(scratch)) is below required: $(n_nonzero)"
-    end
-
-    @views scratch[1:n_nonzero] .= nonzero_values
-
-    parallel_loop_wo_rng(1:n_iterations; name = "sparse_quantile", progress, progress_chunk) do iteration_index
-        slice_first = Int(column_offsets[iteration_index])
-        slice_last = Int(column_offsets[iteration_index + 1]) - 1
+    parallel_loop_wo_rng(1:n_rows; name = "sparse_quantile", progress, progress_chunk) do row_index
+        slice_first = Int(column_offsets[row_index])
+        slice_last = Int(column_offsets[row_index + 1]) - 1
         slice_length = slice_last - slice_first + 1
         @views slice = scratch[slice_first:slice_last]
-        n_implicit_zero = n_total_per_iteration - slice_length
-        result[iteration_index] = sparse_quantile_from_buffer!(slice, slice_length, n_implicit_zero, p, positive)
+        n_implicit_zero = n_columns - slice_length
+        result[row_index] = sparse_quantile_from_buffer!(slice, slice_length, n_implicit_zero, p, positive)
         return nothing
     end
 
     return nothing
 end
 
-function compute_sparse_quantile_of_dense_matrix!(
+function compute_sparse_quantile_of_dense_rows!(
     result::AbstractVector{<:AbstractFloat},
     matrix::AbstractMatrix{<:Real},
     p::Real;
-    dims::Integer,
     positive::Bool,
-    scratch::Maybe{AbstractVector{<:AbstractFloat}},
     progress::Maybe{AbstractProgress},
     progress_chunk::Maybe{Integer},
 )::Nothing
     n_rows, n_columns = size(matrix)
-    if dims == Rows
-        n_iterations = n_columns
-        slice_length = n_rows
-    else
-        n_iterations = n_rows
-        slice_length = n_columns
-    end
+    scratch = Matrix{Float64}(undef, n_columns, n_rows)
+    transpose!(scratch, matrix)
 
-    n_required_scratch = slice_length * n_iterations
-    if scratch === nothing
-        scratch = Vector{Float64}(undef, n_required_scratch)
-    else
-        @assert length(scratch) >= n_required_scratch (
-            "scratch length: $(length(scratch)) is below required: $(n_required_scratch)"
-        )
-    end
-
-    @views scratch_matrix = reshape(scratch[1:n_required_scratch], slice_length, n_iterations)
-    if dims == Rows
-        copyto!(scratch_matrix, matrix)
-    else
-        transpose!(scratch_matrix, matrix)
-    end
-
-    parallel_loop_wo_rng(1:n_iterations; name = "sparse_quantile", progress, progress_chunk) do iteration_index
-        slice_first = (iteration_index - 1) * slice_length + 1
-        slice_last = iteration_index * slice_length
-        @views slice = scratch[slice_first:slice_last]
-        result[iteration_index] = sparse_quantile_from_buffer!(slice, slice_length, 0, p, positive)
+    parallel_loop_wo_rng(1:n_rows; name = "sparse_quantile", progress, progress_chunk) do row_index
+        @views slice = scratch[:, row_index]
+        result[row_index] = sparse_quantile_from_buffer!(slice, n_columns, 0, p, positive)
         return nothing
     end
 

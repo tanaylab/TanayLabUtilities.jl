@@ -9,8 +9,10 @@ when few rows are wanted, and like a walk of the column when most rows are wante
 
 The position of a wanted row is its index in the vector of wanted rows. Callers use it to index their own buffers.
 
-These functions take a plain `SparseMatrixCSC`. A caller with a lazy matrix converts it once, outside its loop, using
-`plain_array` for all of it or `matrix[:, columns]` for a few of its columns.
+These functions take a plain `SparseMatrixCSC` and a column index. A caller with a lazy matrix converts it once, outside
+its loop, using `plain_array` for all of it or `matrix[:, columns]` for a few of its columns. Most of them also take a
+single sparse column (a `SparseVector`, or a view of a column of a `SparseMatrixCSC`), such as the columns
+[`parallel_foreach_column`](@ref) gives, which reads a lazy matrix one column at a time.
 """
 module SparseColumns
 
@@ -20,6 +22,8 @@ export sum_sparse_columns_per_group!
 
 using SparseArrays
 
+import SparseArrays.SparseVectorUnion
+
 """
     stored_values_at_rows(
         matrix::SparseMatrixCSC,
@@ -27,10 +31,15 @@ using SparseArrays
         row_indices::AbstractVector{<:Integer},
     )
 
-Iterate on the stored values of one column of a sparse `matrix`, in some of its rows. The wanted `row_indices` must be
-sorted in increasing order, with no repetitions. This yields `(position, value)` for each wanted row that has a stored
-value, where `position` is the index of the row in `row_indices`. Wanted rows that have no stored value (that is, are
-zero) are skipped.
+    stored_values_at_rows(
+        column::SparseArrays.SparseVectorUnion,
+        row_indices::AbstractVector{<:Integer},
+    )
+
+Iterate on the stored values of one column of a sparse `matrix`, or of a sparse `column` (a `SparseVector`, or a view
+of a column of a `SparseMatrixCSC`), in some of its rows. The wanted `row_indices` must be sorted in increasing order,
+with no repetitions. This yields `(position, value)` for each wanted row that has a stored value, where `position` is
+the index of the row in `row_indices`. Wanted rows that have no stored value (that is, are zero) are skipped.
 
 ```jldoctest
 using SparseArrays
@@ -40,6 +49,7 @@ matrix = sparse([0 1; 2 0; 3 4; 0 5])
 
 @assert collect(stored_values_at_rows(matrix, 1, [1, 3, 4])) == [(2, 3)]
 @assert collect(stored_values_at_rows(matrix, 2, [1, 3, 4])) == [(1, 1), (2, 4), (3, 5)]
+@assert collect(stored_values_at_rows(view(matrix, :, 2), [1, 3, 4])) == [(1, 1), (2, 4), (3, 5)]
 
 # output
 
@@ -51,11 +61,17 @@ function stored_values_at_rows(
     row_indices::AbstractVector{<:Integer},
 )::StoredValuesAtRows
     @assert issorted(row_indices; lt = <=) "row indices are not strictly increasing"
-    return StoredValuesAtRows(matrix, nzrange(matrix, column_index), row_indices)
+    return StoredValuesAtRows(rowvals(matrix), nonzeros(matrix), nzrange(matrix, column_index), row_indices)
 end
 
-struct StoredValuesAtRows{T, M <: SparseMatrixCSC{T}, R <: AbstractVector{<:Integer}}
-    matrix::M
+function stored_values_at_rows(column::SparseVectorUnion, row_indices::AbstractVector{<:Integer})::StoredValuesAtRows
+    @assert issorted(row_indices; lt = <=) "row indices are not strictly increasing"
+    return StoredValuesAtRows(SparseArrays.nonzeroinds(column), nonzeros(column), 1:nnz(column), row_indices)
+end
+
+struct StoredValuesAtRows{T, I <: AbstractVector{<:Integer}, V <: AbstractVector{T}, R <: AbstractVector{<:Integer}}
+    row_index_per_stored::I
+    value_per_stored::V
     stored_indices::UnitRange{Int}
     row_indices::R
 end
@@ -71,13 +87,13 @@ function Base.iterate(
     state::Tuple{Int, Int} = (1, first(iterator.stored_indices)),
 )::Union{Nothing, Tuple{Tuple{Int, T}, Tuple{Int, Int}}} where {T}
     position, stored_index = state
-    row_index_per_stored = rowvals(iterator.matrix)
+    row_index_per_stored = iterator.row_index_per_stored
     last_stored_index = last(iterator.stored_indices)
     @inbounds while position <= length(iterator.row_indices) && stored_index <= last_stored_index
         row_index = iterator.row_indices[position]
         stored_index = first_stored_index_at_or_after(row_index_per_stored, stored_index, last_stored_index, row_index)
         if stored_index <= last_stored_index && row_index_per_stored[stored_index] == row_index
-            return ((position, nonzeros(iterator.matrix)[stored_index]), (position + 1, stored_index + 1))
+            return ((position, iterator.value_per_stored[stored_index]), (position + 1, stored_index + 1))
         end
         position += 1
     end
@@ -114,9 +130,16 @@ end
         row_indices::AbstractVector{<:Integer},
     )::Bool
 
-Gather the values of one column of a sparse `matrix`, in some of its rows, into a dense `destination`. The wanted
-`row_indices` must be sorted in increasing order, with no repetitions. The value of each wanted row is placed in the
-`destination` at the row's position in `row_indices`. Returns whether any of the gathered values is non-zero.
+    gather_sparse_column!(
+        destination::AbstractVector,
+        column::SparseArrays.SparseVectorUnion,
+        row_indices::AbstractVector{<:Integer},
+    )::Bool
+
+Gather the values of one column of a sparse `matrix`, or of a sparse `column`, in some of its rows, into a dense
+`destination`. The wanted `row_indices` must be sorted in increasing order, with no repetitions. The value of each
+wanted row is placed in the `destination` at the row's position in `row_indices`. Returns whether any of the gathered
+values is non-zero.
 
 ```jldoctest
 using SparseArrays
@@ -132,6 +155,9 @@ destination = Vector{Int}(undef, 1)
 @assert !gather_sparse_column!(destination, matrix, 2, [2])
 @assert destination == [0]
 
+@assert gather_sparse_column!(destination, view(matrix, :, 2), [3])
+@assert destination == [4]
+
 # output
 
 ```
@@ -142,10 +168,23 @@ function gather_sparse_column!(
     column_index::Integer,
     row_indices::AbstractVector{<:Integer},
 )::Bool
-    @assert length(destination) == length(row_indices)
+    return gather_stored_values!(destination, stored_values_at_rows(matrix, column_index, row_indices))
+end
+
+function gather_sparse_column!(
+    destination::AbstractVector,
+    column::SparseVectorUnion,
+    row_indices::AbstractVector{<:Integer},
+)::Bool
+    return gather_stored_values!(destination, stored_values_at_rows(column, row_indices))
+end
+
+# Gather the `stored_values` of the wanted rows into the `destination`, which has an entry per wanted row.
+function gather_stored_values!(destination::AbstractVector, stored_values::StoredValuesAtRows)::Bool
+    @assert length(destination) == length(stored_values.row_indices)
     fill!(destination, 0)
     is_any_nonzero = false
-    for (position, value) in stored_values_at_rows(matrix, column_index, row_indices)
+    for (position, value) in stored_values
         destination[position] = value
         is_any_nonzero |= !iszero(value)
     end

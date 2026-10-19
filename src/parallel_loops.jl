@@ -468,6 +468,7 @@ end
         policy::Symbol = :greedy_sticky,
         weights::Maybe{AbstractVector{<:Integer}} = nothing,
         progress::Maybe{AbstractProgress} = nothing,
+        progress_chunk::Maybe{Integer} = nothing,
     )::Nothing
 
 Run `visit(position, column_index, column)` in parallel for each of the `columns` of the `matrix`. The `position` is the
@@ -493,8 +494,9 @@ Buffers are allocated before the loop, one per thread, and dropped after it. The
 another parallel loop, it runs serially (see [`parallel_loop_wo_rng`](@ref)) and allocates a single buffer. Since this
 allocates inside the other loop, it invokes the [`GLOBAL_INEFFICIENT_ACTION_HANDLER`](@ref).
 
-For a sparse matrix, the `weights` default to the number of stored values in each of the `columns`. The `weights`, the
-`name`, the `policy` and the `progress` are passed to [`parallel_loop_wo_rng`](@ref).
+For a sparse matrix, the `weights` default to the number of stored values in each of the `columns`, unless a
+`progress_chunk` is given. The `weights`, the `name`, the `policy`, the `progress` and the `progress_chunk` are passed
+to [`parallel_loop_wo_rng`](@ref).
 
 ```jldoctest
 using SparseArrays
@@ -520,6 +522,7 @@ function parallel_foreach_column(
     policy::Symbol = :greedy_sticky,
     weights::Maybe{AbstractVector{<:Integer}} = nothing,
     progress::Maybe{AbstractProgress} = nothing,
+    progress_chunk::Maybe{Integer} = nothing,
 )::Nothing
     @assert policy in (:greedy_sticky, :static, :serial)
     if isempty(columns)
@@ -527,11 +530,11 @@ function parallel_foreach_column(
     end
 
     base_matrix = base_array(matrix)
-    if weights === nothing && base_matrix isa AbstractSparseMatrixCSC
+    if weights === nothing && progress_chunk === nothing && base_matrix isa AbstractSparseMatrixCSC
         column_pointers = SparseArrays.getcolptr(base_matrix)
         weights = [Int(column_pointers[column_index + 1] - column_pointers[column_index]) for column_index in columns]
     end
-    is_serial = policy == :serial || nthreads() == 1 || is_in_parallel_loop()
+    is_serial = is_serial_loop(policy)
 
     scratch = column_scratch(base_matrix)
     if scratch !== nothing
@@ -545,6 +548,7 @@ function parallel_foreach_column(
             policy,
             weights,
             progress,
+            progress_chunk,
         )
         return nothing
     end
@@ -554,8 +558,25 @@ function parallel_foreach_column(
     if issparse(storage) && major_axis(storage) != Columns
         storage = SparseMatrixCSC(storage)
     end
-    foreach_plain_column(visit, storage, matrix, columns, contiguous, is_serial; name, policy, weights, progress)
+    foreach_plain_column(
+        visit,
+        storage,
+        matrix,
+        columns,
+        contiguous,
+        is_serial;
+        name,
+        policy,
+        weights,
+        progress,
+        progress_chunk,
+    )
     return nothing
+end
+
+# Whether a parallel loop with the `policy` runs serially, which is also the case inside another parallel loop.
+function is_serial_loop(policy::Symbol)::Bool
+    return policy == :serial || nthreads() == 1 || is_in_parallel_loop()
 end
 
 # Run `visit(position, column_index, column)` for each of the `columns` of the plain `storage` of the `matrix`, where
@@ -571,6 +592,7 @@ function foreach_plain_column(
     policy::Symbol,
     weights::Maybe{AbstractVector{<:Integer}},
     progress::Maybe{AbstractProgress},
+    progress_chunk::Maybe{Integer},
 )::Nothing
     if contiguous && !issparse(storage) && !is_contiguous_array(view(storage, :, first(columns)))
         create_buffer = () -> Vector{eltype(storage)}(undef, size(storage, 1))
@@ -584,9 +606,10 @@ function foreach_plain_column(
             policy,
             weights,
             progress,
+            progress_chunk,
         )
     else
-        parallel_loop_wo_rng(1:length(columns); name, policy, weights, progress) do position
+        parallel_loop_wo_rng(1:length(columns); name, policy, weights, progress, progress_chunk) do position
             column_index = columns[position]
             visit(position, column_index, view(storage, :, column_index))
             return nothing
@@ -602,12 +625,13 @@ function new_scratch_per_thread(
     first_scratch::Any,
     create_scratch::Function,
     matrix::AbstractMatrix,
-    is_serial::Bool,
+    is_serial::Bool;
+    report::Bool = true,  # TODOX
 )::AbstractVector
     if !is_serial
         return [thread_index == 1 ? first_scratch : create_scratch() for thread_index in 1:maxthreadid()]
     end
-    if is_in_parallel_loop()
+    if report && is_in_parallel_loop()  # TODOX
         handle_abnormal(GLOBAL_INEFFICIENT_ACTION_HANDLER) do
             return """
                 allocating column scratch inside a parallel loop
@@ -629,8 +653,9 @@ function foreach_column_through_scratch(
     policy::Symbol,
     weights::Maybe{AbstractVector{<:Integer}},
     progress::Maybe{AbstractProgress},
+    progress_chunk::Maybe{Integer},
 )::Nothing
-    parallel_loop_wo_rng(1:length(columns); name, policy, weights, progress) do position
+    parallel_loop_wo_rng(1:length(columns); name, policy, weights, progress, progress_chunk) do position
         column_index = columns[position]
         visit(position, column_index, read_column(scratch_per_thread[threadid()], column_index))
         return nothing

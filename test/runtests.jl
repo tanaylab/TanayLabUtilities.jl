@@ -461,18 +461,35 @@ end
 
         sparse_matrix = sparse([0 1 0 4; 2 0 0 5; 0 3 0 6; 0 0 0 7])
         sparse_result = Vector{Float64}(undef, size(sparse_matrix, 2))
-        sparse_scratch = Vector{Float64}(undef, nnz(sparse_matrix))
-        sparse_quantile(sparse_matrix, 0.5; dims = Rows, result = sparse_result, scratch = sparse_scratch)
+        sparse_quantile(sparse_matrix, 0.5; dims = Rows, result = sparse_result)
         @test sparse_result ≈ [quantile(view(sparse_matrix, :, j), 0.5) for j in 1:size(sparse_matrix, 2)]
 
         dense_matrix = Float64[1 2 3 4; 5 6 7 8; 9 10 11 12]
         dense_result = Vector{Float64}(undef, size(dense_matrix, 2))
-        dense_scratch = Vector{Float64}(undef, length(dense_matrix))
-        sparse_quantile(dense_matrix, 0.5; dims = Rows, result = dense_result, scratch = dense_scratch)
+        sparse_quantile(dense_matrix, 0.5; dims = Rows, result = dense_result)
         @test dense_result ≈ [quantile(view(dense_matrix, :, j), 0.5) for j in 1:size(dense_matrix, 2)]
 
         flat_scratch = Vector{Float64}(undef, nnz(sparse_matrix))
         @test sparse_quantile(sparse_matrix, 0.5; scratch = flat_scratch) ≈ quantile(vec(Matrix(sparse_matrix)), 0.5)
+
+        for dims in (Rows, Columns)
+            @test_throws "a scratch is only used for a vector or for a whole matrix" sparse_quantile(
+                dense_matrix,
+                0.5;
+                dims,
+                scratch = Vector{Float64}(undef, length(dense_matrix)),
+            )
+        end
+    end
+
+    @testset "lazy matrices are read one column at a time" begin
+        values = Float64[(row + column) % 3 == 0 ? row + column / 10 : 0 for row in 1:9, column in 1:6]
+        lazy_values = LazyColumnsMatrix(values, Threads.Atomic{Int}(0))
+        @test sparse_var(lazy_values; dims = Rows) ≈ vec(var(values; dims = Rows))
+        @test sparse_std(lazy_values; dims = Rows, corrected = false) ≈ vec(std(values; dims = Rows, corrected = false))
+        @test sparse_quantile(lazy_values, 0.3; dims = Rows) ≈ [quantile(values[:, column], 0.3) for column in 1:6]
+        @test sparse_median(lazy_values; dims = Rows, positive = true) ≈ vec(median(values; dims = Rows))
+        @test lazy_values.n_scratches[] > 0
     end
 
     @testset "quickselect partition path on large shuffled inputs" begin
@@ -513,9 +530,12 @@ end
                 (position, row_index) in enumerate(row_indices) if matrix[row_index, column_index] != 0
             ]
             @test collect(stored_values_at_rows(matrix, column_index, row_indices)) == expected
+            @test collect(stored_values_at_rows(view(matrix, :, column_index), row_indices)) == expected
+            @test collect(stored_values_at_rows(matrix[:, column_index], row_indices)) == expected
         end
         @test_throws "row indices are not strictly increasing" stored_values_at_rows(matrix, 1, [3, 2])
         @test_throws "row indices are not strictly increasing" stored_values_at_rows(matrix, 1, [3, 3])
+        @test_throws "row indices are not strictly increasing" stored_values_at_rows(matrix[:, 1], [3, 2])
         @test eltype(stored_values_at_rows(matrix, 1, [1])) == Tuple{Int, eltype(matrix)}
     end
 
@@ -525,6 +545,11 @@ end
             is_any_nonzero = gather_sparse_column!(destination, matrix, column_index, row_indices)
             @test destination == matrix[row_indices, column_index]
             @test is_any_nonzero == any(!iszero, destination)
+            for column in (view(matrix, :, column_index), matrix[:, column_index])
+                fill!(destination, -1.0)
+                @test gather_sparse_column!(destination, column, row_indices) == is_any_nonzero
+                @test destination == matrix[row_indices, column_index]
+            end
         end
     end
 
