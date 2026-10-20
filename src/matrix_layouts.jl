@@ -1513,25 +1513,22 @@ end
 function flipped(matrix::AbstractMatrix)::AbstractMatrix
     return flame_timed("flipped") do
         axis = require_major_axis(matrix)
-        local result
 
-        if issparse(matrix)
+        result = if issparse(matrix)
             flame_timed("flipped.sparse") do
                 @assert axis == Columns
-                result = SparseMatrixCSC(flip(plain_array(matrix)))  # NOLINT
-                return nothing
+                return SparseMatrixCSC(flip(plain_array(matrix)))
             end
 
         else
             flame_timed("flipped.dense") do
                 if axis == Columns
-                    result = Matrix{eltype(matrix)}(undef, size(matrix, Columns), size(matrix, Rows))
-                    result = permutedims!(result, plain_array(matrix), (2, 1))
+                    transposed = Matrix{eltype(matrix)}(undef, size(matrix, Columns), size(matrix, Rows))
+                    return permutedims!(transposed, plain_array(matrix), (2, 1))
 
                 elseif axis == Rows  # UNTESTED
-                    result = Matrix{eltype(matrix)}(undef, size(matrix, Rows), size(matrix, Columns))  # UNTESTED
-                    result = permutedims!(result, flip(plain_array(matrix)), (2, 1))  # UNTESTED
-                    result = flip(result)  # UNTESTED
+                    transposed = Matrix{eltype(matrix)}(undef, size(matrix, Rows), size(matrix, Columns))  # UNTESTED
+                    return flip(permutedims!(transposed, flip(plain_array(matrix)), (2, 1)))  # UNTESTED
 
                 else
                     @assert false

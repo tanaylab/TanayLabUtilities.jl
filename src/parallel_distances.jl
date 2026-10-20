@@ -77,23 +77,23 @@ function parallel_pairwise(
         return flame_timed("pairwise." * string(nameof(typeof(distance)))) do
             return pairwise(distance, X, Y; dims)
         end
-    else
-        _, n_X_columns = size(X)
-        _, n_Y_columns = size(Y)
-        @views X_column = X[:, 1]
-        @views Y_column = Y[:, 1]
-        first_distance = evaluate(distance, X_column, Y_column)
-        result = Matrix{typeof(first_distance)}(undef, n_X_columns, n_Y_columns)
-        parallel_loop_wo_rng(
-            1:n_Y_columns;
-            name = "pairwise." * string(nameof(typeof(distance))),
-            policy,
-            progress,
-        ) do Y_column_index
-            @views Y_column_view = Y[:, Y_column_index]
-            result[:, Y_column_index] = colwise(distance, X, Y_column_view)
-            return nothing
-        end
+    end
+
+    _, n_X_columns = size(X)
+    _, n_Y_columns = size(Y)
+    @views X_column = X[:, 1]
+    @views Y_column = Y[:, 1]
+    first_distance = evaluate(distance, X_column, Y_column)
+    result = Matrix{typeof(first_distance)}(undef, n_X_columns, n_Y_columns)
+    parallel_loop_wo_rng(
+        1:n_Y_columns;
+        name = "pairwise." * string(nameof(typeof(distance))),
+        policy,
+        progress,
+    ) do Y_column_index
+        @views Y_column_view = Y[:, Y_column_index]
+        result[:, Y_column_index] = colwise(distance, X, Y_column_view)
+        return nothing
     end
 
     return result
@@ -117,24 +117,24 @@ function parallel_pairwise(
         return flame_timed("pairwise." * string(nameof(typeof(distance)))) do
             return pairwise(distance, X; dims)
         end
-    else
-        _, n_columns = size(X)
-        @views column = X[:, 1]
-        first_distance = evaluate(distance, column, column)
-        result = Matrix{typeof(first_distance)}(undef, n_columns, n_columns)
-        parallel_loop_wo_rng(
-            1:n_columns;
-            name = "pairwise." * string(nameof(typeof(distance))),
-            policy,
-            progress,
-            progress_chunk,
-        ) do column_index
-            @views column_view = X[:, column_index]
-            @views columns_view = X[:, column_index:n_columns]
-            result[column_index, column_index:n_columns] =
-                result[column_index:n_columns, column_index] = colwise(distance, column_view, columns_view)
-            return nothing
-        end
+    end
+
+    _, n_columns = size(X)
+    @views column = X[:, 1]
+    first_distance = evaluate(distance, column, column)
+    result = Matrix{typeof(first_distance)}(undef, n_columns, n_columns)
+    parallel_loop_wo_rng(
+        1:n_columns;
+        name = "pairwise." * string(nameof(typeof(distance))),
+        policy,
+        progress,
+        progress_chunk,
+    ) do column_index
+        @views column_view = X[:, column_index]
+        @views columns_view = X[:, column_index:n_columns]
+        result[column_index, column_index:n_columns] =
+            result[column_index:n_columns, column_index] = colwise(distance, column_view, columns_view)
+        return nothing
     end
 
     return result

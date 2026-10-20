@@ -81,10 +81,9 @@ function unique_name(prefix::AbstractString, separator::AbstractString = "#")::A
     end
 
     counter = lock(UNIQUE_NAME_LOCK) do
-        counter = get(UNIQUE_NAME_PREFIXES, prefix, 0)
-        counter += 1
-        UNIQUE_NAME_PREFIXES[prefix] = counter
-        return counter
+        prefix_counter = get(UNIQUE_NAME_PREFIXES, prefix, 0) + 1
+        UNIQUE_NAME_PREFIXES[prefix] = prefix_counter
+        return prefix_counter
     end
 
     if counter == 1

@@ -487,19 +487,20 @@ If `min_size` is specified, rounds are ranked first by the number of clusters wh
     best_kmeans_result = nothing
 
     for _ in 1:rounds
+        round_buf = current_buf
         if centers === nothing
             kmeans_result = flame_timed("kmeans") do
-                return kmeans_in_buffers(values_of_points, k; buffers = current_buf, rng)
+                return kmeans_in_buffers(values_of_points, k; buffers = round_buf, rng)
             end
         else
-            if current_buf !== nothing
-                copyto!(@view(current_buf.centers[:, 1:k]), centers)
+            if round_buf !== nothing
+                copyto!(@view(round_buf.centers[:, 1:k]), centers)
             end
             kmeans_result = flame_timed("kmeans") do
                 return kmeans_in_buffers!(
                     values_of_points,
-                    current_buf === nothing ? copy(centers) : @view(current_buf.centers[:, 1:k]);
-                    buffers = current_buf,
+                    round_buf === nothing ? copy(centers) : @view(round_buf.centers[:, 1:k]);
+                    buffers = round_buf,
                     rng,
                 )
             end

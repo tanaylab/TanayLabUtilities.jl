@@ -140,23 +140,22 @@ function cached_readdir(directory::AbstractString)::Set{<:String}
     @assert IS_PATH_CACHE_TIMEOUT != 0
 
     return flame_timed("cached_readdir") do
-        readdir_target = nothing
-        cached = lock_read(IS_PATH_CACHE_LOCK) do
-            readdir_target = directory
-            entry = get(IS_PATH_CACHE_DICT, readdir_target, nothing)
+        cached, readdir_target = lock_read(IS_PATH_CACHE_LOCK) do
+            target = directory
+            entry = get(IS_PATH_CACHE_DICT, target, nothing)
             while entry isa DirectoryRedirect
                 if IS_PATH_CACHE_TIMEOUT > 0 && (now() - entry.fetched_at).value / 1000.0 >= IS_PATH_CACHE_TIMEOUT  # UNTESTED
-                    return nothing  # UNTESTED
+                    return (nothing, target)  # UNTESTED
                 end
-                readdir_target = entry.real_directory  # UNTESTED
-                entry = get(IS_PATH_CACHE_DICT, readdir_target, nothing)  # UNTESTED
+                target = entry.real_directory  # UNTESTED
+                entry = get(IS_PATH_CACHE_DICT, target, nothing)  # UNTESTED
             end
             if entry isa DirectoryFiles
                 if IS_PATH_CACHE_TIMEOUT < 0 || (now() - entry.fetched_at).value / 1000.0 < IS_PATH_CACHE_TIMEOUT  # UNTESTED
-                    return entry  # UNTESTED
+                    return (entry, target)  # UNTESTED
                 end
             end
-            return nothing
+            return (nothing, target)
         end
 
         if cached !== nothing
@@ -178,8 +177,9 @@ function cached_readdir(directory::AbstractString)::Set{<:String}
                 end
             end
 
-            IS_PATH_CACHE_DICT[readdir_target] = cached = DirectoryFiles(file_names, fetched_at)
-            return cached.file_names
+            directory_files = DirectoryFiles(file_names, fetched_at)
+            IS_PATH_CACHE_DICT[readdir_target] = directory_files
+            return directory_files.file_names
         end
     end
 end

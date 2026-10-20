@@ -304,9 +304,9 @@ function flame_timed(body::Function, name::AbstractString; iterations::Integer =
 
     finally
         elapsed_ns = time_ns() - start_elapsed_ns  # UNTESTED
-        if start_is_in_parallel  # UNTESTED
+        new_measurement = if start_is_in_parallel  # UNTESTED
             @assert iterations >= 0  # UNTESTED
-            new_measurement = ParallelMeasurement(1, iterations, elapsed_ns, 0)  # UNTESTED
+            ParallelMeasurement(1, iterations, elapsed_ns, 0)  # UNTESTED
         else
             gc_ns = Base.gc_num().total_time - start_gc_ns  # UNTESTED # NOJET
             gc_full_sweeps = Base.gc_num().full_sweep - start_gc_full_sweeps  # UNTESTED # NOJET
@@ -320,7 +320,7 @@ function flame_timed(body::Function, name::AbstractString; iterations::Integer =
             write_blocks = end_rusage.ru_oublock - start_write_blocks  # UNTESTED # NOJET
             voluntary_context_switches = end_rusage.ru_nvcsw - start_voluntary_context_switches  # UNTESTED # NOJET
             involuntary_context_switches = end_rusage.ru_nivcsw - start_involuntary_context_switches  # UNTESTED # NOJET
-            new_measurement = SerialMeasurement(  # UNTESTED
+            SerialMeasurement(  # UNTESTED
                 1,
                 iterations,
                 elapsed_ns,
@@ -398,12 +398,12 @@ function finalize_flameview(;  # UNTESTED
         fields = split(line)
         stack = fields[1]
         is_in_parallel = parse(Bool, fields[2])
-        if is_in_parallel
+        new_measurement = if is_in_parallel
             @assert length(fields) == 5
             invocations = parse(Int64, fields[3])
             iterations = parse(Int64, fields[4])
             elapsed_ns = parse(Int64, fields[5])
-            new_measurement = ParallelMeasurement(invocations, iterations, elapsed_ns, 0)
+            ParallelMeasurement(invocations, iterations, elapsed_ns, 0)
         else
             @assert length(fields) == 16
             invocations = parse(Int64, fields[3])
@@ -420,7 +420,7 @@ function finalize_flameview(;  # UNTESTED
             write_blocks = parse(Int64, fields[14])
             voluntary_context_switches = parse(Int64, fields[15])
             involuntary_context_switches = parse(Int64, fields[16])
-            new_measurement = SerialMeasurement(
+            SerialMeasurement(
                 invocations,
                 iterations,
                 elapsed_ns,
@@ -529,10 +529,10 @@ function finalize_flameview(;  # UNTESTED
         reversed_sorted_reversed_stacks = sort!(collect(keys(reversed_self_measurements_dict)); rev = true)
         for reversed_stack in reversed_sorted_reversed_stacks
             self_measurement = reversed_self_measurements_dict[reversed_stack]
-            if self_measurement isa SerialMeasurement
-                empty_measurement = SerialMeasurement(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+            empty_measurement = if self_measurement isa SerialMeasurement
+                SerialMeasurement(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
             else
-                empty_measurement = ParallelMeasurement(0, 0, 0, 0)
+                ParallelMeasurement(0, 0, 0, 0)
             end
             while true
                 update!(
@@ -575,6 +575,16 @@ function finalize_flameview(;  # UNTESTED
         end
     end
 
+    write_flameview(flameview_path, self_measurements_dict, folded_measurements_dict)
+    return nothing
+end
+
+# Write a line per stack to the `flameview_path`, with its self time and the text describing its folded measurement.
+function write_flameview(  # UNTESTED
+    flameview_path::AbstractString,
+    self_measurements_dict::AbstractDict{<:AbstractString, <:Union{SerialMeasurement, ParallelMeasurement}},
+    folded_measurements_dict::AbstractDict{<:AbstractString, <:Union{SerialMeasurement, ParallelMeasurement}},
+)::Nothing
     open(flameview_path, "w") do file
         for (stack, self_measurement) in self_measurements_dict
             folded_measurement = folded_measurements_dict[stack]
@@ -661,6 +671,7 @@ function finalize_flameview(;  # UNTESTED
                 println(file, "$(stack) $(elapsed_ns) # $(text)")
             else
                 @assert self_measurement isa ParallelMeasurement
+                @assert folded_measurement isa ParallelMeasurement
                 text = measurement_text("Calls"; samples = folded_measurement.invocations, units = "executions")
                 if self_measurement.iterations != 0
                     text *=
@@ -708,12 +719,8 @@ function warn_about_expensive_operation_in_parallel(name::AbstractString)::Nothi
     private_storage = task_local_storage()
     is_in_parallel = get(private_storage, :is_in_parallel, false)
     if is_in_parallel
-        flame_stack = get(private_storage, :flame_stack, nothing)
-        if flame_stack === nothing
-            flame_stack = "Main"
-        else
-            flame_stack = join(flame_stack, ";")
-        end
+        stack_names = get(private_storage, :flame_stack, nothing)
+        flame_stack = stack_names === nothing ? "Main" : join(stack_names, ";")
 
         key = (flame_stack, name)
         lock(FLAME_MEASUREMENTS_LOCK) do

@@ -49,26 +49,14 @@ function zero_cor_between_matrix_columns(
     return flame_timed("zero_cor_between_matrix_columns") do
         n_rows, n_columns = size(matrix)
 
-        if result === nothing
-            result = Matrix{Float64}(undef, n_columns, n_columns)
-        else
-            @assert size(result) == (n_columns, n_columns)  # UNTESTED
-        end
+        @assert result === nothing || size(result) == (n_columns, n_columns)
+        output = result === nothing ? Matrix{Float64}(undef, n_columns, n_columns) : result
 
-        if scratch_matrix === nothing
-            scratch_matrix = Matrix{Float64}(undef, n_rows, n_columns)
-        else
-            @assert size(scratch_matrix) == size(matrix)  # UNTESTED
-        end
+        @assert scratch_matrix === nothing || size(scratch_matrix) == size(matrix)
+        normalized = scratch_matrix === nothing ? Matrix{Float64}(undef, n_rows, n_columns) : scratch_matrix
 
-        if scratch_row === nothing
-            scratch_row = Vector{Float64}(undef, n_columns)
-        else
-            @assert length(scratch_row) == n_columns  # UNTESTED
-        end
-
-        normalized = scratch_matrix
-        norms = scratch_row
+        @assert scratch_row === nothing || length(scratch_row) == n_columns
+        norms = scratch_row === nothing ? Vector{Float64}(undef, n_columns) : scratch_row
 
         for column_index in 1:n_columns
             @views column = matrix[:, column_index]
@@ -85,16 +73,16 @@ function zero_cor_between_matrix_columns(
         end
 
         normalized ./= transpose(norms)
-        mul!(result, transpose(normalized), normalized)
+        mul!(output, transpose(normalized), normalized)
 
         for column_index in 1:n_columns
             if norms[column_index] == 1 && normalized[1, column_index] == 0
-                result[:, column_index] .= 0
-                result[column_index, :] .= 0
+                output[:, column_index] .= 0
+                output[column_index, :] .= 0
             end
         end
 
-        return result
+        return output
     end
 end
 
@@ -140,40 +128,22 @@ function zero_cor_between_matrices_columns(
         n_right_columns = size(right_matrix, 2)
         @assert size(right_matrix, 1) == n_rows
 
-        if result === nothing
-            result = Matrix{Float64}(undef, n_left_columns, n_right_columns)
-        else
-            @assert size(result) == (n_left_columns, n_right_columns)  # UNTESTED
-        end
+        @assert result === nothing || size(result) == (n_left_columns, n_right_columns)
+        output = result === nothing ? Matrix{Float64}(undef, n_left_columns, n_right_columns) : result
 
-        if left_scratch_matrix === nothing
-            left_scratch_matrix = Matrix{Float64}(undef, n_rows, n_left_columns)
-        else
-            @assert size(left_scratch_matrix) == size(left_matrix)  # UNTESTED
-        end
+        @assert left_scratch_matrix === nothing || size(left_scratch_matrix) == size(left_matrix)
+        left_normalized =
+            left_scratch_matrix === nothing ? Matrix{Float64}(undef, n_rows, n_left_columns) : left_scratch_matrix
 
-        if right_scratch_matrix === nothing
-            right_scratch_matrix = Matrix{Float64}(undef, n_rows, n_right_columns)
-        else
-            @assert size(right_scratch_matrix) == size(right_matrix)  # UNTESTED
-        end
+        @assert right_scratch_matrix === nothing || size(right_scratch_matrix) == size(right_matrix)
+        right_normalized =
+            right_scratch_matrix === nothing ? Matrix{Float64}(undef, n_rows, n_right_columns) : right_scratch_matrix
 
-        if left_scratch_row === nothing
-            left_scratch_row = Vector{Float64}(undef, n_left_columns)
-        else
-            @assert length(left_scratch_row) == n_left_columns  # UNTESTED
-        end
+        @assert left_scratch_row === nothing || length(left_scratch_row) == n_left_columns
+        left_column_norms = left_scratch_row === nothing ? Vector{Float64}(undef, n_left_columns) : left_scratch_row
 
-        if right_scratch_row === nothing
-            right_scratch_row = Vector{Float64}(undef, n_right_columns)
-        else
-            @assert length(right_scratch_row) == n_right_columns  # UNTESTED
-        end
-
-        left_normalized = left_scratch_matrix
-        right_normalized = right_scratch_matrix
-        left_column_norms = left_scratch_row
-        right_column_norms = right_scratch_row
+        @assert right_scratch_row === nothing || length(right_scratch_row) == n_right_columns
+        right_column_norms = right_scratch_row === nothing ? Vector{Float64}(undef, n_right_columns) : right_scratch_row
 
         for column_index in 1:n_left_columns
             @views left_column = left_matrix[:, column_index]
@@ -205,17 +175,17 @@ function zero_cor_between_matrices_columns(
         end
         right_normalized ./= transpose(right_column_norms)
 
-        mul!(result, transpose(left_normalized), right_normalized)
+        mul!(output, transpose(left_normalized), right_normalized)
 
         for column_index in 1:n_right_columns
             for row_index in 1:n_left_columns
-                if isnan(result[row_index, column_index])
-                    result[row_index, column_index] = 0  # UNTESTED
+                if isnan(output[row_index, column_index])
+                    output[row_index, column_index] = 0  # UNTESTED
                 end
             end
         end
 
-        return result
+        return output
     end
 end
 
@@ -306,40 +276,24 @@ function zero_cor_between_vector_and_matrix_columns(
         n_rows, n_columns = size(right_matrix)
         @assert length(left_vector) == n_rows
 
-        if result === nothing
-            result = Vector{Float64}(undef, n_columns)
-        else
-            @assert length(result) == n_columns  # UNTESTED
-        end
+        @assert result === nothing || length(result) == n_columns
+        output = result === nothing ? Vector{Float64}(undef, n_columns) : result
 
-        if result_scratch === nothing
-            result_scratch = Vector{Float64}(undef, n_columns)
-        else
-            @assert length(result_scratch) == n_columns  # UNTESTED
-        end
+        @assert result_scratch === nothing || length(result_scratch) == n_columns
+        right_column_norms = result_scratch === nothing ? Vector{Float64}(undef, n_columns) : result_scratch
 
-        if left_scratch === nothing
-            left_scratch = Vector{Float64}(undef, n_rows)
-        else
-            @assert length(left_scratch) == n_rows  # UNTESTED
-        end
+        @assert left_scratch === nothing || length(left_scratch) == n_rows
+        left_normalized = left_scratch === nothing ? Vector{Float64}(undef, n_rows) : left_scratch
 
-        if right_scratch === nothing
-            right_scratch = Matrix{Float64}(undef, n_rows, n_columns)
-        else
-            @assert size(right_scratch) == (n_rows, n_columns)  # UNTESTED
-        end
-
-        left_normalized = left_scratch
-        right_normalized = right_scratch
-        right_column_norms = result_scratch
+        @assert right_scratch === nothing || size(right_scratch) == (n_rows, n_columns)
+        right_normalized = right_scratch === nothing ? Matrix{Float64}(undef, n_rows, n_columns) : right_scratch
 
         mean_left = sum(left_vector) / n_rows
         left_normalized .= left_vector .- mean_left
         left_norm = norm(left_normalized)
         if left_norm == 0 || minimum(left_vector) == maximum(left_vector)
-            result .= 0
-            return result
+            output .= 0
+            return output
         end
         left_normalized ./= left_norm
 
@@ -358,15 +312,15 @@ function zero_cor_between_vector_and_matrix_columns(
         end
         right_normalized ./= transpose(right_column_norms)
 
-        mul!(result, transpose(right_normalized), left_normalized)
+        mul!(output, transpose(right_normalized), left_normalized)  # NOJET
 
         for column_index in 1:n_columns
-            if isnan(result[column_index])
-                result[column_index] = 0  # UNTESTED
+            if isnan(output[column_index])
+                output[column_index] = 0  # UNTESTED
             end
         end
 
-        return result
+        return output
     end
 end
 

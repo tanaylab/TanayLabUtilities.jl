@@ -177,7 +177,7 @@ function parallel_loop_wo_rng(
     order::Maybe{AbstractVector{<:Integer}} = nothing,
     weights::Maybe{AbstractVector{<:Integer}} = nothing,
     nested::Bool = false,
-    progress::Maybe{AbstractProgress} = nothing,  # NOLINT
+    progress::Maybe{AbstractProgress} = nothing,
     progress_chunk::Maybe{Integer} = nothing,
 )::Nothing
     @assert policy in (:greedy, :static, :dynamic, :greedy_sticky, :serial)
@@ -201,39 +201,33 @@ function parallel_loop_wo_rng(
     end
 
     base_private_storage = task_local_storage()
-    base_flame_stack = FlameTime.get_flame_stack(base_private_storage)
-    if base_flame_stack !== nothing
-        if startswith(name, ".")  # UNTESTED
-            @assert length(base_flame_stack) > 0  # UNTESTED
-            name = base_flame_stack[end] * name  # UNTESTED
-        end
-        base_flame_stack = join(base_flame_stack, ";")  # UNTESTED
-    elseif startswith(name, ".")
-        name = name[2:end]
+    flame_stack_names = FlameTime.get_flame_stack(base_private_storage)
+    loop_name, base_flame_stack = if flame_stack_names === nothing
+        (startswith(name, ".") ? name[2:end] : name, nothing)
+    else
+        @assert !startswith(name, ".") || length(flame_stack_names) > 0  # UNTESTED
+        (startswith(name, ".") ? flame_stack_names[end] * name : name, join(flame_stack_names, ";"))  # UNTESTED
     end
 
-    if nthreads() == 1
-        policy = :serial  # UNTESTED
-    else
-        if !nested && haskey(base_private_storage, :is_in_parallel_loop)
-            progress = nothing  # UNTESTED
-            if policy != :serial  # UNTESTED
-                policy = :serial  # UNTESTED
-            end
-        end
-    end
+    # A loop nested in another parallel loop runs serially, without its own progress.
+    is_nested_in_parallel_loop = nthreads() > 1 && !nested && haskey(base_private_storage, :is_in_parallel_loop)
+    loop_progress = is_nested_in_parallel_loop ? nothing : progress
 
     # When `:greedy_sticky` would have at most one iteration per thread, the atomic counter buys nothing - degrade to
     # `:static` (which gives each iteration its own thread directly).
-    if policy == :greedy_sticky && length(indices) <= nthreads()
-        policy = :static
+    loop_policy = if nthreads() == 1 || is_nested_in_parallel_loop
+        :serial
+    elseif policy == :greedy_sticky && length(indices) <= nthreads()
+        :static
+    else
+        policy
     end
 
     # Resolve the iteration order once: under `:static`, round-robin-shuffle `order` in place so each contiguous chunk
     # gets one item from each weight quantile. Under any other policy, the work queue consumes items in the order they
     # appear, so an already-sorted (heaviest-first) `order` directly dispatches the heaviest items earliest. The body
     # always receives `indices[order[k]]` - `view(indices, order)` projects positions to values without allocating.
-    if order !== nothing && policy == :static
+    if order !== nothing && loop_policy == :static
         round_robin_for_static_chunks!(order, nthreads())
     end
     iteration_indices = order === nothing ? indices : view(indices, order)
@@ -244,32 +238,32 @@ function parallel_loop_wo_rng(
     # iteration body falls back to `+1` per step (or to `progress_chunk` throttling).
     step_per_position = weights === nothing ? nothing : (order === nothing ? weights : weights[order])
 
-    flame_timed(name; iterations = policy == :serial ? length(indices) : -length(indices)) do
+    flame_timed(loop_name; iterations = loop_policy == :serial ? length(indices) : -length(indices)) do
         try
-            if progress !== nothing
+            if loop_progress !== nothing
                 disable_logging(Logging.Debug)
-                if progress.counter == 0
-                    update!(progress, 0; force = true)  # NOJET
+                if loop_progress.counter == 0
+                    update!(loop_progress, 0; force = true)  # NOJET
                 end
             end
 
-            # Advance `progress` by the visited position's contribution: weighted step if `weights` were given, one
-            # per item under no chunking, or one per `progress_chunk` items when throttling.
+            # Advance `loop_progress` by the visited position's contribution: weighted step if `weights` were given,
+            # one per item under no chunking, or one per `progress_chunk` items when throttling.
             @inline function advance_progress(position::Integer)::Nothing
-                if progress === nothing
+                if loop_progress === nothing
                     return nothing
                 end
                 if step_per_position !== nothing
-                    next!(progress; step = Int(step_per_position[position]))
+                    next!(loop_progress; step = Int(step_per_position[position]))
                 elseif progress_chunk === nothing
-                    next!(progress)
+                    next!(loop_progress)
                 elseif position % progress_chunk == 0
-                    next!(progress; step = progress_chunk)
+                    next!(loop_progress; step = progress_chunk)
                 end
                 return nothing
             end
 
-            if policy == :serial
+            if loop_policy == :serial
                 for position in 1:n_index_positions
                     body(iteration_indices[position])
                     advance_progress(position)
@@ -282,7 +276,7 @@ function parallel_loop_wo_rng(
                     index_flame_stack = [base_flame_stack]
                     index_private_storage[:flame_stack] = index_flame_stack
 
-                    flame_timed(name) do
+                    flame_timed(loop_name) do
                         body(iteration_indices[position])
                         advance_progress(position)
                         return nothing
@@ -294,22 +288,22 @@ function parallel_loop_wo_rng(
                 saved_blas_threads = BLAS.get_num_threads()
                 BLAS.set_num_threads(1)
                 try
-                    if policy == :greedy
+                    if loop_policy == :greedy
                         @threads :greedy for position in 1:n_index_positions
                             iteration_body(position)
                         end
 
-                    elseif policy == :static
+                    elseif loop_policy == :static
                         @threads :static for position in 1:n_index_positions
                             iteration_body(position)
                         end
 
-                    elseif policy == :dynamic
+                    elseif loop_policy == :dynamic
                         @threads :dynamic for position in 1:n_index_positions
                             iteration_body(position)
                         end
 
-                    elseif policy == :greedy_sticky
+                    elseif loop_policy == :greedy_sticky
                         # `nthreads()` sticky workers (one per thread) pull positions from a shared atomic counter.
                         # Each iteration runs on its starting thread for the duration of the body, so
                         # `threadid()`-indexed scratch is safe - unlike `:greedy` / `:dynamic` which create
@@ -334,14 +328,14 @@ function parallel_loop_wo_rng(
             end
 
         finally
-            if progress !== nothing
+            if loop_progress !== nothing
                 disable_logging(Logging.BelowMinLevel)
             end
         end
     end
 
-    if progress !== nothing && progress_chunk !== nothing && length(indices) % progress_chunk > 0
-        next!(progress; step = length(indices) % progress_chunk)
+    if loop_progress !== nothing && progress_chunk !== nothing && length(indices) % progress_chunk > 0
+        next!(loop_progress; step = length(indices) % progress_chunk)
     end
 
     return nothing
@@ -440,9 +434,7 @@ function parallel_loop_with_rng(
 )::Nothing
     @assert policy in (:greedy, :static, :dynamic, :greedy_sticky, :serial)
 
-    if seed === nothing
-        seed = rand(copy(rng === nothing ? default_rng() : rng), Int64)
-    end
+    loop_seed = seed === nothing ? rand(copy(rng === nothing ? default_rng() : rng), Int64) : seed
 
     parallel_loop_wo_rng(indices; name, policy, order, weights, nested, progress) do index
         if rng === nothing
@@ -450,7 +442,7 @@ function parallel_loop_with_rng(
         else
             iteration_rng = copy(rng)
         end
-        Random.seed!(iteration_rng, seed + index)
+        Random.seed!(iteration_rng, loop_seed + index)
         body(index, iteration_rng)
         return nothing
     end

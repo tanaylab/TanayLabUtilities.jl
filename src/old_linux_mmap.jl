@@ -124,14 +124,8 @@ function mmap_populate_if_old_linux_ramdisk(  # UNTESTED
 )::ArrayT where {T, ArrayT <: Array{T}}
     @assert mode in ("r", "r+")
 
-    bytes_size = 0
-
     @static if Sys.islinux()
-        if size isa Tuple
-            total_size = size[1] * size[2]
-        else
-            total_size = size
-        end
+        total_size = size isa Tuple ? size[1] * size[2] : size
         bytes_size = total_size * sizeof(T)
 
         if bytes_size > 0 && IS_OLD_LINUX_KERNEL && is_in_linux_ramdisk(dirname(path))

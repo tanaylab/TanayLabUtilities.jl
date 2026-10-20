@@ -303,13 +303,8 @@ function parallel_loop_on_slices(
     n_rows, n_columns = size(matrix)
 
     if issparse(matrix) && major_axis(matrix) == dims
-        if dims == Columns
-            column_major_matrix = matrix
-            column_major_output = output
-        else
-            column_major_matrix = flip(matrix)
-            column_major_output = flip(output)
-        end
+        column_major_matrix = dims == Columns ? matrix : flip(matrix)
+        column_major_output = dims == Columns ? output : flip(output)
 
         column_offsets = colptr(column_major_matrix)
         row_indices = rowval(column_major_matrix)

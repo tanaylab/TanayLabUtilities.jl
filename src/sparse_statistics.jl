@@ -430,29 +430,36 @@ function compute_sparse_var_of_matrix(
     progress_chunk::Maybe{Integer},
 )::AbstractVector{<:AbstractFloat}
     n_rows, n_columns = size(matrix)
-    result_length = dims == Rows ? n_columns : n_rows
-    if result === nothing
-        result = Vector{Float64}(undef, result_length)
-    else
-        @assert length(result) == result_length "result length: $(length(result)) is not the expected: $(result_length)"
-    end
+    output = result_or_new_vector(result, dims == Rows ? n_columns : n_rows)
 
     if dims == Rows
         parallel_foreach_column(matrix; name = "sparse_var", progress, progress_chunk) do _, column_index, column
-            result[column_index] = welford_variance(stored_column_values(column), n_rows, corrected)
+            output[column_index] = welford_variance(stored_column_values(column), n_rows, corrected)
             return nothing
         end
-        return result
+        return output
     end
 
     if major_axis(matrix) !== nothing
         check_efficient_action(@source_location()..., "matrix", matrix, Rows)
     end
     if issparse(matrix) && major_axis(matrix) == Rows
-        compute_sparse_var_of_sparse_rows!(result, plain_array(matrix), corrected; progress, progress_chunk)
+        compute_sparse_var_of_sparse_rows!(output, plain_array(matrix), corrected; progress, progress_chunk)
     else
-        compute_sparse_var_of_dense_rows!(result, matrix, corrected; progress, progress_chunk)
+        compute_sparse_var_of_dense_rows!(output, matrix, corrected; progress, progress_chunk)
     end
+    return output
+end
+
+# The `result` vector given by the caller, or a new one, of the `result_length`.
+function result_or_new_vector(
+    result::Maybe{AbstractVector{<:AbstractFloat}},
+    result_length::Integer,
+)::AbstractVector{<:AbstractFloat}
+    if result === nothing
+        return Vector{Float64}(undef, result_length)
+    end
+    @assert length(result) == result_length "result length: $(length(result)) is not the expected: $(result_length)"
     return result
 end
 
@@ -603,12 +610,7 @@ function compute_sparse_quantile_of_matrix(
 )::AbstractVector{<:AbstractFloat}
     n_rows, n_columns = size(matrix)
     @assert scratch === nothing "a scratch is only used for a vector or for a whole matrix (without dims)"
-    result_length = dims == Rows ? n_columns : n_rows
-    if result === nothing
-        result = Vector{Float64}(undef, result_length)
-    else
-        @assert length(result) == result_length "result length: $(length(result)) is not the expected: $(result_length)"
-    end
+    output = result_or_new_vector(result, dims == Rows ? n_columns : n_rows)
 
     if dims == Rows
         create_buffer = () -> Vector{Float64}(undef, n_rows)
@@ -624,21 +626,21 @@ function compute_sparse_quantile_of_matrix(
             n_values = length(values)
             @views buffer = buffer_per_thread[threadid()][1:n_values]
             copyto!(buffer, values)
-            result[column_index] = sparse_quantile_from_buffer!(buffer, n_values, n_rows - n_values, p, positive)
+            output[column_index] = sparse_quantile_from_buffer!(buffer, n_values, n_rows - n_values, p, positive)
             return nothing
         end
-        return result
+        return output
     end
 
     if major_axis(matrix) !== nothing
         check_efficient_action(@source_location()..., "matrix", matrix, Rows)
     end
     if issparse(matrix) && major_axis(matrix) == Rows
-        compute_sparse_quantile_of_sparse_rows!(result, plain_array(matrix), p; positive, progress, progress_chunk)
+        compute_sparse_quantile_of_sparse_rows!(output, plain_array(matrix), p; positive, progress, progress_chunk)
     else
-        compute_sparse_quantile_of_dense_rows!(result, matrix, p; positive, progress, progress_chunk)
+        compute_sparse_quantile_of_dense_rows!(output, matrix, p; positive, progress, progress_chunk)
     end
-    return result
+    return output
 end
 
 function compute_sparse_quantile_of_sparse_rows!(
