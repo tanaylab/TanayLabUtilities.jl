@@ -186,7 +186,7 @@ function parallel_loop_wo_rng(
         @assert length(weights) == length(indices)
         @assert progress_chunk === nothing
         if order === nothing
-            order = sortperm(weights; rev = true)  # NOJET
+            order = sortperm!(Vector{Int}(undef, length(weights)), weights; rev = true)
         end
     end
 
@@ -530,9 +530,12 @@ function parallel_foreach_column(
     end
 
     base_matrix = base_array(matrix)
-    if weights === nothing && progress_chunk === nothing && base_matrix isa AbstractSparseMatrixCSC
+    # A local of its own keeps the type of the default weights concrete.
+    weight_per_position = weights
+    if weight_per_position === nothing && progress_chunk === nothing && base_matrix isa AbstractSparseMatrixCSC
         column_pointers = SparseArrays.getcolptr(base_matrix)
-        weights = [Int(column_pointers[column_index + 1] - column_pointers[column_index]) for column_index in columns]
+        weight_per_position =
+            [Int(column_pointers[column_index + 1] - column_pointers[column_index]) for column_index in columns]
     end
     is_serial = is_serial_loop(policy)
 
@@ -546,7 +549,7 @@ function parallel_foreach_column(
             scratch_per_thread;
             name,
             policy,
-            weights,
+            weights = weight_per_position,
             progress,
             progress_chunk,
         )
@@ -567,7 +570,7 @@ function parallel_foreach_column(
         is_serial;
         name,
         policy,
-        weights,
+        weights = weight_per_position,
         progress,
         progress_chunk,
     )

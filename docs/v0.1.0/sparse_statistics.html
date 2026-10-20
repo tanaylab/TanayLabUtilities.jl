@@ -622,15 +622,25 @@ sparse_quantile(
 </p>
 <p>If 
 <code>scratch
-</code> is given, no allocation is performed. The required 
+</code> is given for a 
+<code>vector
+</code>, or for a whole 
+<code>matrix
+</code> (without 
+<code>dims
+</code>), no allocation is performed. The required 
 <code>scratch
 </code> length is 
 <code>nnz(input)
 </code> for sparse data and 
 <code>length(input)
-</code> for dense vectors (or 
-<code>n_rows * n_columns
-</code> for dense matrices). If 
+</code> for dense data. A 
+<code>scratch
+</code> can&#39;t be given with 
+<code>dims
+</code>, which allocates its own buffers (one column per thread for 
+<code>dims = Rows
+</code>). If 
 <code>result
 </code> is given for the matrix variant (length 
 <code>n_columns
@@ -640,11 +650,21 @@ sparse_quantile(
 <code>n_rows
 </code> for 
 <code>dims = Columns
-</code>), no result allocation is performed either.
+</code>), no result allocation is performed.
 </p>
 <p>When operating on a 
 <code>matrix
-</code>, the iteration is parallelized via 
+</code>, the iteration is parallelized. The columns (
+<code>dims = Rows
+</code>) are read via 
+<a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.parallel_foreach_column">
+<code>parallel_foreach_column
+</code>
+</a>, so a lazy 
+<code>matrix
+</code> is read one column at a time. The rows (
+<code>dims = Columns
+</code>) are read via 
 <a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.parallel_loop_wo_rng">
 <code>parallel_loop_wo_rng
 </code>
@@ -652,13 +672,13 @@ sparse_quantile(
 <a href="matrix_layouts.html#TanayLabUtilities.MatrixLayouts.major_axis">
 <code>major_axis
 </code>
-</a> of a sparse 
+</a> of a 
 <code>matrix
 </code> will trigger the 
 <a href="matrix_layouts.html#TanayLabUtilities.MatrixLayouts.GLOBAL_INEFFICIENT_ACTION_HANDLER">
 <code>GLOBAL_INEFFICIENT_ACTION_HANDLER
 </code>
-</a> and fall back to allocating per-iteration views.
+</a>.
 </p>
 <p>If 
 <code>progress
@@ -872,7 +892,17 @@ sparse_var(
 </p>
 <p>When operating on a 
 <code>matrix
-</code>, the iteration is parallelized via 
+</code>, the iteration is parallelized. The columns (
+<code>dims = Rows
+</code>) are read via 
+<a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.parallel_foreach_column">
+<code>parallel_foreach_column
+</code>
+</a>, so a lazy 
+<code>matrix
+</code> is read one column at a time. The rows (
+<code>dims = Columns
+</code>) are read via 
 <a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.parallel_loop_wo_rng">
 <code>parallel_loop_wo_rng
 </code>
@@ -880,7 +910,7 @@ sparse_var(
 <a href="matrix_layouts.html#TanayLabUtilities.MatrixLayouts.major_axis">
 <code>major_axis
 </code>
-</a> of a sparse 
+</a> of a 
 <code>matrix
 </code> will trigger the 
 <a href="matrix_layouts.html#TanayLabUtilities.MatrixLayouts.GLOBAL_INEFFICIENT_ACTION_HANDLER">

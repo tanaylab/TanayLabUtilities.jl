@@ -624,6 +624,239 @@ end
 </article>
 <article>
 <details class="docstring" open="true">
+<summary id="TanayLabUtilities.ParallelLoops.parallel_foreach_column">
+<a class="docstring-binding" href="#TanayLabUtilities.ParallelLoops.parallel_foreach_column">
+<code>TanayLabUtilities.ParallelLoops.parallel_foreach_column
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+</summary>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">parallel_foreach_column(
+    visit::Function,
+    matrix::AbstractMatrix;
+    columns::AbstractVector{&lt;:Integer} = 1:size(matrix, 2),
+    contiguous::Bool = false,
+    name::AbstractString = &quot;.columns&quot;,
+    policy::Symbol = :greedy_sticky,
+    weights::Maybe{AbstractVector{&lt;:Integer}} = nothing,
+    progress::Maybe{AbstractProgress} = nothing,
+    progress_chunk::Maybe{Integer} = nothing,
+)::Nothing
+</code>
+</pre>
+<p>Run 
+<code>visit(position, column_index, column)
+</code> in parallel for each of the 
+<code>columns
+</code> of the 
+<code>matrix
+</code>. The 
+<code>position
+</code> is the index of the 
+<code>column_index
+</code> in 
+<code>columns
+</code>, so 
+<code>visit
+</code> can write its results by position. This is 
+<a href="matrix_layouts.html#TanayLabUtilities.MatrixLayouts.plain_array">
+<code>plain_array
+</code>
+</a> one column at a time: the 
+<code>column
+</code> holds the values of the column in plain storage, so 
+<code>visit
+</code> needs no 
+<code>plain_array
+</code> of its own. The 
+<code>column
+</code> is valid only during the call to 
+<code>visit
+</code>, and must not be modified.
+</p>
+<p>A dense 
+<code>column
+</code> is a view of a column of plain storage, or a buffer holding the column. A sparse 
+<code>column
+</code> is read through 
+<code>nonzeroinds
+</code> and 
+<code>nonzeros
+</code>. It is a view of a column of a 
+<code>SparseMatrixCSC
+</code>, or a 
+<code>SparseVector
+</code> holding the column.
+</p>
+<p>A lazy matrix (which reads its data on demand) is read one column at a time through 
+<a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.column_scratch">
+<code>column_scratch
+</code>
+</a> and 
+<a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.read_column!">
+<code>read_column!
+</code>
+</a>, so all of it is never held in memory. Any other matrix is read once through 
+<code>plain_array
+</code>, which copies nothing for plain storage, read-only and named wrappers, and strided views. A matrix stored in rows (e.g. a transpose) is read against the grain, which invokes the 
+<a href="matrix_layouts.html#TanayLabUtilities.MatrixLayouts.GLOBAL_INEFFICIENT_ACTION_HANDLER">
+<code>GLOBAL_INEFFICIENT_ACTION_HANDLER
+</code>
+</a>. A sparse one is relayouted to columns first.
+</p>
+<p>Set 
+<code>contiguous
+</code> to copy each column with gaps (of a strided view or of a transpose) into a buffer, for code that needs contiguous memory.
+</p>
+<p>Buffers are allocated before the loop, one per thread, and dropped after it. They are indexed by 
+<code>threadid()
+</code>, so the 
+<code>policy
+</code> must keep each task on its thread (
+<code>:greedy_sticky
+</code>, 
+<code>:static
+</code> or 
+<code>:serial
+</code>). If this is invoked from inside another parallel loop, it runs serially (see 
+<a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.parallel_loop_wo_rng">
+<code>parallel_loop_wo_rng
+</code>
+</a>) and allocates a single buffer. Since this allocates inside the other loop, it invokes the 
+<a href="matrix_layouts.html#TanayLabUtilities.MatrixLayouts.GLOBAL_INEFFICIENT_ACTION_HANDLER">
+<code>GLOBAL_INEFFICIENT_ACTION_HANDLER
+</code>
+</a>.
+</p>
+<p>For a sparse matrix, the 
+<code>weights
+</code> default to the number of stored values in each of the 
+<code>columns
+</code>, unless a 
+<code>progress_chunk
+</code> is given. The 
+<code>weights
+</code>, the 
+<code>name
+</code>, the 
+<code>policy
+</code>, the 
+<code>progress
+</code> and the 
+<code>progress_chunk
+</code> are passed to 
+<a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.parallel_loop_wo_rng">
+<code>parallel_loop_wo_rng
+</code>
+</a>.
+</p>
+<pre>
+<code class="language-julia hljs">using SparseArrays
+
+matrix = sparse([0 1 2; 3 0 4])
+n_stored_per_column = zeros(Int, 2)
+parallel_foreach_column(matrix; columns = [3, 1]) do position, column_index, column
+    n_stored_per_column[position] = length(nonzeros(column))
+    return nothing
+end
+@assert n_stored_per_column == [2, 1]
+
+# output
+
+</code>
+</pre>
+</div>
+</section>
+</details>
+</article>
+<article>
+<details class="docstring" open="true">
+<summary id="TanayLabUtilities.ParallelLoops.column_scratch">
+<a class="docstring-binding" href="#TanayLabUtilities.ParallelLoops.column_scratch">
+<code>TanayLabUtilities.ParallelLoops.column_scratch
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+</summary>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">column_scratch(matrix::AbstractMatrix)::Any
+</code>
+</pre>
+<p>The scratch 
+<a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.parallel_foreach_column">
+<code>parallel_foreach_column
+</code>
+</a> needs for reading the columns of the 
+<code>matrix
+</code> one at a time through 
+<a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.read_column!">
+<code>read_column!
+</code>
+</a>, or 
+<code>nothing
+</code> if it reads the matrix through 
+<a href="matrix_layouts.html#TanayLabUtilities.MatrixLayouts.plain_array">
+<code>plain_array
+</code>
+</a> instead. This is 
+<code>nothing
+</code> except for a lazy matrix type (which reads its data on demand), which adds a method for both functions. Such a type returns 
+<code>nothing
+</code> when all its data is already in memory, since 
+<code>plain_array
+</code> then returns it without reading it.
+</p>
+</div>
+</section>
+</details>
+</article>
+<article>
+<details class="docstring" open="true">
+<summary id="TanayLabUtilities.ParallelLoops.read_column!">
+<a class="docstring-binding" href="#TanayLabUtilities.ParallelLoops.read_column!">
+<code>TanayLabUtilities.ParallelLoops.read_column!
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+</summary>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">read_column!(scratch::Any, matrix::AbstractMatrix, column_index::Integer)::AbstractVector
+</code>
+</pre>
+<p>Return the values of the column 
+<code>column_index
+</code> of a lazy 
+<code>matrix
+</code>, using the 
+<code>scratch
+</code> from 
+<a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.column_scratch">
+<code>column_scratch
+</code>
+</a>. The result is valid until the next call with the same 
+<code>scratch
+</code>. See 
+<a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.parallel_foreach_column">
+<code>parallel_foreach_column
+</code>
+</a> for the kinds of columns it may return.
+</p>
+</div>
+</section>
+</details>
+</article>
+<article>
+<details class="docstring" open="true">
 <summary id="TanayLabUtilities.ParallelLoops.is_in_parallel_loop">
 <a class="docstring-binding" href="#TanayLabUtilities.ParallelLoops.is_in_parallel_loop">
 <code>TanayLabUtilities.ParallelLoops.is_in_parallel_loop
@@ -740,8 +973,20 @@ end
 </a>
 </li>
 <li>
+<a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.column_scratch">
+<code>TanayLabUtilities.ParallelLoops.column_scratch
+</code>
+</a>
+</li>
+<li>
 <a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.is_in_parallel_loop">
 <code>TanayLabUtilities.ParallelLoops.is_in_parallel_loop
+</code>
+</a>
+</li>
+<li>
+<a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.parallel_foreach_column">
+<code>TanayLabUtilities.ParallelLoops.parallel_foreach_column
 </code>
 </a>
 </li>
@@ -754,6 +999,12 @@ end
 <li>
 <a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.parallel_loop_wo_rng">
 <code>TanayLabUtilities.ParallelLoops.parallel_loop_wo_rng
+</code>
+</a>
+</li>
+<li>
+<a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.read_column!">
+<code>TanayLabUtilities.ParallelLoops.read_column!
 </code>
 </a>
 </li>

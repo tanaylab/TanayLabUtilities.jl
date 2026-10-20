@@ -266,11 +266,19 @@
 </p>
 <p>These functions take a plain 
 <code>SparseMatrixCSC
-</code>. A caller with a lazy matrix converts it once, outside its loop, using 
+</code> and a column index. A caller with a lazy matrix converts it once, outside its loop, using 
 <code>plain_array
 </code> for all of it or 
 <code>matrix[:, columns]
-</code> for a few of its columns.
+</code> for a few of its columns. Most of them also take a single sparse column (a 
+<code>SparseVector
+</code>, or a view of a column of a 
+<code>SparseMatrixCSC
+</code>), such as the columns 
+<a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.parallel_foreach_column">
+<code>parallel_foreach_column
+</code>
+</a> gives, which reads a lazy matrix one column at a time.
 </p>
 </div>
 </section>
@@ -294,11 +302,22 @@
     column_index::Integer,
     row_indices::AbstractVector{&lt;:Integer},
 )
+
+stored_values_at_rows(
+    column::SparseArrays.SparseVectorUnion,
+    row_indices::AbstractVector{&lt;:Integer},
+)
 </code>
 </pre>
 <p>Iterate on the stored values of one column of a sparse 
 <code>matrix
-</code>, in some of its rows. The wanted 
+</code>, or of a sparse 
+<code>column
+</code> (a 
+<code>SparseVector
+</code>, or a view of a column of a 
+<code>SparseMatrixCSC
+</code>), in some of its rows. The wanted 
 <code>row_indices
 </code> must be sorted in increasing order, with no repetitions. This yields 
 <code>(position, value)
@@ -316,6 +335,7 @@ matrix = sparse([0 1; 2 0; 3 4; 0 5])
 
 @assert collect(stored_values_at_rows(matrix, 1, [1, 3, 4])) == [(2, 3)]
 @assert collect(stored_values_at_rows(matrix, 2, [1, 3, 4])) == [(1, 1), (2, 4), (3, 5)]
+@assert collect(stored_values_at_rows(view(matrix, :, 2), [1, 3, 4])) == [(1, 1), (2, 4), (3, 5)]
 
 # output
 
@@ -344,10 +364,18 @@ matrix = sparse([0 1; 2 0; 3 4; 0 5])
     column_index::Integer,
     row_indices::AbstractVector{&lt;:Integer},
 )::Bool
+
+gather_sparse_column!(
+    destination::AbstractVector,
+    column::SparseArrays.SparseVectorUnion,
+    row_indices::AbstractVector{&lt;:Integer},
+)::Bool
 </code>
 </pre>
 <p>Gather the values of one column of a sparse 
 <code>matrix
+</code>, or of a sparse 
+<code>column
 </code>, in some of its rows, into a dense 
 <code>destination
 </code>. The wanted 
@@ -371,6 +399,9 @@ destination = Vector{Int}(undef, 2)
 destination = Vector{Int}(undef, 1)
 @assert !gather_sparse_column!(destination, matrix, 2, [2])
 @assert destination == [0]
+
+@assert gather_sparse_column!(destination, view(matrix, :, 2), [3])
+@assert destination == [4]
 
 # output
 

@@ -12,7 +12,8 @@ The position of a wanted row is its index in the vector of wanted rows. Callers 
 These functions take a plain `SparseMatrixCSC` and a column index. A caller with a lazy matrix converts it once, outside
 its loop, using `plain_array` for all of it or `matrix[:, columns]` for a few of its columns. Most of them also take a
 single sparse column (a `SparseVector`, or a view of a column of a `SparseMatrixCSC`), such as the columns
-[`parallel_foreach_column`](@ref) gives, which reads a lazy matrix one column at a time.
+[`parallel_foreach_column`](@ref TanayLabUtilities.ParallelLoops.parallel_foreach_column) gives, which reads a lazy
+matrix one column at a time.
 """
 module SparseColumns
 

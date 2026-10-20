@@ -318,7 +318,7 @@
 </summary>
 <section>
 <div>
-<p>A symbolic name for the rows axis. It is more readable to write, say, 
+<p>A symbolic name for the columns axis. It is more readable to write, say, 
 <code>size(matrix, Columns)
 </code>, instead of 
 <code>size(matrix, 2)
@@ -894,6 +894,43 @@ base = SparseMatrixCSC([0.0 1.0 2.0; 3.0 4.0 0.0])
 vector = [1, 2, 3, 4, 5]
 @assert plain_array(view(vector, 1:2:5)) isa SubArray
 @assert plain_array(view(vector, 1:2:5); contiguous = true) isa Vector
+
+# output
+
+</code>
+</pre>
+</div>
+</section>
+</details>
+</article>
+<article>
+<details class="docstring" open="true">
+<summary id="TanayLabUtilities.MatrixLayouts.is_contiguous_array">
+<a class="docstring-binding" href="#TanayLabUtilities.MatrixLayouts.is_contiguous_array">
+<code>TanayLabUtilities.MatrixLayouts.is_contiguous_array
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+</summary>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">is_contiguous_array(array::AbstractArray)::Bool
+</code>
+</pre>
+<p>Whether the elements of the 
+<code>array
+</code> are adjacent in memory, in column-major order. This is 
+<code>false
+</code> for any array that isn&#39;t strided (e.g. a transpose, or a lazy array).
+</p>
+<pre>
+<code class="language-julia hljs">matrix = [1 2 3; 4 5 6]
+@assert is_contiguous_array(matrix)
+@assert is_contiguous_array(view(matrix, :, 2:3))
+@assert !is_contiguous_array(view(matrix, 1, :))
+@assert !is_contiguous_array(transpose(matrix))
 
 # output
 
@@ -1491,6 +1528,12 @@ for matrix: 2 x 3 x Int64 in Columns (Dense)
 <li>
 <a href="matrix_layouts.html#TanayLabUtilities.MatrixLayouts.flipped">
 <code>TanayLabUtilities.MatrixLayouts.flipped
+</code>
+</a>
+</li>
+<li>
+<a href="matrix_layouts.html#TanayLabUtilities.MatrixLayouts.is_contiguous_array">
+<code>TanayLabUtilities.MatrixLayouts.is_contiguous_array
 </code>
 </a>
 </li>
