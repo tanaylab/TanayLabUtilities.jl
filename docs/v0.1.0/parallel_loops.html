@@ -281,6 +281,10 @@
 <code>body
 </code> in parallel, passing it the iteration 
 <code>index
+</code>. A parallel loop runs one worker task per thread, started by 
+<code>@threads
+</code> with the 
+<code>policy
 </code>. The 
 <code>policy
 </code> is one of:
@@ -288,13 +292,9 @@
 <ul>
 <li>
 <code>:greedy_sticky
-</code> - 
-<code>nthreads()
-</code> sticky worker tasks spawned via 
-<code>@threads :static for _ in 1:nthreads()
-</code>, each pulling the next index position from an 
-<code>Atomic{Int}
-</code> counter. Combines the dynamic load balancing of 
+</code> - sticky workers, started by 
+<code>@threads :static
+</code>, which claim the next index positions from a shared atomic counter. Combines the dynamic load balancing of 
 <code>:greedy
 </code> with the threadid stability of 
 <code>:static
@@ -307,18 +307,18 @@
 </code>) to attack the tail-latency problem - heavy items dispatch first, light items fill the tail.
 </li>
 <li>
-<code>:greedy
-</code>, 
-<code>:dynamic
-</code>, 
 <code>:static
-</code> - passed straight to 
-<code>@threads
-</code>. Note that 
+</code> - sticky workers, each running a fixed contiguous chunk of the positions, split as 
+<code>@threads :static
+</code> does.
+</li>
+<li>
 <code>:greedy
-</code> and 
+</code>, 
 <code>:dynamic
-</code> create 
+</code> - workers which claim positions like 
+<code>:greedy_sticky
+</code>, but are 
 <em>non-sticky
 </em> tasks that may migrate across threads at yield points, so 
 <code>threadid()
@@ -329,6 +329,12 @@
 </code> - run the loop on the calling thread (useful for debugging).
 </li>
 </ul>
+<p>Without an 
+<code>order
+</code> (or 
+<code>weights
+</code>), each claim takes a guided chunk of the remaining positions, which shrinks towards the end of the loop. With one, each claim takes a single position, keeping the order.
+</p>
 <p>If 
 <code>order
 </code> is specified, it must be a permutation of the 
@@ -395,17 +401,21 @@
 <code>policy
 </code> is ignored and the loop is executed serially. This makes functions safe to compose: parallel at the top level, serial when called from inside another parallel loop. Pass 
 <code>nested = true
-</code> to opt out of the safety demotion - the loop then uses 
+</code> to opt out of the safety demotion. The caller then runs the positions of the loop itself, claiming them as above, and the workers of the top-level loop that have no positions of their own left help it. This starts no new tasks, and 
 <code>policy
-</code> as if at the top level. The caller is responsible for the scratch contract: under 
+</code> is ignored. This balances the work of an outer loop whose iterations differ a lot in size: the last, heavy iterations get the help of the threads that are done with the rest.
+</p>
+<p>The caller is responsible for the scratch contract. Each thread runs one task at a time, so under a sticky top-level 
 <code>:static
 </code>/
 <code>:greedy_sticky
-</code> each spawned sub-task has a stable 
+</code> the body of the nested loop has a stable 
 <code>threadid()
-</code>, but multiple outer iterations may be inside their nested loops at the same time, so per-thread scratch indexed by inner 
+</code>. However, the caller runs some of the positions in its own task, in the middle of its own outer iteration, so per-thread scratch indexed by inner 
 <code>threadid()
-</code> must be local to the outer iteration (not a global per-thread array shared across all outer iterations).
+</code> must not be the scratch of the outer iteration. The caller keeps its own flame stack and its own 
+<code>default_rng()
+</code> state across the positions it runs.
 </p>
 <p>The 
 <code>name
@@ -515,15 +525,11 @@ end
 </p>
 <p>The 
 <code>policy
-</code> is passed to 
-<code>@threads
-</code> if it is one of (the default 
-<code>:greedy
-</code>, 
-<code>:dynamic
-</code>, or 
-<code>:static
-</code>). If it is 
+</code> is one of those of 
+<a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.parallel_loop_wo_rng">
+<code>parallel_loop_wo_rng
+</code>
+</a>. If it is 
 <code>:serial
 </code>, then the loop is not run in parallel (useful for debugging).
 </p>
@@ -551,17 +557,13 @@ end
 <code>policy
 </code> is ignored and the loop is executed serially. This makes functions safe to compose: parallel at the top level, serial when called from inside another parallel loop. Pass 
 <code>nested = true
-</code> to opt out of the safety demotion - the loop then uses 
-<code>policy
-</code> as if at the top level. The caller is responsible for the scratch contract: under 
-<code>:static
-</code>/
-<code>:greedy_sticky
-</code> each spawned sub-task has a stable 
-<code>threadid()
-</code>, but multiple outer iterations may be inside their nested loops at the same time, so per-thread scratch indexed by inner 
-<code>threadid()
-</code> must be local to the outer iteration (not a global per-thread array shared across all outer iterations).
+</code> to have the caller run the loop with the help of the idle workers of the top-level loop - see 
+<a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.parallel_loop_wo_rng">
+<code>parallel_loop_wo_rng
+</code>
+</a> for how, and for the scratch contract. The caller keeps its own 
+<code>default_rng()
+</code> state, even though the positions it runs reseed it.
 </p>
 <p>The 
 <code>name

@@ -86,7 +86,7 @@ end
 
 Base.size(matrix::LazyColumnsMatrix) = size(matrix.values)
 
-function Base.getindex(::LazyColumnsMatrix, ::Int, ::Int)::Float64
+function Base.getindex(::LazyColumnsMatrix, ::Int, ::Int)::Float64  # UNTESTED
     return error("read a lazy matrix element by element")
 end
 
@@ -1023,6 +1023,133 @@ end
         @test progress.counter == n_items
     end
 
+    @testset "nested loops" begin
+        # Busy-wait, so that a position takes long enough for idle workers to join.
+        function busy_wait(n_ns::Integer)::Nothing
+            start_ns = time_ns()
+            while time_ns() - start_ns < n_ns
+            end
+            return nothing
+        end
+
+        n_outer = 3 * Threads.nthreads()
+        n_inner = 40
+
+        @testset "results are right under every policy" begin
+            for policy in (:static, :greedy_sticky, :greedy, :dynamic)
+                results = zeros(Int, n_outer, n_inner)
+                parallel_loop_wo_rng(1:n_outer; policy) do outer_index
+                    parallel_loop_wo_rng(1:n_inner; nested = true) do inner_index
+                        results[outer_index, inner_index] = outer_index * inner_index
+                        return nothing
+                    end
+                    return nothing
+                end
+                @test results == [outer_index * inner_index for outer_index in 1:n_outer, inner_index in 1:n_inner]
+            end
+        end
+
+        @testset "idle workers help the heavy outer iteration, and no task is added" begin
+            thread_per_inner = zeros(Int, n_inner)
+            tasks = Set{UInt}()
+            tasks_lock = ReentrantLock()
+            parallel_loop_wo_rng(
+                1:n_outer;
+                weights = [outer_index == 1 ? 100 : 1 for outer_index in 1:n_outer],
+            ) do outer_index
+                lock(tasks_lock) do
+                    return push!(tasks, objectid(current_task()))
+                end
+                if outer_index == 1
+                    parallel_loop_wo_rng(1:n_inner; nested = true) do inner_index
+                        busy_wait(1_000_000)
+                        thread_per_inner[inner_index] = Threads.threadid()
+                        lock(tasks_lock) do
+                            return push!(tasks, objectid(current_task()))
+                        end
+                        return nothing
+                    end
+                end
+                return nothing
+            end
+            @test (length(unique(thread_per_inner)) > 1) == (Threads.nthreads() > 1)
+            @test length(tasks) <= Threads.nthreads()
+        end
+
+        @testset "the thread is stable inside a nested position under a sticky policy" begin
+            for policy in (:static, :greedy_sticky)
+                is_stable_per_inner = fill(false, n_outer, n_inner)
+                parallel_loop_wo_rng(1:n_outer; policy) do outer_index
+                    parallel_loop_wo_rng(1:n_inner; nested = true) do inner_index
+                        thread_before = Threads.threadid()
+                        yield()
+                        is_stable_per_inner[outer_index, inner_index] = Threads.threadid() == thread_before
+                        return nothing
+                    end
+                    return nothing
+                end
+                @test all(is_stable_per_inner)
+            end
+        end
+
+        @testset "a failure in a nested position reaches the top level" begin
+            # Fail in a position the caller runs, and in a position a helping worker runs.
+            for is_failing_in_helper in (false, true)
+                failure = nothing
+                try
+                    parallel_loop_wo_rng(1:n_outer) do outer_index
+                        if outer_index == 1
+                            caller_thread = Threads.threadid()
+                            parallel_loop_wo_rng(1:n_inner; nested = true) do inner_index
+                                busy_wait(1_000_000)
+                                is_helper = Threads.threadid() != caller_thread
+                                if is_helper == is_failing_in_helper
+                                    error("nested failure")
+                                end
+                                return nothing
+                            end
+                        end
+                        return nothing
+                    end
+                catch exception
+                    failure = exception
+                end
+                if Threads.nthreads() > 1 || !is_failing_in_helper
+                    @test failure !== nothing && contains(sprint(showerror, failure), "nested failure")
+                end
+            end
+        end
+
+        @testset "the caller keeps its random generator" begin
+            is_kept_per_outer = fill(false, n_outer)
+            parallel_loop_wo_rng(1:n_outer) do outer_index
+                Random.seed!(outer_index)
+                expected = rand(copy(Random.default_rng()))
+                parallel_loop_with_rng(1:n_inner; nested = true) do _, rng
+                    rand(rng)
+                    return nothing
+                end
+                is_kept_per_outer[outer_index] = rand() == expected
+                return nothing
+            end
+            @test all(is_kept_per_outer)
+        end
+
+        @testset "progress counts every nested position" begin
+            progress = Progress(n_inner)
+            parallel_loop_wo_rng(1:n_outer) do outer_index
+                if outer_index == 1
+                    parallel_loop_wo_rng(1:n_inner; nested = true, progress) do _
+                        busy_wait(100_000)
+                        return nothing
+                    end
+                end
+                return nothing
+            end
+            @test progress.counter == n_inner
+        end
+    end
+
     @testset "parallel_foreach_column" begin
         values = Float64[row + column / 10 for row in 1:7, column in 1:5]
         expected_sums = vec(sum(values; dims = 1))
@@ -1053,6 +1180,10 @@ end
         @testset "column subsets are visited by position" begin
             @test column_sums(values; columns = [4, 2]) == expected_sums[[4, 2]]
             @test column_sums(sparse_values; columns = [5, 1, 3]) == expected_sparse_sums[[5, 1, 3]]
+        end
+
+        @testset "no columns visit nothing" begin
+            @test column_sums(values; columns = Int[]) == Float64[]
         end
 
         @testset "strided views are kept unless contiguous" begin

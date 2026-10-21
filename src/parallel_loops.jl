@@ -52,7 +52,7 @@ end
 function round_robin_for_static_chunks!(order::AbstractVector{<:Integer}, n_threads::Integer)::Nothing
     n = length(order)
     if n_threads <= 1 || n <= 1
-        return nothing  # UNTESTED
+        return nothing
     end
     chunk_size = cld(n, n_threads)
     n_overflow = chunk_size * n_threads - n
@@ -92,6 +92,238 @@ function round_robin_for_static_chunks!(order::AbstractVector{<:Integer}, n_thre
     return nothing
 end
 
+# The positions of a parallel loop, claimed in chunks by the threads that run them. A nested loop is listed in
+# `OPEN_LOOPS` while it runs, so that the idle workers of the top-level loop can help it. The `run_position` is what a
+# helping worker runs for each position. The `n_active` counts the tasks that may still run positions of the loop.
+mutable struct ClaimedLoop
+    run_position::Function
+    n_positions::Int
+    is_guided::Bool
+    next_position::Atomic{Int}
+    n_active::Atomic{Int}
+    is_waiting::Atomic{Bool}
+    is_idle_event::Event
+    failure::Maybe{CapturedException}
+end
+
+function ClaimedLoop(run_position::Function, n_positions::Integer, is_guided::Bool, n_active::Integer)::ClaimedLoop
+    return ClaimedLoop(
+        run_position,
+        n_positions,
+        is_guided,
+        Atomic{Int}(1),
+        Atomic{Int}(n_active),
+        Atomic{Bool}(false),
+        Event(),
+        nothing,
+    )
+end
+
+const OPEN_LOOPS = ClaimedLoop[]
+const OPEN_LOOPS_CONDITION = Threads.Condition()
+const OPEN_LOOPS_VERSION = Atomic{Int}(0)
+
+# About the cost of blocking a task and waking it up again, which is how long a wait spins before it blocks.
+const SPIN_LIMIT_NS = 5_000
+
+# Claim the next positions of the `loop`, or an empty range if none are left. A guided claim takes a share of the
+# remaining positions, so the chunks shrink towards the end of the loop. Otherwise each claim is a single position.
+function claim_positions!(loop::ClaimedLoop)::UnitRange{Int}
+    while true
+        first_position = loop.next_position[]
+        if first_position > loop.n_positions
+            return 1:0
+        end
+        n_claimed = loop.is_guided ? max(1, (loop.n_positions - first_position + 1) ÷ (2 * nthreads())) : 1
+        if atomic_cas!(loop.next_position, first_position, first_position + n_claimed) == first_position
+            return first_position:(first_position + n_claimed - 1)
+        end
+    end
+end
+
+# Run claimed positions of the `loop` until none are left. A failure stops the claims of all the tasks.
+function run_claimed_positions!(run_position::Function, loop::ClaimedLoop)::Nothing
+    try
+        while true
+            positions = claim_positions!(loop)
+            if isempty(positions)
+                return nothing
+            end
+            for position in positions
+                run_position(position)
+            end
+        end
+    catch
+        loop.next_position[] = loop.n_positions + 1
+        rethrow()
+    end
+end
+
+# Spin until `is_done()`, for at most `SPIN_LIMIT_NS`. Return whether it is done.
+function spin_until(is_done::Function)::Bool
+    start_ns = time_ns()
+    while !is_done()
+        if time_ns() - start_ns > SPIN_LIMIT_NS
+            return false
+        end
+        GC.safepoint()
+    end
+    return true
+end
+
+# Help the nested `loop` as an idle worker. A failure is kept for the caller of the loop to throw.
+function help_loop!(loop::ClaimedLoop)::Nothing
+    try
+        run_claimed_positions!(loop.run_position, loop)
+    catch exception
+        failure = CapturedException(exception, catch_backtrace())
+        lock(OPEN_LOOPS_CONDITION) do
+            if loop.failure === nothing
+                loop.failure = failure
+            end
+            return nothing
+        end
+    finally
+        if atomic_sub!(loop.n_active, 1) == 1 && loop.is_waiting[]
+            notify(loop.is_idle_event)
+        end
+    end
+    return nothing
+end
+
+# Help the open nested loops as an idle worker, until the top-level loop `is_done`. Waiting for a loop to open spins,
+# then blocks.
+function help_open_loops!(is_done::Atomic{Bool})::Nothing
+    while true
+        version = OPEN_LOOPS_VERSION[]
+        loop = lock(OPEN_LOOPS_CONDITION) do
+            for open_loop in OPEN_LOOPS
+                if open_loop.next_position[] <= open_loop.n_positions
+                    atomic_add!(open_loop.n_active, 1)
+                    return open_loop
+                end
+            end
+            return nothing
+        end
+        if loop !== nothing
+            help_loop!(loop)
+        elseif is_done[]
+            return nothing
+        elseif !spin_until(() -> OPEN_LOOPS_VERSION[] != version || is_done[])
+            lock(OPEN_LOOPS_CONDITION) do
+                while OPEN_LOOPS_VERSION[] == version && !is_done[]
+                    wait(OPEN_LOOPS_CONDITION)
+                end
+                return nothing
+            end
+        end
+    end
+end
+
+# Wake up the idle workers, because a loop opened or a top-level loop is done.
+function wake_idle_workers()::Nothing
+    lock(OPEN_LOOPS_CONDITION) do
+        atomic_add!(OPEN_LOOPS_VERSION, 1)
+        notify(OPEN_LOOPS_CONDITION)
+        return nothing
+    end
+    return nothing
+end
+
+# Run a nested loop. Its caller runs its positions using `run_position`, while idle workers of the top-level loop help
+# using `help_position`. The caller returns only after the helpers are done, and throws the failure of any of them.
+function run_nested_loop(
+    run_position::Function,
+    help_position::Function,
+    n_positions::Integer,
+    is_guided::Bool,
+)::Nothing
+    loop = ClaimedLoop(help_position, n_positions, is_guided, 1)
+    lock(OPEN_LOOPS_CONDITION) do
+        push!(OPEN_LOOPS, loop)
+        return nothing
+    end
+    wake_idle_workers()
+
+    try
+        run_claimed_positions!(run_position, loop)
+    finally
+        lock(OPEN_LOOPS_CONDITION) do
+            loop_index = findfirst(open_loop -> open_loop === loop, OPEN_LOOPS)
+            @assert loop_index !== nothing
+            deleteat!(OPEN_LOOPS, loop_index)
+            return nothing
+        end
+        atomic_sub!(loop.n_active, 1)
+        if !spin_until(() -> loop.n_active[] == 0)
+            loop.is_waiting[] = true
+            if loop.n_active[] > 0
+                wait(loop.is_idle_event)
+            end
+        end
+    end
+
+    failure = loop.failure
+    if failure !== nothing
+        throw(failure)
+    end
+    return nothing
+end
+
+# The positions of the `worker_index` under `:static`, using the same split as `@threads :static`.
+function static_positions(n_positions::Integer, worker_index::Integer)::UnitRange{Int}
+    chunk_size, n_larger_chunks = divrem(n_positions, nthreads())
+    first_position = 1 + (worker_index - 1) * chunk_size + min(worker_index - 1, n_larger_chunks)
+    last_position = first_position + chunk_size - 1 + (worker_index <= n_larger_chunks ? 1 : 0)
+    return first_position:last_position
+end
+
+# Run a top-level loop with one worker per thread. A worker runs its own positions, then helps the open nested loops
+# until all the positions of the top-level loop are done.
+function run_top_level_loop(run_position::Function, n_positions::Integer, policy::Symbol, is_guided::Bool)::Nothing
+    is_static = policy == :static
+    loop = ClaimedLoop(run_position, n_positions, is_guided, is_static ? nthreads() : 0)
+    is_done = Atomic{Bool}(false)
+
+    function run_worker(worker_index::Integer)::Nothing
+        if !is_static
+            atomic_add!(loop.n_active, 1)
+        end
+        try
+            if is_static
+                for position in static_positions(n_positions, worker_index)
+                    run_position(position)
+                end
+            else
+                run_claimed_positions!(run_position, loop)
+            end
+        finally
+            if atomic_sub!(loop.n_active, 1) == 1 && (is_static || loop.next_position[] > n_positions)
+                is_done[] = true
+                wake_idle_workers()
+            end
+        end
+        help_open_loops!(is_done)
+        return nothing
+    end
+
+    if policy == :greedy
+        @threads :greedy for worker_index in 1:nthreads()
+            run_worker(worker_index)
+        end
+    elseif policy == :dynamic
+        @threads :dynamic for worker_index in 1:nthreads()
+            run_worker(worker_index)
+        end
+    else
+        @assert policy in (:static, :greedy_sticky)
+        @threads :static for worker_index in 1:nthreads()
+            run_worker(worker_index)
+        end
+    end
+    return nothing
+end
+
 """
     parallel_loop_wo_rng(
         body::Function,
@@ -104,17 +336,21 @@ end
         progress::Maybe{AbstractProgress} = nothing,
     )::Nothing
 
-Run the `body` in parallel, passing it the iteration `index`. The `policy` is one of:
+Run the `body` in parallel, passing it the iteration `index`. A parallel loop runs one worker task per thread, started
+by `@threads` with the `policy`. The `policy` is one of:
 
-  - `:greedy_sticky` - `nthreads()` sticky worker tasks spawned via `@threads :static for _ in 1:nthreads()`, each
-    pulling the next index position from an `Atomic{Int}` counter. Combines the dynamic load balancing of `:greedy`
-    with the threadid stability of `:static`: tasks never migrate, so `threadid()`-indexed scratch is safe inside the
-    body. Pair with a heaviest-first `order` (or `weights`) to attack the tail-latency problem - heavy items dispatch
-    first, light items fill the tail.
-  - `:greedy`, `:dynamic`, `:static` - passed straight to `@threads`. Note that `:greedy` and `:dynamic` create
-    *non-sticky* tasks that may migrate across threads at yield points, so `threadid()`-indexed scratch is unsafe
-    under those.
+  - `:greedy_sticky` - sticky workers, started by `@threads :static`, which claim the next index positions from a
+    shared atomic counter. Combines the dynamic load balancing of `:greedy` with the threadid stability of `:static`:
+    tasks never migrate, so `threadid()`-indexed scratch is safe inside the body. Pair with a heaviest-first `order`
+    (or `weights`) to attack the tail-latency problem - heavy items dispatch first, light items fill the tail.
+  - `:static` - sticky workers, each running a fixed contiguous chunk of the positions, split as `@threads :static`
+    does.
+  - `:greedy`, `:dynamic` - workers which claim positions like `:greedy_sticky`, but are *non-sticky* tasks that may
+    migrate across threads at yield points, so `threadid()`-indexed scratch is unsafe under those.
   - `:serial` - run the loop on the calling thread (useful for debugging).
+
+Without an `order` (or `weights`), each claim takes a guided chunk of the remaining positions, which shrinks towards the
+end of the loop. With one, each claim takes a single position, keeping the order.
 
 If `order` is specified, it must be a permutation of the *positions* of `indices` - that is, a length-`length(indices)`
 vector whose values are a permutation of `1:length(indices)`. The body still receives the corresponding
@@ -134,11 +370,16 @@ Mutually exclusive with `progress_chunk` (the unweighted-throttling alternative)
 
 If this is invoked from inside another parallel loop and `nested` is `false` (the default), `policy` is ignored and the
 loop is executed serially. This makes functions safe to compose: parallel at the top level, serial when called from
-inside another parallel loop. Pass `nested = true` to opt out of the safety demotion - the loop then uses `policy` as if
-at the top level. The caller is responsible for the scratch contract: under `:static`/`:greedy_sticky` each spawned
-sub-task has a stable `threadid()`, but multiple outer iterations may be inside their nested loops at the same time, so
-per-thread scratch indexed by inner `threadid()` must be local to the outer iteration (not a global per-thread array
-shared across all outer iterations).
+inside another parallel loop. Pass `nested = true` to opt out of the safety demotion. The caller then runs the positions
+of the loop itself, claiming them as above, and the workers of the top-level loop that have no positions of their own
+left help it. This starts no new tasks, and `policy` is ignored. This balances the work of an outer loop whose
+iterations differ a lot in size: the last, heavy iterations get the help of the threads that are done with the rest.
+
+The caller is responsible for the scratch contract. Each thread runs one task at a time, so under a sticky top-level
+`:static`/`:greedy_sticky` the body of the nested loop has a stable `threadid()`. However, the caller runs some of the
+positions in its own task, in the middle of its own outer iteration, so per-thread scratch indexed by inner `threadid()`
+must not be the scratch of the outer iteration. The caller keeps its own flame stack and its own `default_rng()` state
+across the positions it runs.
 
 The `name` is used for [`flame_timed`](@ref) for the whole loop. If the loop is parallel, the whole loop is a line in
 the serial flame file, and each iteration is a line in the parallel flame file. The serial file therefore gives a view
@@ -209,11 +450,14 @@ function parallel_loop_wo_rng(
         (startswith(name, ".") ? name[2:end] : name, nothing)
     else
         @assert !startswith(name, ".") || length(flame_stack_names) > 0  # UNTESTED
-        (startswith(name, ".") ? flame_stack_names[end] * name : name, join(flame_stack_names, ";"))  # UNTESTED
+        (startswith(name, ".") ? flame_stack_names[end] * name : name, join(flame_stack_names, ";"))
     end
 
-    # A loop nested in another parallel loop runs serially, without its own progress.
-    is_nested_in_parallel_loop = nthreads() > 1 && !nested && haskey(base_private_storage, :is_in_parallel_loop)
+    # A loop nested in another parallel loop runs serially, without its own progress. With `nested`, its caller runs it
+    # with the help of the idle workers of the top-level loop.
+    is_in_outer_parallel_loop = nthreads() > 1 && haskey(base_private_storage, :is_in_parallel_loop)
+    is_nested_in_parallel_loop = is_in_outer_parallel_loop && !nested
+    is_helped_nested_loop = is_in_outer_parallel_loop && nested
     loop_progress = is_nested_in_parallel_loop ? nothing : progress
 
     # When `:greedy_sticky` would have at most one iteration per thread, the atomic counter buys nothing - degrade to
@@ -227,14 +471,19 @@ function parallel_loop_wo_rng(
     end
 
     # Resolve the iteration order once: under `:static`, round-robin-shuffle `order` in place so each contiguous chunk
-    # gets one item from each weight quantile. Under any other policy, the work queue consumes items in the order they
-    # appear, so an already-sorted (heaviest-first) `order` directly dispatches the heaviest items earliest. The body
-    # always receives `indices[order[k]]` - `view(indices, order)` projects positions to values without allocating.
-    if order !== nothing && loop_policy == :static
+    # gets one item from each weight quantile. Under any other policy, and in a helped nested loop, the positions are
+    # claimed in the order they appear, so an already-sorted (heaviest-first) `order` directly dispatches the heaviest
+    # items earliest. The body always receives `indices[order[k]]` - `view(indices, order)` projects positions to values
+    # without allocating.
+    if order !== nothing && loop_policy == :static && !is_helped_nested_loop
         round_robin_for_static_chunks!(order, nthreads())
     end
     iteration_indices = order === nothing ? indices : view(indices, order)
     n_index_positions = length(iteration_indices)
+
+    # Without an explicit order, claims take guided chunks. With one, they take a position at a time, so the
+    # heaviest-first order is kept.
+    is_guided = order === nothing
 
     # Per-position progress step. Built after the `:static` round-robin shuffle so `step_per_position[k]` matches the
     # `iteration_indices[k]` actually visited at step `k`. `nothing` when no `weights` were given, in which case the
@@ -288,45 +537,35 @@ function parallel_loop_wo_rng(
                     return nothing
                 end
 
-                saved_blas_threads = BLAS.get_num_threads()
-                BLAS.set_num_threads(1)
-                try
-                    if loop_policy == :greedy
-                        @threads :greedy for position in 1:n_index_positions
-                            iteration_body(position)
-                        end
-
-                    elseif loop_policy == :static
-                        @threads :static for position in 1:n_index_positions
-                            iteration_body(position)
-                        end
-
-                    elseif loop_policy == :dynamic
-                        @threads :dynamic for position in 1:n_index_positions
-                            iteration_body(position)
-                        end
-
-                    elseif loop_policy == :greedy_sticky
-                        # `nthreads()` sticky workers (one per thread) pull positions from a shared atomic counter.
-                        # Each iteration runs on its starting thread for the duration of the body, so
-                        # `threadid()`-indexed scratch is safe - unlike `:greedy` / `:dynamic` which create
-                        # non-sticky tasks.
-                        next_position = Atomic{Int}(0)
-                        @threads :static for _ in 1:nthreads()
-                            while true
-                                position = atomic_add!(next_position, 1) + 1
-                                if position > n_index_positions
-                                    break
-                                end
-                                iteration_body(position)
+                if is_helped_nested_loop
+                    # The caller runs positions in its own task. It keeps its own flame stack and random generator.
+                    @inline function caller_iteration_body(position::Integer)::Nothing
+                        saved_flame_stack = base_private_storage[:flame_stack]
+                        saved_rng = copy(default_rng())
+                        try
+                            base_private_storage[:flame_stack] = [base_flame_stack]
+                            flame_timed(loop_name) do
+                                body(iteration_indices[position])
+                                advance_progress(position)
+                                return nothing
                             end
+                        finally
+                            base_private_storage[:flame_stack] = saved_flame_stack
+                            copy!(default_rng(), saved_rng)
                         end
-
-                    else
-                        @assert false
+                        return nothing
                     end
-                finally
-                    BLAS.set_num_threads(saved_blas_threads)
+
+                    run_nested_loop(caller_iteration_body, iteration_body, n_index_positions, is_guided)
+
+                else
+                    saved_blas_threads = BLAS.get_num_threads()
+                    BLAS.set_num_threads(1)
+                    try
+                        run_top_level_loop(iteration_body, n_index_positions, loop_policy, is_guided)
+                    finally
+                        BLAS.set_num_threads(saved_blas_threads)
+                    end
                 end
             end
 
@@ -363,8 +602,8 @@ reset to `seed + index` for reproducibility. If no `seed` is specified, it is ju
 If the `rng` isn't given, then this uses (and sets for each iteration) the `default_rng()`. In this case passing it to
 the body is redundant but is still done for consistency.
 
-The `policy` is passed to `@threads` if it is one of (the default `:greedy`, `:dynamic`, or `:static`). If it is
-`:serial`, then the loop is not run in parallel (useful for debugging).
+The `policy` is one of those of [`parallel_loop_wo_rng`](@ref). If it is `:serial`, then the loop is not run in parallel
+(useful for debugging).
 
 If `order` and/or `weights` are specified, they are forwarded to [`parallel_loop_wo_rng`](@ref) - see there for the
 position-permutation semantics, the in-place round-robin shuffle under `:static`, and the work-weighted progress
@@ -373,11 +612,9 @@ accounting. The body still receives the same `indices[order[k]]` value at each s
 
 If this is invoked from inside another parallel loop and `nested` is `false` (the default), `policy` is ignored and
 the loop is executed serially. This makes functions safe to compose: parallel at the top level, serial when called
-from inside another parallel loop. Pass `nested = true` to opt out of the safety demotion - the loop then uses
-`policy` as if at the top level. The caller is responsible for the scratch contract: under `:static`/`:greedy_sticky`
-each spawned sub-task has a stable `threadid()`, but multiple outer iterations may be inside their nested loops at
-the same time, so per-thread scratch indexed by inner `threadid()` must be local to the outer iteration (not a global
-per-thread array shared across all outer iterations).
+from inside another parallel loop. Pass `nested = true` to have the caller run the loop with the help of the idle
+workers of the top-level loop - see [`parallel_loop_wo_rng`](@ref) for how, and for the scratch contract. The caller
+keeps its own `default_rng()` state, even though the positions it runs reseed it.
 
 The `name` is used for [`flame_timed`](@ref) for the whole loop. If the loop is parallel, the whole loop is a line in
 the serial flame file, and each iteration is a line in the parallel flame file. The serial file therefore gives a view
