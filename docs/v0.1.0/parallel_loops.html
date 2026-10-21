@@ -775,6 +775,146 @@ end
 </article>
 <article>
 <details class="docstring" open="true">
+<summary id="TanayLabUtilities.ParallelLoops.ColumnReader">
+<a class="docstring-binding" href="#TanayLabUtilities.ParallelLoops.ColumnReader">
+<code>TanayLabUtilities.ParallelLoops.ColumnReader
+</code>
+</a> — 
+<span class="docstring-category">Type
+</span>
+</summary>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">abstract type ColumnReader end
+</code>
+</pre>
+<p>Reads the columns of a matrix one at a time, for a loop that visits some of its columns. Each thread needs its own reader, from 
+<a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.new_column_reader_per_thread">
+<code>new_column_reader_per_thread
+</code>
+</a>. The columns are read by 
+<a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.read_column">
+<code>read_column
+</code>
+</a>.
+</p>
+</div>
+</section>
+</details>
+</article>
+<article>
+<details class="docstring" open="true">
+<summary id="TanayLabUtilities.ParallelLoops.new_column_reader_per_thread">
+<a class="docstring-binding" href="#TanayLabUtilities.ParallelLoops.new_column_reader_per_thread">
+<code>TanayLabUtilities.ParallelLoops.new_column_reader_per_thread
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+</summary>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">new_column_reader_per_thread(
+    matrix::AbstractMatrix;
+    contiguous::Bool = false,
+    policy::Symbol = :greedy_sticky,
+)::AbstractVector{&lt;:ColumnReader}
+</code>
+</pre>
+<p>A 
+<a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.ColumnReader">
+<code>ColumnReader
+</code>
+</a> of the 
+<code>matrix
+</code> for each thread, indexed by 
+<code>threadid()
+</code>, for a parallel loop with the 
+<code>policy
+</code>. This is useful when each iteration of the loop reads several columns, e.g. the columns of one group. The 
+<code>matrix
+</code> and the 
+<code>contiguous
+</code> flag are handled as in 
+<a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.parallel_foreach_column">
+<code>parallel_foreach_column
+</code>
+</a>, which reads its columns through these readers.
+</p>
+<p>The readers are created before the loop, so the 
+<code>policy
+</code> must keep each task on its thread (
+<code>:greedy_sticky
+</code>, 
+<code>:static
+</code> or 
+<code>:serial
+</code>). If the loop runs serially, all threads share one reader. If this is invoked from inside another parallel loop and the readers need buffers, it invokes the 
+<a href="matrix_layouts.html#TanayLabUtilities.MatrixLayouts.GLOBAL_INEFFICIENT_ACTION_HANDLER">
+<code>GLOBAL_INEFFICIENT_ACTION_HANDLER
+</code>
+</a>.
+</p>
+<pre>
+<code class="language-julia hljs">using SparseArrays
+
+matrix = sparse([0 1 2; 3 0 4])
+columns_per_group = [[1, 3], [2]]
+n_stored_per_group = zeros(Int, 2)
+column_reader_per_thread = new_column_reader_per_thread(matrix)
+parallel_loop_wo_rng(1:2) do group_index
+    column_reader = column_reader_per_thread[Threads.threadid()]
+    for column_index in columns_per_group[group_index]
+        n_stored_per_group[group_index] += length(nonzeros(read_column(column_reader, column_index)))
+    end
+    return nothing
+end
+@assert n_stored_per_group == [3, 1]
+
+# output
+
+</code>
+</pre>
+</div>
+</section>
+</details>
+</article>
+<article>
+<details class="docstring" open="true">
+<summary id="TanayLabUtilities.ParallelLoops.read_column">
+<a class="docstring-binding" href="#TanayLabUtilities.ParallelLoops.read_column">
+<code>TanayLabUtilities.ParallelLoops.read_column
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+</summary>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">read_column(reader::ColumnReader, column_index::Integer)::AbstractVector
+</code>
+</pre>
+<p>Return the values of the column 
+<code>column_index
+</code> through the 
+<code>reader
+</code>. The result is valid until the next call with the same 
+<code>reader
+</code>, and must not be modified. See 
+<a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.parallel_foreach_column">
+<code>parallel_foreach_column
+</code>
+</a> for the kinds of columns it may return.
+</p>
+</div>
+</section>
+</details>
+</article>
+<article>
+<details class="docstring" open="true">
 <summary id="TanayLabUtilities.ParallelLoops.column_scratch">
 <a class="docstring-binding" href="#TanayLabUtilities.ParallelLoops.column_scratch">
 <code>TanayLabUtilities.ParallelLoops.column_scratch
@@ -961,6 +1101,12 @@ end
 </a>
 </li>
 <li>
+<a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.ColumnReader">
+<code>TanayLabUtilities.ParallelLoops.ColumnReader
+</code>
+</a>
+</li>
+<li>
 <a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.DebugProgress">
 <code>TanayLabUtilities.ParallelLoops.DebugProgress
 </code>
@@ -985,6 +1131,12 @@ end
 </a>
 </li>
 <li>
+<a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.new_column_reader_per_thread">
+<code>TanayLabUtilities.ParallelLoops.new_column_reader_per_thread
+</code>
+</a>
+</li>
+<li>
 <a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.parallel_foreach_column">
 <code>TanayLabUtilities.ParallelLoops.parallel_foreach_column
 </code>
@@ -999,6 +1151,12 @@ end
 <li>
 <a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.parallel_loop_wo_rng">
 <code>TanayLabUtilities.ParallelLoops.parallel_loop_wo_rng
+</code>
+</a>
+</li>
+<li>
+<a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.read_column">
+<code>TanayLabUtilities.ParallelLoops.read_column
 </code>
 </a>
 </li>

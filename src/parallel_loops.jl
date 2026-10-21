@@ -3,13 +3,16 @@ Parallel loops.
 """
 module ParallelLoops
 
+export ColumnReader
 export DebugProgress
 export DebugProgressUnknown
 export column_scratch
 export is_in_parallel_loop
+export new_column_reader_per_thread
 export parallel_foreach_column
 export parallel_loop_with_rng
 export parallel_loop_wo_rng
+export read_column
 export read_column!
 
 using ..Brief
@@ -451,6 +454,113 @@ function parallel_loop_with_rng(
 end
 
 """
+    abstract type ColumnReader end
+
+Reads the columns of a matrix one at a time, for a loop that visits some of its columns. Each thread needs its own
+reader, from [`new_column_reader_per_thread`](@ref). The columns are read by [`read_column`](@ref).
+"""
+abstract type ColumnReader end
+
+# Reads the columns of plain storage as views.
+struct PlainColumnReader{M <: AbstractMatrix} <: ColumnReader
+    storage::M
+end
+
+# Reads the columns of plain storage, which have gaps, by copying them into a contiguous buffer.
+struct CopiedColumnReader{M <: AbstractMatrix, T} <: ColumnReader
+    storage::M
+    buffer::Vector{T}
+end
+
+# Reads the columns of a lazy matrix through its column scratch.
+struct LazyColumnReader{M <: AbstractMatrix, S} <: ColumnReader
+    matrix::M
+    scratch::S
+end
+
+"""
+    new_column_reader_per_thread(
+        matrix::AbstractMatrix;
+        contiguous::Bool = false,
+        policy::Symbol = :greedy_sticky,
+    )::AbstractVector{<:ColumnReader}
+
+A [`ColumnReader`](@ref) of the `matrix` for each thread, indexed by `threadid()`, for a parallel loop with the
+`policy`. This is useful when each iteration of the loop reads several columns, e.g. the columns of one group. The
+`matrix` and the `contiguous` flag are handled as in [`parallel_foreach_column`](@ref), which reads its columns through
+these readers.
+
+The readers are created before the loop, so the `policy` must keep each task on its thread (`:greedy_sticky`, `:static`
+or `:serial`). If the loop runs serially, all threads share one reader. If this is invoked from inside another parallel
+loop and the readers need buffers, it invokes the [`GLOBAL_INEFFICIENT_ACTION_HANDLER`](@ref).
+
+```jldoctest
+using SparseArrays
+
+matrix = sparse([0 1 2; 3 0 4])
+columns_per_group = [[1, 3], [2]]
+n_stored_per_group = zeros(Int, 2)
+column_reader_per_thread = new_column_reader_per_thread(matrix)
+parallel_loop_wo_rng(1:2) do group_index
+    column_reader = column_reader_per_thread[Threads.threadid()]
+    for column_index in columns_per_group[group_index]
+        n_stored_per_group[group_index] += length(nonzeros(read_column(column_reader, column_index)))
+    end
+    return nothing
+end
+@assert n_stored_per_group == [3, 1]
+
+# output
+
+```
+"""
+function new_column_reader_per_thread(
+    matrix::AbstractMatrix;
+    contiguous::Bool = false,
+    policy::Symbol = :greedy_sticky,
+)::AbstractVector{<:ColumnReader}
+    @assert policy in (:greedy_sticky, :static, :serial)
+    is_serial = is_serial_loop(policy)
+
+    base_matrix = base_array(matrix)
+    scratch = column_scratch(base_matrix)
+    if scratch !== nothing
+        create_lazy_reader = () -> LazyColumnReader(base_matrix, column_scratch(base_matrix))
+        return new_scratch_per_thread(LazyColumnReader(base_matrix, scratch), create_lazy_reader, matrix, is_serial)
+    end
+
+    plain_storage = plain_array(matrix)
+    @assert_matrix(plain_storage, Columns)
+    storage =
+        issparse(plain_storage) && major_axis(plain_storage) != Columns ? SparseMatrixCSC(plain_storage) : plain_storage
+    if contiguous && !issparse(storage) && size(storage, 2) > 0 && !is_contiguous_array(view(storage, :, 1))
+        create_copied_reader = () -> CopiedColumnReader(storage, Vector{eltype(storage)}(undef, size(storage, 1)))
+        return new_scratch_per_thread(create_copied_reader(), create_copied_reader, matrix, is_serial)
+    end
+    return fill(PlainColumnReader(storage), maxthreadid())
+end
+
+"""
+    read_column(reader::ColumnReader, column_index::Integer)::AbstractVector
+
+Return the values of the column `column_index` through the `reader`. The result is valid until the next call with the
+same `reader`, and must not be modified. See [`parallel_foreach_column`](@ref) for the kinds of columns it may return.
+"""
+function read_column end
+
+function read_column(reader::PlainColumnReader, column_index::Integer)::AbstractVector
+    return view(reader.storage, :, column_index)
+end
+
+function read_column(reader::CopiedColumnReader, column_index::Integer)::AbstractVector
+    return copyto!(reader.buffer, view(reader.storage, :, column_index))
+end
+
+function read_column(reader::LazyColumnReader, column_index::Integer)::AbstractVector
+    return read_column!(reader.scratch, reader.matrix, column_index)  # NOLINT # NOJET
+end
+
+"""
     parallel_foreach_column(
         visit::Function,
         matrix::AbstractMatrix;
@@ -529,37 +639,12 @@ function parallel_foreach_column(
         weight_per_position =
             [Int(column_pointers[column_index + 1] - column_pointers[column_index]) for column_index in columns]
     end
-    is_serial = is_serial_loop(policy)
 
-    scratch = column_scratch(base_matrix)
-    if scratch !== nothing
-        scratch_per_thread = new_scratch_per_thread(scratch, () -> column_scratch(base_matrix), matrix, is_serial)
-        foreach_column_through_scratch(
-            visit,
-            (thread_scratch, column_index) -> read_column!(thread_scratch, base_matrix, column_index),  # NOLINT
-            columns,
-            scratch_per_thread;
-            name,
-            policy,
-            weights = weight_per_position,
-            progress,
-            progress_chunk,
-        )
-        return nothing
-    end
-
-    storage = plain_array(matrix)
-    @assert_matrix(storage, Columns)
-    if issparse(storage) && major_axis(storage) != Columns
-        storage = SparseMatrixCSC(storage)
-    end
-    foreach_plain_column(
+    column_reader_per_thread = new_column_reader_per_thread(matrix; contiguous, policy)
+    foreach_column_through_readers(
         visit,
-        storage,
-        matrix,
-        columns,
-        contiguous,
-        is_serial;
+        column_reader_per_thread,
+        columns;
         name,
         policy,
         weights = weight_per_position,
@@ -572,45 +657,6 @@ end
 # Whether a parallel loop with the `policy` runs serially, which is also the case inside another parallel loop.
 function is_serial_loop(policy::Symbol)::Bool
     return policy == :serial || nthreads() == 1 || is_in_parallel_loop()
-end
-
-# Run `visit(position, column_index, column)` for each of the `columns` of the plain `storage` of the `matrix`, where
-# the `column` is a view of the storage, or a copy of it in a buffer if it has gaps and must be `contiguous`.
-function foreach_plain_column(
-    visit::Function,
-    storage::AbstractMatrix,
-    matrix::AbstractMatrix,
-    columns::AbstractVector{<:Integer},
-    contiguous::Bool,
-    is_serial::Bool;
-    name::AbstractString,
-    policy::Symbol,
-    weights::Maybe{AbstractVector{<:Integer}},
-    progress::Maybe{AbstractProgress},
-    progress_chunk::Maybe{Integer},
-)::Nothing
-    if contiguous && !issparse(storage) && !is_contiguous_array(view(storage, :, first(columns)))
-        create_buffer = () -> Vector{eltype(storage)}(undef, size(storage, 1))
-        buffer_per_thread = new_scratch_per_thread(create_buffer(), create_buffer, matrix, is_serial)
-        foreach_column_through_scratch(
-            visit,
-            (buffer, column_index) -> copyto!(buffer, view(storage, :, column_index)),
-            columns,
-            buffer_per_thread;
-            name,
-            policy,
-            weights,
-            progress,
-            progress_chunk,
-        )
-    else
-        parallel_loop_wo_rng(1:length(columns); name, policy, weights, progress, progress_chunk) do position
-            column_index = columns[position]
-            visit(position, column_index, view(storage, :, column_index))
-            return nothing
-        end
-    end
-    return nothing
 end
 
 # The scratch of each thread, starting with the `first_scratch`, the rest made by `create_scratch`. A serial loop shares
@@ -636,13 +682,12 @@ function new_scratch_per_thread(
     return fill(first_scratch, maxthreadid())
 end
 
-# Run `visit(position, column_index, column)` for each of the `columns`, where `read_column(scratch, column_index)`
-# returns the column, using the scratch of the current thread.
-function foreach_column_through_scratch(
+# Run `visit(position, column_index, column)` for each of the `columns`, reading the column through the reader of the
+# current thread.
+function foreach_column_through_readers(
     visit::Function,
-    read_column::Function,
-    columns::AbstractVector{<:Integer},
-    scratch_per_thread::AbstractVector;
+    column_reader_per_thread::AbstractVector{<:ColumnReader},
+    columns::AbstractVector{<:Integer};
     name::AbstractString,
     policy::Symbol,
     weights::Maybe{AbstractVector{<:Integer}},
@@ -651,7 +696,7 @@ function foreach_column_through_scratch(
 )::Nothing
     parallel_loop_wo_rng(1:length(columns); name, policy, weights, progress, progress_chunk) do position
         column_index = columns[position]
-        visit(position, column_index, read_column(scratch_per_thread[threadid()], column_index))
+        visit(position, column_index, read_column(column_reader_per_thread[threadid()], column_index))
         return nothing
     end
     return nothing

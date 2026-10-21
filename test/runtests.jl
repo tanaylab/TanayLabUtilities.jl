@@ -1120,6 +1120,50 @@ end
             end
         end
     end
+
+    @testset "new_column_reader_per_thread" begin
+        values = Float64[row + column / 10 for row in 1:7, column in 1:5]
+        sparse_values = sparse(Float64[row == column || row == 7 ? row + column / 10 : 0 for row in 1:7, column in 1:5])
+        columns_per_group = [[1, 4], [5, 2, 3]]
+
+        # The sum of the columns of each group, read through one reader per thread.
+        function group_sums(matrix::AbstractMatrix; kwargs...)::Vector{Float64}
+            sums = zeros(length(columns_per_group))
+            column_reader_per_thread = new_column_reader_per_thread(matrix; kwargs...)
+            parallel_loop_wo_rng(1:length(columns_per_group)) do group_index
+                column_reader = column_reader_per_thread[Threads.threadid()]
+                for column_index in columns_per_group[group_index]
+                    sums[group_index] += sum(read_column(column_reader, column_index))
+                end
+                return nothing
+            end
+            return sums
+        end
+
+        @testset "groups of columns" begin
+            for matrix in (values, sparse_values, view(values, 1:2:7, :))
+                expected_sums = [sum(matrix[:, columns]) for columns in columns_per_group]
+                @test group_sums(matrix) ≈ expected_sums
+                @test group_sums(matrix; contiguous = true) ≈ expected_sums
+            end
+        end
+
+        @testset "columns with gaps are copied only when contiguous" begin
+            strided_values = view(values, 1:2:7, :)
+            @test !(read_column(only(unique(new_column_reader_per_thread(strided_values))), 2) isa Vector)
+            @test read_column(new_column_reader_per_thread(strided_values; contiguous = true)[1], 2) == values[1:2:7, 2]
+        end
+
+        @testset "lazy matrices get one scratch per thread" begin
+            lazy_values = LazyColumnsMatrix(values, Threads.Atomic{Int}(0))
+            @test group_sums(lazy_values) ≈ [sum(values[:, columns]) for columns in columns_per_group]
+            @test lazy_values.n_scratches[] == (Threads.nthreads() == 1 ? 1 : Threads.maxthreadid())
+            lazy_values.n_scratches[] = 0
+            column_reader_per_thread = new_column_reader_per_thread(lazy_values; policy = :serial)
+            @test lazy_values.n_scratches[] == 1
+            @test length(column_reader_per_thread) == Threads.maxthreadid()
+        end
+    end
 end
 
 @testset "parallel_distances" begin
