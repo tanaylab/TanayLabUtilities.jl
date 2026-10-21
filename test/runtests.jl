@@ -301,6 +301,16 @@ end
         end
     end
 
+    @testset "in place with implicit zeros" begin
+        for dense_vector in ([0, 0, 1, 2, 3, 0, 0], [-3, 0, -1, 0, 0, 2, 4, 0], [5, 5, 5, 5], [-1, 0, 1])
+            stored_values = Float64.(filter(!iszero, dense_vector))
+            n_implicit_zero = count(iszero, dense_vector)
+            for p in (0.0, 0.1, 0.25, 0.5, 0.75, 0.9, 1.0)
+                @test sparse_quantile!(copy(stored_values), p; n_implicit_zero) ≈ quantile(dense_vector, p)
+            end
+        end
+    end
+
     @testset "views of sparse arrays" begin
         dense_matrix = Float64[0 1 0; 2 0 3; 0 4 0; 5 0 6; 0 0 7]
         rows = [1, 2, 4, 5]

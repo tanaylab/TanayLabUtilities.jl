@@ -742,6 +742,62 @@ sparse_quantile(matrix, 0.5; dims = Rows)
 </article>
 <article>
 <details class="docstring" open="true">
+<summary id="TanayLabUtilities.SparseStatistics.sparse_quantile!">
+<a class="docstring-binding" href="#TanayLabUtilities.SparseStatistics.sparse_quantile!">
+<code>TanayLabUtilities.SparseStatistics.sparse_quantile!
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+</summary>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">sparse_quantile!(
+    values::AbstractVector{&lt;:AbstractFloat},
+    p::Real;
+    n_implicit_zero::Integer = 0,
+    positive::Bool = false,
+)::Float64
+</code>
+</pre>
+<p>Compute the 
+<code>p
+</code>-quantile (
+<code>0 &lt;= p &lt;= 1
+</code>) of the 
+<code>values
+</code> together with 
+<code>n_implicit_zero
+</code> zero values which aren&#39;t in the 
+<code>values
+</code>, as 
+<a href="sparse_statistics.html#TanayLabUtilities.SparseStatistics.sparse_quantile">
+<code>sparse_quantile
+</code>
+</a> does. This reorders the 
+<code>values
+</code>, as 
+<code>Statistics.quantile!
+</code> does, and allocates nothing. The 
+<code>values
+</code> are typically the stored values of some sparse data, copied into a buffer the caller reuses.
+</p>
+<pre>
+<code class="language-julia hljs">values = [3.0, 1.0, 2.0]
+println(sparse_quantile!(values, 0.5; n_implicit_zero = 2))
+
+# output
+
+1.0
+</code>
+</pre>
+</div>
+</section>
+</details>
+</article>
+<article>
+<details class="docstring" open="true">
 <summary id="TanayLabUtilities.SparseStatistics.sparse_std">
 <a class="docstring-binding" href="#TanayLabUtilities.SparseStatistics.sparse_std">
 <code>TanayLabUtilities.SparseStatistics.sparse_std
@@ -1000,6 +1056,12 @@ sparse_var(matrix; dims = Rows)
 <li>
 <a href="sparse_statistics.html#TanayLabUtilities.SparseStatistics.sparse_quantile">
 <code>TanayLabUtilities.SparseStatistics.sparse_quantile
+</code>
+</a>
+</li>
+<li>
+<a href="sparse_statistics.html#TanayLabUtilities.SparseStatistics.sparse_quantile!">
+<code>TanayLabUtilities.SparseStatistics.sparse_quantile!
 </code>
 </a>
 </li>

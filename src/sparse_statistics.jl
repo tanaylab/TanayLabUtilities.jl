@@ -30,6 +30,7 @@ export auc_per_category
 export auc_per_group!
 export sparse_median
 export sparse_quantile
+export sparse_quantile!
 export sparse_std
 export sparse_var
 
@@ -171,6 +172,37 @@ function sparse_quantile(
     return flame_timed("sparse_quantile") do
         return compute_sparse_quantile_of_matrix(matrix, p; dims, positive, result, scratch, progress, progress_chunk)
     end
+end
+
+"""
+    sparse_quantile!(
+        values::AbstractVector{<:AbstractFloat},
+        p::Real;
+        n_implicit_zero::Integer = 0,
+        positive::Bool = false,
+    )::Float64
+
+Compute the `p`-quantile (`0 <= p <= 1`) of the `values` together with `n_implicit_zero` zero values which aren't in the
+`values`, as [`sparse_quantile`](@ref) does. This reorders the `values`, as `Statistics.quantile!` does, and allocates
+nothing. The `values` are typically the stored values of some sparse data, copied into a buffer the caller reuses.
+
+```jldoctest
+values = [3.0, 1.0, 2.0]
+println(sparse_quantile!(values, 0.5; n_implicit_zero = 2))
+
+# output
+
+1.0
+```
+"""
+function sparse_quantile!(
+    values::AbstractVector{<:AbstractFloat},
+    p::Real;
+    n_implicit_zero::Integer = 0,
+    positive::Bool = false,
+)::Float64
+    @assert 0 <= p <= 1 "quantile p: $(p) is not in [0, 1]"
+    return sparse_quantile_from_buffer!(values, length(values), n_implicit_zero, p, positive)
 end
 
 """
@@ -614,13 +646,8 @@ function compute_sparse_quantile_of_matrix(
 
     if dims == Rows
         create_buffer = () -> Vector{Float64}(undef, n_rows)
-        buffer_per_thread = new_scratch_per_thread(
-            create_buffer(),
-            create_buffer,
-            matrix,
-            is_serial_loop(:greedy_sticky);
-            report = false,  # TODOX
-        )
+        buffer_per_thread =
+            new_scratch_per_thread(create_buffer(), create_buffer, matrix, is_serial_loop(:greedy_sticky))
         parallel_foreach_column(matrix; name = "sparse_quantile", progress, progress_chunk) do _, column_index, column
             values = stored_column_values(column)
             n_values = length(values)

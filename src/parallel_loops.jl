@@ -620,13 +620,12 @@ function new_scratch_per_thread(
     first_scratch::Any,
     create_scratch::Function,
     matrix::AbstractMatrix,
-    is_serial::Bool;
-    report::Bool = true,  # TODOX
+    is_serial::Bool,
 )::AbstractVector
     if !is_serial
         return [thread_index == 1 ? first_scratch : create_scratch() for thread_index in 1:maxthreadid()]
     end
-    if report && is_in_parallel_loop()  # TODOX
+    if is_in_parallel_loop()
         handle_abnormal(GLOBAL_INEFFICIENT_ACTION_HANDLER) do
             return """
                 allocating column scratch inside a parallel loop
