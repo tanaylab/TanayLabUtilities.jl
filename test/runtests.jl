@@ -563,6 +563,22 @@ end
         end
     end
 
+    @testset "gathered_rows" begin
+        dense = Matrix(matrix)
+        spaced = zeros(400, 7)
+        spaced[1:2:400, :] .= dense
+        for row_indices in (row_indices_per_case..., [150, 3, 17, 8])
+            result = gathered_rows(matrix, row_indices)
+            @test result isa SparseMatrixCSC
+            @test result == matrix[row_indices, :]
+            for input in (dense, view(spaced, 1:2:400, :))
+                result = gathered_rows(input, row_indices)
+                @test result isa Matrix
+                @test result == dense[row_indices, :]
+            end
+        end
+    end
+
     @testset "sum_sparse_columns_per_group!" begin
         column_indices_per_group = [[1, 4], [2], [3, 5, 6, 7]]
         for row_indices in row_indices_per_case

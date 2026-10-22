@@ -13,16 +13,20 @@ These functions take a plain `SparseMatrixCSC` and a column index. A caller with
 its loop, using `plain_array` for all of it or `matrix[:, columns]` for a few of its columns. Most of them also take a
 single sparse column (a `SparseVector`, or a view of a column of a `SparseMatrixCSC`), such as the columns
 [`parallel_foreach_column`](@ref TanayLabUtilities.ParallelLoops.parallel_foreach_column) gives, which reads a lazy
-matrix one column at a time.
+matrix one column at a time. [`gathered_rows`](@ref) uses it to read some of the rows of all the columns.
 """
 module SparseColumns
 
 export gather_sparse_column!
+export gathered_rows
 export stored_values_at_rows
 export sum_sparse_columns_per_group!
 
+using ..ParallelLoops
+using Base.Threads
 using SparseArrays
 
+import Base.Threads.maxthreadid
 import SparseArrays.SparseVectorUnion
 
 """
@@ -190,6 +194,93 @@ function gather_stored_values!(destination::AbstractVector, stored_values::Store
         is_any_nonzero |= !iszero(value)
     end
     return is_any_nonzero
+end
+
+"""
+    gathered_rows(matrix::AbstractMatrix, row_indices::AbstractVector{<:Integer})::AbstractMatrix
+
+The values of a column-major `matrix` in some of its rows, as a new column-major matrix, which is sparse if the `matrix`
+is. The result is the same as `matrix[row_indices, :]`. For a sparse `matrix`, that visits every stored value of every
+column, on one thread. Here, the columns are read in parallel, once each, using
+[`parallel_foreach_column`](@ref TanayLabUtilities.ParallelLoops.parallel_foreach_column). So a lazy `matrix` is read
+one column at a time. The `row_indices` must have no repetitions. If they aren't sorted in increasing order, a sparse
+result has its rows reordered at the end.
+
+```jldoctest
+using SparseArrays
+using TanayLabUtilities.SparseColumns
+
+matrix = sparse([0 1; 2 0; 3 4; 0 5])
+
+@assert gathered_rows(matrix, [1, 3, 4]) == [0 1; 3 4; 0 5]
+@assert gathered_rows(matrix, [4, 2]) == [0 5; 2 0]
+@assert gathered_rows(Matrix(matrix), [4, 2]) == [0 5; 2 0]
+
+# output
+
+```
+"""
+function gathered_rows(matrix::AbstractMatrix, row_indices::AbstractVector{<:Integer})::AbstractMatrix
+    if !issparse(matrix)
+        output = Matrix{eltype(matrix)}(undef, length(row_indices), size(matrix, 2))
+        parallel_foreach_column(matrix; name = "gathered_rows") do _, column_index, column
+            @views output[:, column_index] .= column[row_indices]
+            return nothing
+        end
+        return output
+    elseif issorted(row_indices; lt = <=)
+        return gathered_sorted_rows(matrix, row_indices)
+    else
+        order = sortperm(row_indices)
+        return gathered_sorted_rows(matrix, row_indices[order])[invperm(order), :]
+    end
+end
+
+# The rows of a sparse `matrix` at the sorted `row_indices`. Each thread appends the stored values it gathers from its
+# columns to its own buffers, and the buffers are then copied into the result.
+function gathered_sorted_rows(
+    matrix::AbstractMatrix{T},
+    row_indices::AbstractVector{<:Integer},
+)::SparseMatrixCSC{T} where {T}
+    I = SparseArrays.indtype(matrix)
+    n_columns = size(matrix, 2)
+    position_per_stored_per_thread = [I[] for _ in 1:maxthreadid()]
+    value_per_stored_per_thread = [T[] for _ in 1:maxthreadid()]
+    thread_per_column = Vector{Int}(undef, n_columns)
+    first_stored_per_column = Vector{Int}(undef, n_columns)
+    n_stored_per_column = Vector{Int}(undef, n_columns)
+
+    parallel_foreach_column(matrix; name = "gathered_rows") do _, column_index, column
+        thread = threadid()
+        position_per_stored = position_per_stored_per_thread[thread]
+        value_per_stored = value_per_stored_per_thread[thread]
+        first_stored = length(position_per_stored) + 1
+        for (position, value) in stored_values_at_rows(column, row_indices)
+            push!(position_per_stored, position)
+            push!(value_per_stored, value)
+        end
+        thread_per_column[column_index] = thread
+        first_stored_per_column[column_index] = first_stored
+        n_stored_per_column[column_index] = length(position_per_stored) - first_stored + 1
+        return nothing
+    end
+
+    colptr = Vector{I}(undef, n_columns + 1)
+    colptr[1] = 1
+    for column_index in 1:n_columns
+        colptr[column_index + 1] = colptr[column_index] + n_stored_per_column[column_index]
+    end
+    rowval = Vector{I}(undef, colptr[end] - 1)
+    nzval = Vector{T}(undef, colptr[end] - 1)
+    parallel_loop_wo_rng(1:n_columns; name = "gathered_rows") do column_index
+        thread = thread_per_column[column_index]
+        first_stored = first_stored_per_column[column_index]
+        n_stored = n_stored_per_column[column_index]
+        copyto!(rowval, colptr[column_index], position_per_stored_per_thread[thread], first_stored, n_stored)
+        copyto!(nzval, colptr[column_index], value_per_stored_per_thread[thread], first_stored, n_stored)
+        return nothing
+    end
+    return SparseMatrixCSC(length(row_indices), n_columns, colptr, rowval, nzval)
 end
 
 """
