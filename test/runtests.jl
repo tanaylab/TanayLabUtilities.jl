@@ -1313,6 +1313,83 @@ end
     end
 end
 
+@testset "flame_time" begin
+    # The self value of each line of a flameview file.
+    function self_values(flameview_path::AbstractString)::Vector{Int}
+        return [parse(Int, split(line)[2]) for line in eachline(flameview_path)]
+    end
+
+    @testset "a nested loop fits within its enclosing loop" begin
+        mktempdir() do directory
+            measurements_path = joinpath(directory, "measurements.txt")
+            flameview_path = joinpath(directory, "flameview.txt")
+            # Flame timing is switched on when the module is loaded, so it is measured in a separate process.
+            script = """
+                using TanayLabUtilities
+                function busy_wait(n_ns::Integer)::Nothing
+                    start_ns = time_ns()
+                    while time_ns() - start_ns < n_ns
+                    end
+                    return nothing
+                end
+                flame_timed("program") do
+                    parallel_loop_wo_rng(1:8; name = "outer") do outer_index
+                        flame_timed("step") do
+                            if outer_index == 1
+                                parallel_loop_wo_rng(1:40; name = "inner", nested = true) do _
+                                    busy_wait(1_000_000)
+                                    return nothing
+                                end
+                            end
+                            return nothing
+                        end
+                        return nothing
+                    end
+                    parallel_loop_wo_rng(1:8; name = "after") do _
+                        return nothing
+                    end
+                    return nothing
+                end
+                """
+            command = `$(Base.julia_cmd()) --project=$(Base.active_project()) --threads=4 --eval $(script)`
+            run(addenv(command, "TLU_FLAME_MEASUREMENTS_FILE" => measurements_path))
+            @test any(line -> split(line)[2] == "nested", eachline(measurements_path))
+            for reversed in (false, true)
+                finalize_flameview(; measurements_path, flameview_path, reversed)
+                @test any(line -> contains(line, "inner"), eachline(flameview_path))
+                @test all(>=(0), self_values(flameview_path))
+            end
+        end
+    end
+
+    @testset "a file without nested measurements finalizes" begin
+        mktempdir() do directory
+            measurements_path = joinpath(directory, "measurements.txt")
+            flameview_path = joinpath(directory, "flameview.txt")
+            write(
+                measurements_path,
+                """
+                Main false 1 0 5000000 0 0 0 0 0 0 0 0 0 0 0
+                Main;loop false 1 -4 1000000 0 0 0 0 0 0 0 0 0 0 0
+                Main;loop true 4 0 3000000
+                Main;loop;step true 2 0 1000000
+                Main;loop;step true 2 0 1000000
+                Main;loop;step;part true 4 0 500000
+                Main;part false 1 0 1000000 0 0 0 0 0 0 0 0 0 0 0
+                """,
+            )
+            finalize_flameview(; measurements_path, flameview_path)
+            @test all(>=(0), self_values(flameview_path))
+            # The step is scaled by the loop's 1/3, and its part (also scaled) is subtracted from it.
+            @test any(line -> startswith(line, "Main;loop;step;step.self_[1] 500000 "), eachline(flameview_path))
+            # Reversed, both parts meet at the same name.
+            finalize_flameview(; measurements_path, flameview_path, reversed = true)
+            @test all(>=(0), self_values(flameview_path))
+            @test any(line -> startswith(line, "part;"), eachline(flameview_path))
+        end
+    end
+end
+
 @testset "parallel_distances" begin
     using Distances
 

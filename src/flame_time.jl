@@ -71,9 +71,17 @@ mutable struct ParallelMeasurement
     scaled_elapsed_ns::Int64
 end
 
+# A measurement is keyed by its stack and its kind. A `:serial` measurement is taken outside any parallel loop. A
+# `:parallel` measurement is taken inside an iteration of a parallel loop. A `:nested` measurement is the whole of a
+# parallel loop that runs inside an iteration of another parallel loop, taken by its caller.
 FLAME_MEASUREMENTS_FILE::Maybe{AbstractString} = nothing
-FLAME_MEASUREMENTS_DICT::Maybe{Dict{Tuple{AbstractString, Bool}, Union{SerialMeasurement, ParallelMeasurement}}} =
+FLAME_MEASUREMENTS_DICT::Maybe{Dict{Tuple{AbstractString, Symbol}, Union{SerialMeasurement, ParallelMeasurement}}} =
     nothing
+
+# How each kind is written in the measurements file. The serial and parallel kinds are written as the Booleans `false`
+# and `true`, so a file without nested measurements is just a file of Booleans.
+const TEXT_PER_KIND = Dict(:serial => "false", :parallel => "true", :nested => "nested")
+const KIND_PER_TEXT = Dict(text => kind for (kind, text) in TEXT_PER_KIND)
 FLAME_PREFIX::AbstractString = "Main"
 const FLAME_MEASUREMENTS_LOCK = SpinLock()
 
@@ -85,17 +93,16 @@ function __init__()::Nothing
     if path === nothing
         FLAME_MEASUREMENTS_DICT = nothing
     else
-        FLAME_MEASUREMENTS_DICT =  # UNTESTED
-            Dict{Tuple{AbstractString, Bool}, Union{SerialMeasurement, ParallelMeasurement}}()
-        FLAME_MEASUREMENTS_FILE = path  # NOLINT # UNTESTED
-        source_path = Base.source_path()  # UNTESTED
-        if source_path === nothing  # UNTESTED
+        FLAME_MEASUREMENTS_DICT = Dict{Tuple{AbstractString, Symbol}, Union{SerialMeasurement, ParallelMeasurement}}()
+        FLAME_MEASUREMENTS_FILE = path  # NOLINT
+        source_path = Base.source_path()
+        if source_path === nothing
             FLAME_PREFIX = "Main"  # UNTESTED
         else
-            FLAME_PREFIX = Base.basename(source_path)  # UNTESTED
+            FLAME_PREFIX = Base.basename(source_path)
         end
-        @info "Will append flameview measurements into: $(path) under: $(FLAME_PREFIX)" _group = :tlu_env  # UNTESTED
-        atexit(__end__)  # UNTESTED
+        @info "Will append flameview measurements into: $(path) under: $(FLAME_PREFIX)" _group = :tlu_env
+        atexit(__end__)
     end
     return nothing
 end
@@ -106,9 +113,9 @@ function __end__()::Nothing
     @assert measurements_dict !== nothing
     @assert measurements_file !== nothing
     open(measurements_file, "a") do file
-        for ((stack, is_in_parallel), measurement) in measurements_dict
-            print(file, "$(stack) $(is_in_parallel)")
-            if is_in_parallel
+        for ((stack, kind), measurement) in measurements_dict
+            print(file, "$(stack) $(TEXT_PER_KIND[kind])")
+            if kind != :serial
                 @assert measurement isa ParallelMeasurement
                 print(file, " $(measurement.invocations)")
                 print(file, " $(measurement.iterations)")
@@ -269,58 +276,65 @@ function flame_timed(body::Function, name::AbstractString; iterations::Integer =
         return body()
     end
 
-    start_private_storage = task_local_storage()  # UNTESTED
-    start_is_in_parallel = get(start_private_storage, :is_in_parallel_loop, false)  # UNTESTED
-    start_flame_stack = get_flame_stack(start_private_storage)  # UNTESTED
-    @assert start_flame_stack !== nothing  # UNTESTED
+    start_private_storage = task_local_storage()
+    start_is_in_parallel = get(start_private_storage, :is_in_parallel_loop, false)
+    start_flame_stack = get_flame_stack(start_private_storage)
+    @assert start_flame_stack !== nothing
 
-    if startswith(name, ".")  # UNTESTED
+    if startswith(name, ".")
         @assert length(start_flame_stack) > 0  # UNTESTED
         name = start_flame_stack[end] * name  # UNTESTED
     end
 
-    start_elapsed_ns = time_ns()  # UNTESTED
-    if !start_is_in_parallel  # UNTESTED
-        gc_num = Base.gc_num()  # UNTESTED
-        start_gc_ns = gc_num.total_time  # UNTESTED
-        start_gc_full_sweeps = gc_num.full_sweep  # UNTESTED
-        start_gc_pauses = gc_num.pause  # UNTESTED
-        start_rusage = get_rusage()  # UNTESTED
-        start_system_cpu_us = start_rusage.ru_stime[1] * 1000000 + start_rusage.ru_stime[2]  # UNTESTED
-        start_user_cpu_us = start_rusage.ru_utime[1] * 1000000 + start_rusage.ru_utime[2]  # UNTESTED
-        start_soft_page_faults = start_rusage.ru_minflt  # UNTESTED
-        start_hard_page_faults = start_rusage.ru_majflt  # UNTESTED
-        start_read_blocks = start_rusage.ru_inblock  # UNTESTED
-        start_write_blocks = start_rusage.ru_oublock  # UNTESTED
-        start_voluntary_context_switches = start_rusage.ru_nvcsw  # UNTESTED
-        start_involuntary_context_switches = start_rusage.ru_nivcsw  # UNTESTED
+    start_elapsed_ns = time_ns()
+    if !start_is_in_parallel
+        gc_num = Base.gc_num()
+        start_gc_ns = gc_num.total_time
+        start_gc_full_sweeps = gc_num.full_sweep
+        start_gc_pauses = gc_num.pause
+        start_rusage = get_rusage()
+        start_system_cpu_us = start_rusage.ru_stime[1] * 1000000 + start_rusage.ru_stime[2]
+        start_user_cpu_us = start_rusage.ru_utime[1] * 1000000 + start_rusage.ru_utime[2]
+        start_soft_page_faults = start_rusage.ru_minflt
+        start_hard_page_faults = start_rusage.ru_majflt
+        start_read_blocks = start_rusage.ru_inblock
+        start_write_blocks = start_rusage.ru_oublock
+        start_voluntary_context_switches = start_rusage.ru_nvcsw
+        start_involuntary_context_switches = start_rusage.ru_nivcsw
     end
 
-    push!(start_flame_stack, name)  # UNTESTED
-    key = (join(start_flame_stack, ";"), start_is_in_parallel)  # UNTESTED
+    # A negative count of iterations marks a whole parallel loop. Inside another parallel loop, it is a nested loop.
+    kind = if !start_is_in_parallel
+        :serial
+    elseif iterations < 0
+        :nested
+    else
+        :parallel
+    end
+    push!(start_flame_stack, name)
+    key = (join(start_flame_stack, ";"), kind)
 
-    try  # UNTESTED
-        return body()  # UNTESTED
+    try
+        return body()
 
     finally
-        elapsed_ns = time_ns() - start_elapsed_ns  # UNTESTED
-        new_measurement = if start_is_in_parallel  # UNTESTED
-            @assert iterations >= 0  # UNTESTED
-            ParallelMeasurement(1, iterations, elapsed_ns, 0)  # UNTESTED
+        elapsed_ns = time_ns() - start_elapsed_ns
+        new_measurement = if start_is_in_parallel
+            ParallelMeasurement(1, iterations, elapsed_ns, 0)
         else
-            gc_ns = Base.gc_num().total_time - start_gc_ns  # UNTESTED # NOJET
-            gc_full_sweeps = Base.gc_num().full_sweep - start_gc_full_sweeps  # UNTESTED # NOJET
-            gc_pauses = Base.gc_num().pause - start_gc_pauses  # UNTESTED # NOJET
-            end_rusage = get_rusage()  # UNTESTED
-            system_cpu_us = end_rusage.ru_stime[1] * 1000000 + end_rusage.ru_stime[2] - start_system_cpu_us  # UNTESTED # NOJET
-            user_cpu_us = end_rusage.ru_utime[1] * 1000000 + end_rusage.ru_utime[2] - start_user_cpu_us  # UNTESTED # NOJET
-            soft_page_faults = end_rusage.ru_minflt - start_soft_page_faults  # UNTESTED # NOJET
-            hard_page_faults = end_rusage.ru_majflt - start_hard_page_faults  # UNTESTED # NOJET
-            read_blocks = end_rusage.ru_inblock - start_read_blocks  # UNTESTED # NOJET
-            write_blocks = end_rusage.ru_oublock - start_write_blocks  # UNTESTED # NOJET
-            voluntary_context_switches = end_rusage.ru_nvcsw - start_voluntary_context_switches  # UNTESTED # NOJET
-            involuntary_context_switches = end_rusage.ru_nivcsw - start_involuntary_context_switches  # UNTESTED # NOJET
-            SerialMeasurement(  # UNTESTED
+            gc_ns = Base.gc_num().total_time - start_gc_ns  # NOJET
+            gc_full_sweeps = Base.gc_num().full_sweep - start_gc_full_sweeps  # NOJET
+            gc_pauses = Base.gc_num().pause - start_gc_pauses  # NOJET
+            end_rusage = get_rusage()
+            system_cpu_us = end_rusage.ru_stime[1] * 1000000 + end_rusage.ru_stime[2] - start_system_cpu_us  # NOJET
+            user_cpu_us = end_rusage.ru_utime[1] * 1000000 + end_rusage.ru_utime[2] - start_user_cpu_us  # NOJET
+            soft_page_faults = end_rusage.ru_minflt - start_soft_page_faults  # NOJET
+            hard_page_faults = end_rusage.ru_majflt - start_hard_page_faults  # NOJET
+            read_blocks = end_rusage.ru_inblock - start_read_blocks  # NOJET
+            write_blocks = end_rusage.ru_oublock - start_write_blocks  # NOJET
+            voluntary_context_switches = end_rusage.ru_nvcsw - start_voluntary_context_switches  # NOJET
+            involuntary_context_switches = end_rusage.ru_nivcsw - start_involuntary_context_switches  # NOJET
+            SerialMeasurement(
                 1,
                 iterations,
                 elapsed_ns,
@@ -338,7 +352,7 @@ function flame_timed(body::Function, name::AbstractString; iterations::Integer =
             )
         end
 
-        lock(FLAME_MEASUREMENTS_LOCK) do  # UNTESTED
+        lock(FLAME_MEASUREMENTS_LOCK) do
             update!(
                 FLAME_MEASUREMENTS_DICT,
                 key,
@@ -347,7 +361,7 @@ function flame_timed(body::Function, name::AbstractString; iterations::Integer =
             )
             return nothing
         end
-        @assert pop!(start_flame_stack) == name  # UNTESTED
+        @assert pop!(start_flame_stack) == name
     end
 end
 
@@ -372,10 +386,12 @@ of the flameview file, because the annotations won't be properly computed. Speci
 reversed flameview file.
 
 Each `parallel_loop` is therefore measured twice, once as a serial step and once as a parallel step. We scale the
-parallel time (and everything nested in it) so it adds up to the serial time. We then convert all the inclusive
-measurements to exclusive ones. The result is a flameview that shows the contribution of everything (serial and parallel
-steps) to the total execution time, under the assumption that the number of iterations in the parallel loops is large
-enough that it is the sum of parallel steps that matters.
+parallel time (and everything nested in it) so it adds up to the serial time. A `parallel_loop` nested in another one is
+measured the same way, one level down. Its caller measures its whole, and its iterations are scaled to fit that, within
+the scale of the enclosing loop. This holds even when other threads helped run its iterations. We then convert all the
+inclusive measurements to exclusive ones. The result is a flameview that shows the contribution of everything (serial
+and parallel steps) to the total execution time, under the assumption that the number of iterations in the parallel
+loops is large enough that it is the sum of parallel steps that matters.
 
 !!! note
 
@@ -388,17 +404,17 @@ with `flameview`; in general the generated file only works with `flameview.py`. 
 useful) annotations attached to each node, and switch to a `_[j]` suffix (or any other suffix you choose that works with
 `flamegraph.pl`, or even completely get rid of the suffix.)
 """
-function finalize_flameview(;  # UNTESTED
+function finalize_flameview(;
     measurements_path::AbstractString,
     flameview_path::AbstractString,
     reversed::Bool = false,
 )::Nothing
-    raw_measurements_dict = Dict{Tuple{AbstractString, Bool}, Union{SerialMeasurement, ParallelMeasurement}}()
+    raw_measurements_dict = Dict{Tuple{AbstractString, Symbol}, Union{SerialMeasurement, ParallelMeasurement}}()
     for line in eachline(measurements_path)
         fields = split(line)
         stack = fields[1]
-        is_in_parallel = parse(Bool, fields[2])
-        new_measurement = if is_in_parallel
+        kind = KIND_PER_TEXT[fields[2]]
+        new_measurement = if kind != :serial
             @assert length(fields) == 5
             invocations = parse(Int64, fields[3])
             iterations = parse(Int64, fields[4])
@@ -439,7 +455,7 @@ function finalize_flameview(;  # UNTESTED
         end
         update!(
             raw_measurements_dict,
-            (stack, is_in_parallel),
+            (stack, kind),
             old_measurement -> combine_measurements(old_measurement, new_measurement),
             new_measurement,
         )
@@ -448,40 +464,49 @@ function finalize_flameview(;  # UNTESTED
     folded_measurements_dict = Dict{AbstractString, Union{SerialMeasurement, ParallelMeasurement}}()
     self_measurements_dict = Dict{AbstractString, Union{SerialMeasurement, ParallelMeasurement}}()
 
-    loop_scale = nothing
-    loop_stack = nothing
+    # The scale of the parallel measurements under each loop being visited: the loop's whole elapsed time divided by the
+    # sum of the elapsed times of its iterations. The scale of a nested loop includes the scale of its enclosing loop.
+    scale_per_loop = Tuple{AbstractString, Float64}[]
 
-    previous_stack = nothing
-    previous_is_in_parallel = nothing
-    previous_measurement = nothing
+    # The whole of a loop, until the measurement of its iterations follows it.
+    whole_loop_stack = nothing
+    whole_loop_measurement = nothing
 
-    sorted = sort!(collect(raw_measurements_dict); by = pair -> pair[1])
-    for ((stack, is_in_parallel), measurement) in sorted
-        if stack == previous_stack
-            @assert is_in_parallel
-            @assert previous_is_in_parallel === false
-            @assert previous_measurement isa SerialMeasurement
+    # Sort the whole of each loop just before its iterations, which share its stack.
+    order_per_kind = Dict(:serial => 1, :nested => 1, :parallel => 2)
+    sorted = sort!(collect(raw_measurements_dict); by = pair -> (pair[1][1], order_per_kind[pair[1][2]]))
+    for ((stack, kind), measurement) in sorted
+        while !isempty(scale_per_loop) &&
+                  stack != scale_per_loop[end][1] &&
+                  !startswith(stack, scale_per_loop[end][1] * ";")
+            pop!(scale_per_loop)
+        end
+        enclosing_scale = isempty(scale_per_loop) ? 1.0 : scale_per_loop[end][2]
+
+        if kind == :parallel && stack == whole_loop_stack
+            whole_measurement = whole_loop_measurement
+            @assert whole_measurement !== nothing
             @assert measurement isa ParallelMeasurement
-            @assert previous_measurement.iterations == -measurement.invocations
-            loop_scale = min(previous_measurement.elapsed_ns / measurement.elapsed_ns, 1.0)
-            loop_stack = stack
+            @assert whole_measurement.iterations == -measurement.invocations
+            loop_scale = enclosing_scale * min(whole_measurement.elapsed_ns / measurement.elapsed_ns, 1.0)
+            push!(scale_per_loop, (stack, loop_scale))
+            whole_loop_stack = nothing
+            whole_loop_measurement = nothing
         else
-            if is_in_parallel
-                @assert measurement isa ParallelMeasurement
-                @assert loop_stack !== nothing
-                @assert startswith(stack, loop_stack)
-                @assert length(stack) > length(loop_stack)
-                measurement.scaled_elapsed_ns = Int64(round(measurement.elapsed_ns * loop_scale))  # NOJET
-            else
+            if kind == :serial
                 @assert measurement isa SerialMeasurement
+            else
+                @assert measurement isa ParallelMeasurement
+                @assert !isempty(scale_per_loop)
+                measurement.scaled_elapsed_ns = Int64(round(measurement.elapsed_ns * enclosing_scale))
+            end
+            if kind != :parallel && measurement.iterations < 0
+                whole_loop_stack = stack
+                whole_loop_measurement = measurement
             end
             folded_measurements_dict[stack] = measurement
             self_measurements_dict[stack] = copy(measurement)
         end
-
-        previous_stack = stack
-        previous_is_in_parallel = is_in_parallel
-        previous_measurement = measurement
     end
 
     saved = [(stack, copy(measurement)) for (stack, measurement) in self_measurements_dict]
@@ -693,7 +718,7 @@ function write_flameview(  # UNTESTED
     return nothing
 end
 
-function measurement_text(  # UNTESTED
+function measurement_text(
     name::AbstractString;
     samples::Int64,
     scale::Maybe{Real} = nothing,

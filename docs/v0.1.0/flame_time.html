@@ -390,7 +390,9 @@
 </p>
 <p>Each 
 <code>parallel_loop
-</code> is therefore measured twice, once as a serial step and once as a parallel step. We scale the parallel time (and everything nested in it) so it adds up to the serial time. We then convert all the inclusive measurements to exclusive ones. The result is a flameview that shows the contribution of everything (serial and parallel steps) to the total execution time, under the assumption that the number of iterations in the parallel loops is large enough that it is the sum of parallel steps that matters.
+</code> is therefore measured twice, once as a serial step and once as a parallel step. We scale the parallel time (and everything nested in it) so it adds up to the serial time. A 
+<code>parallel_loop
+</code> nested in another one is measured the same way, one level down. Its caller measures its whole, and its iterations are scaled to fit that, within the scale of the enclosing loop. This holds even when other threads helped run its iterations. We then convert all the inclusive measurements to exclusive ones. The result is a flameview that shows the contribution of everything (serial and parallel steps) to the total execution time, under the assumption that the number of iterations in the parallel loops is large enough that it is the sum of parallel steps that matters.
 </p>
 <div class="admonition is-info" id="Note-70682558b60f37e9">
 <header class="admonition-header">Note

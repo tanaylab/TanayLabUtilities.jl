@@ -449,7 +449,7 @@ function parallel_loop_wo_rng(
     loop_name, base_flame_stack = if flame_stack_names === nothing
         (startswith(name, ".") ? name[2:end] : name, nothing)
     else
-        @assert !startswith(name, ".") || length(flame_stack_names) > 0  # UNTESTED
+        @assert !startswith(name, ".") || length(flame_stack_names) > 0
         (startswith(name, ".") ? flame_stack_names[end] * name : name, join(flame_stack_names, ";"))
     end
 
@@ -490,9 +490,8 @@ function parallel_loop_wo_rng(
     # iteration body falls back to `+1` per step (or to `progress_chunk` throttling).
     step_per_position = weights === nothing ? nothing : (order === nothing ? weights : weights[order])
 
-    # A negative count marks a top-level parallel loop. Inside another parallel loop, only plain counts are measured.
-    is_counted_as_serial = loop_policy == :serial || is_in_outer_parallel_loop
-    flame_timed(loop_name; iterations = is_counted_as_serial ? length(indices) : -length(indices)) do
+    # A negative count marks the whole of a parallel loop, top-level or nested, so flame timing scales its iterations.
+    flame_timed(loop_name; iterations = loop_policy == :serial ? length(indices) : -length(indices)) do
         try
             if loop_progress !== nothing
                 disable_logging(Logging.Debug)
