@@ -490,7 +490,9 @@ function parallel_loop_wo_rng(
     # iteration body falls back to `+1` per step (or to `progress_chunk` throttling).
     step_per_position = weights === nothing ? nothing : (order === nothing ? weights : weights[order])
 
-    flame_timed(loop_name; iterations = loop_policy == :serial ? length(indices) : -length(indices)) do
+    # A negative count marks a top-level parallel loop. Inside another parallel loop, only plain counts are measured.
+    is_counted_as_serial = loop_policy == :serial || is_in_outer_parallel_loop
+    flame_timed(loop_name; iterations = is_counted_as_serial ? length(indices) : -length(indices)) do
         try
             if loop_progress !== nothing
                 disable_logging(Logging.Debug)

@@ -278,7 +278,11 @@
 <a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.parallel_foreach_column">
 <code>parallel_foreach_column
 </code>
-</a> gives, which reads a lazy matrix one column at a time.
+</a> gives, which reads a lazy matrix one column at a time. 
+<a href="sparse_columns.html#TanayLabUtilities.SparseColumns.gathered_rows">
+<code>gathered_rows
+</code>
+</a> uses it to read some of the rows of all the columns.
 </p>
 </div>
 </section>
@@ -413,6 +417,58 @@ destination = Vector{Int}(undef, 1)
 </article>
 <article>
 <details class="docstring" open="true">
+<summary id="TanayLabUtilities.SparseColumns.gathered_rows">
+<a class="docstring-binding" href="#TanayLabUtilities.SparseColumns.gathered_rows">
+<code>TanayLabUtilities.SparseColumns.gathered_rows
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+</summary>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">gathered_rows(matrix::AbstractMatrix, row_indices::AbstractVector{&lt;:Integer})::AbstractMatrix
+</code>
+</pre>
+<p>The values of a column-major 
+<code>matrix
+</code> in some of its rows, as a new column-major matrix, which is sparse if the 
+<code>matrix
+</code> is. The result is the same as 
+<code>matrix[row_indices, :]
+</code>. For a sparse 
+<code>matrix
+</code>, that visits every stored value of every column, on one thread. Here, the columns are read in parallel, once each, using 
+<a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.parallel_foreach_column">
+<code>parallel_foreach_column
+</code>
+</a>. So a lazy 
+<code>matrix
+</code> is read one column at a time. The 
+<code>row_indices
+</code> must have no repetitions. If they aren&#39;t sorted in increasing order, a sparse result has its rows reordered at the end.
+</p>
+<pre>
+<code class="language-julia hljs">using SparseArrays
+using TanayLabUtilities.SparseColumns
+
+matrix = sparse([0 1; 2 0; 3 4; 0 5])
+
+@assert gathered_rows(matrix, [1, 3, 4]) == [0 1; 3 4; 0 5]
+@assert gathered_rows(matrix, [4, 2]) == [0 5; 2 0]
+@assert gathered_rows(Matrix(matrix), [4, 2]) == [0 5; 2 0]
+
+# output
+
+</code>
+</pre>
+</div>
+</section>
+</details>
+</article>
+<article>
+<details class="docstring" open="true">
 <summary id="TanayLabUtilities.SparseColumns.sum_sparse_columns_per_group!">
 <a class="docstring-binding" href="#TanayLabUtilities.SparseColumns.sum_sparse_columns_per_group!">
 <code>TanayLabUtilities.SparseColumns.sum_sparse_columns_per_group!
@@ -484,6 +540,12 @@ sum_sparse_columns_per_group!(destination, matrix, [1, 3], [[1, 3], [2]])
 <li>
 <a href="sparse_columns.html#TanayLabUtilities.SparseColumns.gather_sparse_column!">
 <code>TanayLabUtilities.SparseColumns.gather_sparse_column!
+</code>
+</a>
+</li>
+<li>
+<a href="sparse_columns.html#TanayLabUtilities.SparseColumns.gathered_rows">
+<code>TanayLabUtilities.SparseColumns.gathered_rows
 </code>
 </a>
 </li>
