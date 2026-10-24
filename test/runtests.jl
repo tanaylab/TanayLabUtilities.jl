@@ -103,6 +103,31 @@ function TanayLabUtilities.ParallelLoops.read_column!(
     return copyto!(scratch, view(matrix.values, :, column_index))
 end
 
+# A matrix written one column at a time through `fill_column!`, which counts the columns it writes. Writing it element
+# by element fails.
+struct FilledColumnsMatrix <: AbstractMatrix{Float32}
+    values::Matrix{Float32}
+    n_filled::Threads.Atomic{Int}
+end
+
+Base.size(matrix::FilledColumnsMatrix) = size(matrix.values)
+
+function Base.setindex!(::FilledColumnsMatrix, ::Any, ::Int, ::Int)::Nothing  # UNTESTED
+    return error("wrote a matrix element by element")
+end
+
+function TanayLabUtilities.ParallelLoops.fill_column!(
+    fill::Function,
+    matrix::FilledColumnsMatrix,
+    column_index::Integer,
+)::Nothing
+    buffer = Vector{Float32}(undef, size(matrix, 1))
+    fill(buffer)
+    matrix.values[:, column_index] .= buffer
+    Threads.atomic_add!(matrix.n_filled, 1)
+    return nothing
+end
+
 # The sum of each of the `columns` of the `matrix`, computed by `parallel_foreach_column`.
 function column_sums(
     matrix::AbstractMatrix;
@@ -1309,6 +1334,85 @@ end
             column_reader_per_thread = new_column_reader_per_thread(lazy_values; policy = :serial)
             @test lazy_values.n_scratches[] == 1
             @test length(column_reader_per_thread) == Threads.maxthreadid()
+        end
+    end
+
+    @testset "copy_columns!" begin
+        values = Float64[row + column / 10 for row in 1:7, column in 1:5]
+        sparse_values = sparse(Float64[row == column || row == 7 ? row + column / 10 : 0 for row in 1:7, column in 1:5])
+        dense_sparse_values = Matrix(sparse_values)
+
+        @testset "dense destinations" begin
+            for (source, expected) in (
+                (values, values),
+                (read_only_array(values), values),
+                (LazyColumnsMatrix(values, Threads.Atomic{Int}(0)), values),
+                (sparse_values, dense_sparse_values),
+            )
+                destination = fill(Float32(-1), 7, 5)
+                copy_columns!(destination, source)
+                @test destination == Float32.(expected)
+            end
+        end
+
+        @testset "dense destinations are written through fill_column!" begin
+            destination = FilledColumnsMatrix(zeros(Float32, 7, 5), Threads.Atomic{Int}(0))
+            copy_columns!(destination, values)
+            @test destination.values == Float32.(values)
+            @test destination.n_filled[] == 5
+        end
+
+        @testset "consecutive parts of dense destinations" begin
+            destination = zeros(Float32, 7, 10)
+            copy_columns!(destination, values)
+            copy_columns!(destination, sparse_values; column_offset = 5)
+            @test destination == Float32.(hcat(values, dense_sparse_values))
+        end
+
+        @testset "sparse destinations" begin
+            colptr = zeros(Int32, 6)
+            rowval = zeros(Int32, nnz(sparse_values))
+            nzval = zeros(Float32, nnz(sparse_values))
+            copy_columns!(colptr, rowval, nzval, read_only_array(sparse_values))
+            @test SparseMatrixCSC(7, 5, colptr, rowval, nzval) == Float32.(sparse_values)
+        end
+
+        @testset "consecutive parts of sparse destinations" begin
+            expected = hcat(sparse_values, sparse_values[:, [2, 4]])
+            colptr = zeros(Int, 8)
+            rowval = zeros(Int, nnz(expected))
+            nzval = zeros(Float64, nnz(expected))
+            copy_columns!(
+                colptr,
+                rowval,
+                nzval,
+                sparse_values[:, [2, 4]];
+                column_offset = 5,
+                nnz_offset = nnz(sparse_values),
+            )
+            copy_columns!(colptr, rowval, nzval, sparse_values)
+            @test SparseMatrixCSC(7, 7, colptr, rowval, nzval) == expected
+        end
+
+        @testset "sparse matrix destinations" begin
+            destination = copy(sparse_values)
+            fill!(nonzeros(destination), 0)
+            fill!(rowvals(destination), 1)
+            copy_columns!(destination, sparse_values)
+            @test destination == sparse_values
+        end
+
+        @testset "sizes are checked" begin
+            @test_throws "size(destination, 1)" copy_columns!(zeros(6, 5), values)
+            @test_throws "column_offset" copy_columns!(zeros(7, 5), values; column_offset = 1)
+            @test_throws "AbstractSparseMatrixCSC" copy_columns!(zeros(Int, 6), zeros(Int, 9), zeros(9), values)
+            @test_throws "nnz_offset" copy_columns!(
+                zeros(Int, 6),
+                zeros(Int, 10),
+                zeros(10),
+                sparse_values;
+                nnz_offset = 1,
+            )
         end
     end
 end

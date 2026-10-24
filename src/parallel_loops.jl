@@ -7,6 +7,8 @@ export ColumnReader
 export DebugProgress
 export DebugProgressUnknown
 export column_scratch
+export copy_columns!
+export fill_column!
 export is_in_parallel_loop
 export new_column_reader_per_thread
 export parallel_foreach_column
@@ -960,6 +962,151 @@ The result is valid until the next call with the same `scratch`. See [`parallel_
 columns it may return.
 """
 function read_column! end
+
+"""
+    fill_column!(fill::Function, matrix::AbstractMatrix, column_index::Integer)::Nothing
+
+Write the column `column_index` of the `matrix` by calling `fill(column)`, which must set every entry of the `column`
+without keeping a reference to it. By default, the `column` is a view of the column of the `matrix`. A matrix type that
+can't be written through such a view (e.g., one that encodes each column as it is written) adds a method, which may
+pass a buffer instead. This is the write counterpart of [`read_column!`](@ref), used by [`copy_columns!`](@ref).
+"""
+function fill_column!(fill::Function, matrix::AbstractMatrix, column_index::Integer)::Nothing
+    fill(view(matrix, :, column_index))
+    return nothing
+end
+
+"""
+    copy_columns!(
+        destination::AbstractMatrix,
+        source::AbstractMatrix;
+        column_offset::Integer = 0,
+    )::Nothing
+    copy_columns!(
+        colptr::AbstractVector{<:Integer},
+        rowval::AbstractVector{<:Integer},
+        nzval::AbstractVector,
+        source::AbstractMatrix;
+        column_offset::Integer = 0,
+        nnz_offset::Integer = 0,
+    )::Nothing
+
+Copy the columns of the `source` into the columns of the `destination` that follow its first `column_offset` columns.
+The columns are copied in parallel through [`parallel_foreach_column`](@ref), so a lazy `source` is never held in
+memory as a whole. The values are converted to the element type of the destination.
+
+A dense `destination` is written through [`fill_column!`](@ref). A sparse `source` column is written into it together
+with its implicit zeros.
+
+A sparse `destination` is given as its `colptr`, `rowval` and `nzval` (or as a `SparseMatrixCSC`, whose own vectors are
+used). The `source` must be sparse too. Its stored values are written after the first `nnz_offset` stored values of the
+`destination`, and its `colptr` is offset to match. This also writes the `colptr` entry after the last column of the
+`source`. That entry is where the next part of the `destination` starts, so copying several sources into consecutive
+parts of the `destination` fills all of its `colptr`.
+
+The `destination` must have the same number of rows as the `source`, and room for its columns (and stored values) after
+the offsets.
+
+```jldoctest
+using SparseArrays
+
+source = sparse([0 1; 2 0])
+destination = zeros(Float32, 2, 3)
+copy_columns!(destination, source; column_offset = 1)
+@assert destination == Float32[0 0 1; 0 2 0]
+
+colptr = zeros(Int, 3)
+rowval = zeros(Int, 2)
+nzval = zeros(Int, 2)
+copy_columns!(colptr, rowval, nzval, source)
+@assert SparseMatrixCSC(2, 2, colptr, rowval, nzval) == source
+
+# output
+
+```
+"""
+function copy_columns!(destination::AbstractMatrix, source::AbstractMatrix; column_offset::Integer = 0)::Nothing
+    @assert size(destination, 1) == size(source, 1)
+    @assert 0 <= column_offset && column_offset + size(source, 2) <= size(destination, 2)
+    parallel_foreach_column(source; name = "copy_columns!") do _, column_index, column
+        fill_column!(destination, column_offset + column_index) do destination_column
+            copy_column!(destination_column, column)
+            return nothing
+        end
+        return nothing
+    end
+    return nothing
+end
+
+function copy_columns!(
+    destination::SparseMatrixCSC,
+    source::AbstractMatrix;
+    column_offset::Integer = 0,
+    nnz_offset::Integer = 0,
+)::Nothing
+    @assert size(destination, 1) == size(source, 1)
+    copy_columns!(
+        SparseArrays.getcolptr(destination),
+        rowvals(destination),
+        nonzeros(destination),
+        source;
+        column_offset,
+        nnz_offset,
+    )
+    return nothing
+end
+
+function copy_columns!(
+    colptr::AbstractVector{<:Integer},
+    rowval::AbstractVector{<:Integer},
+    nzval::AbstractVector,
+    source::AbstractMatrix;
+    column_offset::Integer = 0,
+    nnz_offset::Integer = 0,
+)::Nothing
+    base_source = base_array(source)
+    @assert base_source isa AbstractSparseMatrixCSC
+    source_colptr = SparseArrays.getcolptr(base_source)
+    n_columns = size(source, 2)
+    @assert 0 <= column_offset && column_offset + n_columns + 1 <= length(colptr)
+    @assert length(rowval) == length(nzval)
+    @assert 0 <= nnz_offset && nnz_offset + source_colptr[end] - 1 <= length(rowval)
+
+    copy_colptr!(colptr, source_colptr, column_offset, nnz_offset)
+    parallel_foreach_column(source; name = "copy_columns!") do _, column_index, column
+        first_stored = nnz_offset + source_colptr[column_index]
+        last_stored = nnz_offset + source_colptr[column_index + 1] - 1
+        rowval[first_stored:last_stored] .= SparseArrays.nonzeroinds(column)
+        nzval[first_stored:last_stored] .= nonzeros(column)
+        return nothing
+    end
+    return nothing
+end
+
+# Copy the `source_colptr` into the `colptr`, after its first `column_offset` entries, adding `nnz_offset` to each.
+function copy_colptr!(
+    colptr::AbstractVector{<:Integer},
+    source_colptr::AbstractVector{<:Integer},
+    column_offset::Integer,
+    nnz_offset::Integer,
+)::Nothing
+    for (position, source_pointer) in enumerate(source_colptr)
+        colptr[column_offset + position] = source_pointer + nnz_offset
+    end
+    return nothing
+end
+
+# Write the values of a `column` of a source into a dense `destination_column`.
+function copy_column!(destination_column::AbstractVector, column::AbstractVector)::Nothing
+    destination_column .= column
+    return nothing
+end
+
+function copy_column!(destination_column::AbstractVector, column::SparseArrays.SparseVectorUnion)::Nothing
+    destination_column .= zero(eltype(destination_column))
+    destination_column[SparseArrays.nonzeroinds(column)] .= nonzeros(column)
+    return nothing
+end
 
 function is_debug_enabled_for_caller(group::Maybe{Symbol} = nothing)
     if get(ENV, "JULIA_DEBUG", "") == ""
