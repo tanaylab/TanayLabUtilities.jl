@@ -306,6 +306,24 @@ function gathered_sorted_rows(
     return SparseMatrixCSC(length(row_indices), n_columns, colptr, rowval, nzval)
 end
 
+# A sparse column of a view of some of the rows (see `parallel_foreach_column`). It holds the stored values of the
+# `parent_column` in the increasing `row_indices`, renumbered by their position in them.
+function ParallelLoops.gathered_view_rows(
+    parent_column::SparseVectorUnion,
+    row_indices::AbstractVector{<:Integer},
+    buffer::SparseVector,
+)::AbstractVector
+    position_per_kept = SparseArrays.nonzeroinds(buffer)
+    value_per_kept = nonzeros(buffer)
+    empty!(position_per_kept)
+    empty!(value_per_kept)
+    for (position, value) in stored_values_at_sorted_rows(parent_column, row_indices)
+        push!(position_per_kept, position)
+        push!(value_per_kept, value)
+    end
+    return buffer
+end
+
 """
     sum_sparse_columns_per_group!(
         destination::AbstractMatrix,

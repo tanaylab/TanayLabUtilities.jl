@@ -718,6 +718,21 @@ struct LazyColumnReader{M <: AbstractMatrix, S} <: ColumnReader
     scratch::S
 end
 
+# Reads the columns of a view of a matrix through a reader of its parent. The `buffer` holds the column of a view of
+# some of the rows: a `Vector` for a contiguous dense column, a `SparseVector` for a sparse column, or `nothing`
+# otherwise.
+struct ViewColumnReader{
+    R <: ColumnReader,
+    I <: AbstractVector{<:Integer},
+    C <: AbstractVector{<:Integer},
+    B <: Union{Nothing, Vector, SparseVector},
+} <: ColumnReader
+    parent_reader::R
+    parent_row_indices::I
+    parent_column_indices::C
+    buffer::B
+end
+
 """
     new_column_reader_per_thread(
         matrix::AbstractMatrix;
@@ -763,6 +778,10 @@ function new_column_reader_per_thread(
     is_serial = is_serial_loop(policy)
 
     base_matrix = base_array(matrix)
+    if base_matrix isa SubArray && is_read_by_parent_columns(base_matrix)
+        return new_view_column_reader_per_thread(base_matrix, contiguous, policy, is_serial)
+    end
+
     scratch = column_scratch(base_matrix)
     if scratch !== nothing
         create_lazy_reader = () -> LazyColumnReader(base_matrix, column_scratch(base_matrix))
@@ -800,6 +819,89 @@ function read_column(reader::LazyColumnReader, column_index::Integer)::AbstractV
     return read_column!(reader.scratch, reader.matrix, column_index)  # NOLINT # NOJET
 end
 
+function read_column(reader::ViewColumnReader, column_index::Integer)::AbstractVector
+    parent_column = read_column(reader.parent_reader, reader.parent_column_indices[column_index])
+    return gathered_view_rows(parent_column, reader.parent_row_indices, reader.buffer)
+end
+
+# Whether the columns of a `matrix_view` are read through the columns of its parent, instead of through `plain_array`. A
+# strided view of an `Array` is plain storage by itself. A sparse view of some of the rows needs them to be increasing,
+# so the rows of its columns stay sorted.
+function is_read_by_parent_columns(matrix_view::SubArray)::Bool
+    if ndims(matrix_view) != 2 || (parent(matrix_view) isa Array && matrix_view isa StridedArray)
+        return false
+    end
+    row_indices, column_indices = parentindices(matrix_view)
+    if !(row_indices isa AbstractVector{<:Integer} && column_indices isa AbstractVector{<:Integer})
+        return false  # UNTESTED
+    end
+    return !issparse(parent(matrix_view)) || row_indices isa Base.Slice || issorted(row_indices; lt = <=)
+end
+
+function new_view_column_reader_per_thread(
+    matrix_view::SubArray,
+    contiguous::Bool,
+    policy::Symbol,
+    is_serial::Bool,
+)::AbstractVector{<:ColumnReader}
+    view_row_indices, column_indices = parentindices(matrix_view)
+    row_indices = view_row_indices isa Base.LogicalIndex ? collect(view_row_indices) : view_row_indices
+    is_all_rows = row_indices isa Base.Slice
+    parent_matrix = parent(matrix_view)
+    parent_reader_per_thread =
+        new_column_reader_per_thread(parent_matrix; contiguous = contiguous && is_all_rows, policy)
+
+    create_buffer = nothing
+    if !is_all_rows && issparse(parent_matrix)
+        create_buffer =
+            () -> SparseVector(
+                length(row_indices),
+                Vector{SparseArrays.indtype(parent_matrix)}(),
+                Vector{eltype(parent_matrix)}(),
+            )
+    elseif !is_all_rows && contiguous
+        create_buffer = () -> Vector{eltype(parent_matrix)}(undef, length(row_indices))
+    end
+
+    buffer_per_thread = if create_buffer === nothing
+        fill(nothing, maxthreadid())
+    else
+        new_scratch_per_thread(create_buffer(), create_buffer, matrix_view, is_serial)
+    end
+
+    return [
+        ViewColumnReader(
+            parent_reader_per_thread[thread_index],
+            row_indices,
+            column_indices,
+            buffer_per_thread[thread_index],
+        ) for thread_index in 1:maxthreadid()
+    ]
+end
+
+# The values of a `parent_column` in the rows of a view, given by the `row_indices` of the parent.
+function gathered_view_rows(parent_column::AbstractVector, ::Base.Slice, ::Nothing)::AbstractVector
+    return parent_column
+end
+
+function gathered_view_rows(
+    parent_column::AbstractVector,
+    row_indices::AbstractVector{<:Integer},
+    ::Nothing,
+)::AbstractVector
+    return view(parent_column, row_indices)
+end
+
+function gathered_view_rows(
+    parent_column::AbstractVector,
+    row_indices::AbstractVector{<:Integer},
+    buffer::Vector,
+)::AbstractVector
+    return copyto!(buffer, view(parent_column, row_indices))
+end
+
+# The method for a sparse column, whose `buffer` is a `SparseVector`, is in `SparseColumns`.
+
 """
     parallel_foreach_column(
         visit::Function,
@@ -823,10 +925,17 @@ through `nonzeroinds` and `nonzeros`. It is a view of a column of a `SparseMatri
 column.
 
 A lazy matrix (which reads its data on demand) is read one column at a time through [`column_scratch`](@ref) and
-[`read_column!`](@ref), so all of it is never held in memory. Any other matrix is read once through `plain_array`, which
-copies nothing for plain storage, read-only and named wrappers, and strided views. A matrix stored in rows (e.g. a
-transpose) is read against the grain, which invokes the [`GLOBAL_INEFFICIENT_ACTION_HANDLER`](@ref). A sparse one is
-relayouted to columns first.
+[`read_column!`](@ref), so all of it is never held in memory.
+
+A view of some of the rows and columns of a matrix (e.g., by a mask) is read through the columns of its parent. Only the
+parent's columns in the view are read, and a view of a lazy matrix is never held in memory either. A dense column of a
+view of some of the rows is a view of the parent's column. A sparse one is a `SparseVector` holding the parent's stored
+values in these rows. This needs the rows to be increasing. A sparse view of rows in any other order is read through
+`plain_array`.
+
+Any other matrix is read once through `plain_array`, which copies nothing for plain storage, read-only and named
+wrappers, and strided views. A matrix stored in rows (e.g. a transpose) is read against the grain, which invokes the
+[`GLOBAL_INEFFICIENT_ACTION_HANDLER`](@ref). A sparse one is relayouted to columns first.
 
 Set `contiguous` to copy each column with gaps (of a strided view or of a transpose) into a buffer, for code that needs
 contiguous memory.
@@ -872,12 +981,19 @@ function parallel_foreach_column(
     end
 
     base_matrix = base_array(matrix)
+    stored_matrix = base_matrix
+    stored_columns = columns
+    if base_matrix isa SubArray && is_read_by_parent_columns(base_matrix)
+        stored_matrix = parent(base_matrix)
+        stored_columns = view(parentindices(base_matrix)[2], columns)
+    end
+
     # A local of its own keeps the type of the default weights concrete.
     weight_per_position = weights
-    if weight_per_position === nothing && progress_chunk === nothing && base_matrix isa AbstractSparseMatrixCSC
-        column_pointers = SparseArrays.getcolptr(base_matrix)
+    if weight_per_position === nothing && progress_chunk === nothing && stored_matrix isa AbstractSparseMatrixCSC
+        column_pointers = SparseArrays.getcolptr(stored_matrix)
         weight_per_position =
-            [Int(column_pointers[column_index + 1] - column_pointers[column_index]) for column_index in columns]
+            [Int(column_pointers[column_index + 1] - column_pointers[column_index]) for column_index in stored_columns]
     end
 
     column_reader_per_thread = new_column_reader_per_thread(matrix; contiguous, policy)

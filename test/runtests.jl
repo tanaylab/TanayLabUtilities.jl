@@ -1285,6 +1285,42 @@ end
             @test lazy_values.n_scratches[] == 1
         end
 
+        @testset "views are read through the columns of their parent" begin
+            lazy_values = LazyColumnsMatrix(values, Threads.Atomic{Int}(0))
+            for (rows, columns) in ((:, [4, 2, 5]), ([1, 3, 6], :), ([2, 7], [5, 1]))
+                expected_view_sums = vec(sum(values[rows, columns]; dims = 1))
+                expected_sparse_view_sums = vec(sum(sparse_values[rows, columns]; dims = 1))
+                for matrix in (values, lazy_values)
+                    @test column_sums(view(matrix, rows, columns)) ≈ expected_view_sums
+                    @test column_sums(view(matrix, rows, columns); contiguous = true) ≈ expected_view_sums
+                end
+                @test column_sums(view(sparse_values, rows, columns)) ≈ expected_sparse_view_sums
+            end
+
+            is_view_per_column = fill(false, 3)
+            parallel_foreach_column(view(values, :, [4, 2, 5])) do position, _, column
+                is_view_per_column[position] = parent(column) === values
+                return nothing
+            end
+            @test all(is_view_per_column)
+
+            is_view_per_column = fill(false, 3)
+            parallel_foreach_column(view(sparse_values, :, [5, 1, 3])) do position, _, column
+                is_view_per_column[position] = parent(nonzeros(column)) === nonzeros(sparse_values)
+                return nothing
+            end
+            @test all(is_view_per_column)
+
+            gathered_columns = Vector{SparseVector{Float64, Int}}(undef, 2)
+            parallel_foreach_column(view(sparse_values, [2, 5, 7], [5, 2]); policy = :serial) do position, _, column
+                gathered_columns[position] = copy(column)
+                return nothing
+            end
+            @test gathered_columns == [sparse_values[[2, 5, 7], 5], sparse_values[[2, 5, 7], 2]]
+
+            @test column_sums(view(sparse_values, [7, 2], :)) ≈ vec(sum(sparse_values[[7, 2], :]; dims = 1))
+        end
+
         @testset "nested loops run serially and report only when they allocate" begin
             n_outer = 2 * Threads.nthreads()
             is_reported_per_outer = fill(false, n_outer)
@@ -1304,14 +1340,26 @@ end
 
         @testset "nothing is allocated per column" begin
             wide_values = rand(7, 200)
+            lazy_wide_values = LazyColumnsMatrix(wide_values, Threads.Atomic{Int}(0))
+            sparse_wide_values = sparse(wide_values .* (wide_values .> 0.5))
             sums = zeros(200)
-            for matrix in (wide_values, LazyColumnsMatrix(wide_values, Threads.Atomic{Int}(0)))
+
+            # The bytes allocated for reading 190 more columns of the `matrix`.
+            function n_more_columns_bytes(matrix::AbstractMatrix)::Int
                 sum_columns!(sums, matrix, 1:10)
                 sum_columns!(sums, matrix, 1:200)
                 n_few_bytes = @allocated sum_columns!(sums, matrix, 1:10)
                 n_many_bytes = @allocated sum_columns!(sums, matrix, 1:200)
-                @test n_many_bytes - n_few_bytes < 1000
+                return n_many_bytes - n_few_bytes
             end
+
+            for matrix in (wide_values, lazy_wide_values, view(lazy_wide_values, [1, 3, 6], :))
+                @test n_more_columns_bytes(matrix) < 1000
+            end
+
+            # A sparse matrix allocates its default weights, one per column. Its views allocate nothing more.
+            sparse_view = view(sparse_wide_values, [1, 3, 6], :)
+            @test n_more_columns_bytes(sparse_view) - n_more_columns_bytes(sparse_wide_values) < 1000
         end
     end
 
