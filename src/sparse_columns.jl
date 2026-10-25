@@ -3,9 +3,9 @@ Read the values of some of the rows of the columns of a `SparseMatrixCSC`.
 
 Reading `matrix[row, column]` for many rows costs a binary search per row, while walking a whole column visits every
 stored value of the column, wanted or not. The functions here take the wanted rows as a sorted vector of row indices,
-and merge it with the sorted rows of each column, galloping forward for each wanted row. This costs about
-`s * log(nnz / s)` for `s` wanted rows and `nnz` stored values in the column. So it behaves like `s` binary searches
-when few rows are wanted, and like a walk of the column when most rows are wanted.
+and merge it with the sorted rows of each column. The merge gallops forward in whichever of the two is behind. This
+costs about `m * log(M / m)`, where `m` is the smaller and `M` is the larger of the number of wanted rows and the number
+of stored values in the column. So few wanted rows cost about a binary search each, and so do few stored values.
 
 The position of a wanted row is its index in the vector of wanted rows. Callers use it to index their own buffers.
 
@@ -66,11 +66,28 @@ function stored_values_at_rows(
     row_indices::AbstractVector{<:Integer},
 )::StoredValuesAtRows
     @assert issorted(row_indices; lt = <=) "row indices are not strictly increasing"
-    return StoredValuesAtRows(rowvals(matrix), nonzeros(matrix), nzrange(matrix, column_index), row_indices)
+    return stored_values_at_sorted_rows(matrix, column_index, row_indices)
 end
 
 function stored_values_at_rows(column::SparseVectorUnion, row_indices::AbstractVector{<:Integer})::StoredValuesAtRows
     @assert issorted(row_indices; lt = <=) "row indices are not strictly increasing"
+    return stored_values_at_sorted_rows(column, row_indices)
+end
+
+# Like `stored_values_at_rows`, for a caller that checked once that the `row_indices` are strictly increasing. Checking
+# them for each column would read all of them for each column.
+function stored_values_at_sorted_rows(
+    matrix::SparseMatrixCSC,
+    column_index::Integer,
+    row_indices::AbstractVector{<:Integer},
+)::StoredValuesAtRows
+    return StoredValuesAtRows(rowvals(matrix), nonzeros(matrix), nzrange(matrix, column_index), row_indices)
+end
+
+function stored_values_at_sorted_rows(
+    column::SparseVectorUnion,
+    row_indices::AbstractVector{<:Integer},
+)::StoredValuesAtRows
     return StoredValuesAtRows(SparseArrays.nonzeroinds(column), nonzeros(column), 1:nnz(column), row_indices)
 end
 
@@ -92,39 +109,45 @@ function Base.iterate(
     state::Tuple{Int, Int} = (1, first(iterator.stored_indices)),
 )::Union{Nothing, Tuple{Tuple{Int, T}, Tuple{Int, Int}}} where {T}
     position, stored_index = state
+    row_indices = iterator.row_indices
+    n_wanted = length(row_indices)
     row_index_per_stored = iterator.row_index_per_stored
     last_stored_index = last(iterator.stored_indices)
-    @inbounds while position <= length(iterator.row_indices) && stored_index <= last_stored_index
-        row_index = iterator.row_indices[position]
-        stored_index = first_stored_index_at_or_after(row_index_per_stored, stored_index, last_stored_index, row_index)
-        if stored_index <= last_stored_index && row_index_per_stored[stored_index] == row_index
+    @inbounds while position <= n_wanted && stored_index <= last_stored_index
+        row_index = row_indices[position]
+        stored_index = first_index_at_or_after(row_index_per_stored, stored_index, last_stored_index, row_index)
+        if stored_index > last_stored_index
+            break
+        end
+        stored_row_index = row_index_per_stored[stored_index]
+        if stored_row_index == row_index
             return ((position, iterator.value_per_stored[stored_index]), (position + 1, stored_index + 1))
         end
-        position += 1
+        position = first_index_at_or_after(row_indices, position, n_wanted, stored_row_index)
     end
     return nothing
 end
 
-# The first index from `stored_index` to `last_stored_index` whose row is at least `row_index`, or
-# `last_stored_index + 1` if there is none. Gallops forward from `stored_index`, doubling the step, then searches the
-# last step.
-function first_stored_index_at_or_after(
-    row_index_per_stored::AbstractVector{<:Integer},
-    stored_index::Integer,
-    last_stored_index::Integer,
-    row_index::Integer,
+# The first index from `first_index` to `last_index` of the increasing `sorted_values` whose value is at least `value`,
+# or `last_index + 1` if there is none. Gallops forward from `first_index`, doubling the step, then searches the last
+# step.
+function first_index_at_or_after(
+    sorted_values::AbstractVector{<:Integer},
+    first_index::Integer,
+    last_index::Integer,
+    value::Integer,
 )::Int
-    @inbounds if row_index_per_stored[stored_index] >= row_index
-        return stored_index
+    @inbounds if sorted_values[first_index] >= value
+        return first_index
     end
-    low_index = stored_index
+    low_index = first_index
     step = 1
-    @inbounds while low_index + step <= last_stored_index && row_index_per_stored[low_index + step] < row_index
+    @inbounds while low_index + step <= last_index && sorted_values[low_index + step] < value
         low_index += step
         step *= 2
     end
-    high_index = min(low_index + step, last_stored_index + 1)
-    return searchsortedfirst(row_index_per_stored, row_index, low_index + 1, high_index - 1, Base.Order.Forward)
+    high_index = min(low_index + step, last_index + 1)
+    return searchsortedfirst(sorted_values, value, low_index + 1, high_index - 1, Base.Order.Forward)
 end
 
 """
@@ -255,7 +278,7 @@ function gathered_sorted_rows(
         position_per_stored = position_per_stored_per_thread[thread]
         value_per_stored = value_per_stored_per_thread[thread]
         first_stored = length(position_per_stored) + 1
-        for (position, value) in stored_values_at_rows(column, row_indices)
+        for (position, value) in stored_values_at_sorted_rows(column, row_indices)
             push!(position_per_stored, position)
             push!(value_per_stored, value)
         end
@@ -317,9 +340,10 @@ function sum_sparse_columns_per_group!(
     column_indices_per_group::AbstractVector{<:AbstractVector{<:Integer}},
 )::Nothing
     @assert size(destination) == (length(column_indices_per_group), length(row_indices))
+    @assert issorted(row_indices; lt = <=) "row indices are not strictly increasing"
     for (group_index, column_indices) in enumerate(column_indices_per_group)
         for column_index in column_indices
-            for (position, value) in stored_values_at_rows(matrix, column_index, row_indices)
+            for (position, value) in stored_values_at_sorted_rows(matrix, column_index, row_indices)
                 destination[group_index, position] += value
             end
         end

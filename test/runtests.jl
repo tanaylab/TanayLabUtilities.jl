@@ -57,6 +57,19 @@ function Base.getindex(array::CountingBools, index::Int)::Bool
     return array.values[index]
 end
 
+# An index vector that counts how many of its elements were read, from any thread.
+struct CountingIndices <: AbstractVector{Int}
+    values::Vector{Int}
+    n_reads::Threads.Atomic{Int}
+end
+
+Base.size(array::CountingIndices) = size(array.values)
+
+function Base.getindex(array::CountingIndices, index::Int)::Int
+    Threads.atomic_add!(array.n_reads, 1)
+    return array.values[index]
+end
+
 # A matrix that counts how many of its elements were read, like a lazy matrix. Its plain storage is the wrapped matrix.
 struct CountingMatrix <: AbstractMatrix{Float64}
     values::Matrix{Float64}
@@ -601,6 +614,15 @@ end
                 @test result isa Matrix
                 @test result == dense[row_indices, :]
             end
+        end
+
+        @testset "wanted rows are read only near the stored values" begin
+            n_rows = 100_000
+            few_stored = sparse([11, 50_000, 50_001, 99_991], [1, 1, 2, 2], [1.0, 2.0, 3.0, 4.0], n_rows, 2)
+            wanted_rows = collect(1:2:n_rows)
+            counting_rows = CountingIndices(wanted_rows, Threads.Atomic{Int}(0))
+            @test gathered_rows(few_stored, counting_rows) == few_stored[wanted_rows, :]
+            @test counting_rows.n_reads[] < length(wanted_rows) + 1000
         end
     end
 
