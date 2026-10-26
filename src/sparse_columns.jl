@@ -23,6 +23,7 @@ export stored_values_at_rows
 export sum_sparse_columns_per_group!
 
 using ..ParallelLoops
+using ..Types
 using Base.Threads
 using SparseArrays
 
@@ -226,8 +227,8 @@ The values of a column-major `matrix` in some of its rows, as a new column-major
 is. The result is the same as `matrix[row_indices, :]`. For a sparse `matrix`, that visits every stored value of every
 column, on one thread. Here, the columns are read in parallel, once each, using
 [`parallel_foreach_column`](@ref TanayLabUtilities.ParallelLoops.parallel_foreach_column). So a lazy `matrix` is read
-one column at a time. The `row_indices` must have no repetitions. If they aren't sorted in increasing order, a sparse
-result has its rows reordered at the end.
+one column at a time. The `row_indices` must have no repetitions. If they aren't sorted in increasing order, the stored
+values of each sparse column are reordered as they are gathered.
 
 ```jldoctest
 using SparseArrays
@@ -252,23 +253,27 @@ function gathered_rows(matrix::AbstractMatrix, row_indices::AbstractVector{<:Int
         end
         return output
     elseif issorted(row_indices; lt = <=)
-        return gathered_sorted_rows(matrix, row_indices)
+        return gathered_sorted_rows(matrix, row_indices, nothing)
     else
         order = sortperm(row_indices)
-        return gathered_sorted_rows(matrix, row_indices[order])[invperm(order), :]
+        return gathered_sorted_rows(matrix, row_indices[order], order)
     end
 end
 
 # The rows of a sparse `matrix` at the sorted `row_indices`. Each thread appends the stored values it gathers from its
-# columns to its own buffers, and the buffers are then copied into the result.
+# columns to its own buffers, and the buffers are then copied into the result. If the rows were sorted by an `order`,
+# each column's stored values are renumbered by it as they are gathered, so the result has the rows in the original
+# order.
 function gathered_sorted_rows(
     matrix::AbstractMatrix{T},
     row_indices::AbstractVector{<:Integer},
+    order::Maybe{AbstractVector{<:Integer}},
 )::SparseMatrixCSC{T} where {T}
     I = SparseArrays.indtype(matrix)
     n_columns = size(matrix, 2)
     position_per_stored_per_thread = [I[] for _ in 1:maxthreadid()]
     value_per_stored_per_thread = [T[] for _ in 1:maxthreadid()]
+    renumbered_per_thread = [Tuple{I, T}[] for _ in 1:maxthreadid()]
     thread_per_column = Vector{Int}(undef, n_columns)
     first_stored_per_column = Vector{Int}(undef, n_columns)
     n_stored_per_column = Vector{Int}(undef, n_columns)
@@ -281,6 +286,15 @@ function gathered_sorted_rows(
         for (position, value) in stored_values_at_sorted_rows(column, row_indices)
             push!(position_per_stored, position)
             push!(value_per_stored, value)
+        end
+        if order !== nothing
+            stored_range = first_stored:length(position_per_stored)
+            renumber_stored_values!(
+                view(position_per_stored, stored_range),
+                view(value_per_stored, stored_range),
+                order,
+                renumbered_per_thread[thread],
+            )
         end
         thread_per_column[column_index] = thread
         first_stored_per_column[column_index] = first_stored
@@ -304,6 +318,27 @@ function gathered_sorted_rows(
         return nothing
     end
     return SparseMatrixCSC(length(row_indices), n_columns, colptr, rowval, nzval)
+end
+
+# Renumber the `positions` of some stored values in sorted rows to their positions in the original rows, given by the
+# `order` that sorted them, and reorder them (and their `values`) so the new positions increase. The `renumbered`
+# buffer is reused between calls, so this allocates nothing once it is large enough.
+function renumber_stored_values!(
+    positions::AbstractVector{<:Integer},
+    values::AbstractVector,
+    order::AbstractVector{<:Integer},
+    renumbered::Vector{<:Tuple},
+)::Nothing
+    n_stored = length(positions)
+    resize!(renumbered, n_stored)
+    for index in 1:n_stored
+        renumbered[index] = (order[positions[index]], values[index])
+    end
+    sort!(renumbered; by = first, alg = QuickSort)
+    for index in 1:n_stored
+        positions[index], values[index] = renumbered[index]
+    end
+    return nothing
 end
 
 # A sparse column of a view of some of the rows (see `parallel_foreach_column`). It holds the stored values of the

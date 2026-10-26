@@ -624,6 +624,19 @@ end
             @test gathered_rows(few_stored, counting_rows) == few_stored[wanted_rows, :]
             @test counting_rows.n_reads[] < length(wanted_rows) + 1000
         end
+
+        @testset "unsorted rows are reordered while they are gathered" begin
+            large = sprand(Random.MersenneTwister(2), 20_000, 300, 0.05)
+            sorted_rows = collect(1:2:20_000)
+            unsorted_rows = Random.shuffle(Random.MersenneTwister(3), sorted_rows)
+            result = gathered_rows(large, unsorted_rows)
+            @test result == large[unsorted_rows, :]
+            @test all(issorted(view(rowvals(result), nzrange(result, column_index))) for column_index in 1:300)
+            gathered_rows(large, sorted_rows)
+            n_sorted_bytes = @allocated gathered_rows(large, sorted_rows)
+            n_unsorted_bytes = @allocated gathered_rows(large, unsorted_rows)
+            @test n_unsorted_bytes < 1.2 * n_sorted_bytes
+        end
     end
 
     @testset "sum_sparse_columns_per_group!" begin
