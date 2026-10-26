@@ -1274,19 +1274,21 @@ end
         end
 
         @testset "matrices without a layout are copied" begin
-            reshaped_values = reshape(1.0:35.0, 7, 5)
-            @test major_axis(reshaped_values) === nothing
-            @test column_sums(reshaped_values) == vec(sum(Matrix(reshaped_values); dims = 1))
-        end
-
-        @testset "views of arrays of more dimensions" begin
             values_3d = reshape(collect(1.0:60.0), 3, 4, 5)
             strided_view = view(values_3d,:,1,:)
             @test major_axis(strided_view) == Columns
             @test column_sums(strided_view) == vec(sum(Array(strided_view); dims = 1))
-            gathered_view = view(values_3d, [1, 3], 2, :)
-            @test major_axis(gathered_view) === nothing
-            @test column_sums(gathered_view) == vec(sum(Array(gathered_view); dims = 1))
+
+            for matrix in (reshape(1.0:35.0, 7, 5), view(values_3d, [1, 3], 2, :))
+                @test major_axis(matrix) === nothing
+                @test_throws "copying a matrix without a layout" column_sums(matrix)
+                TanayLabUtilities.MatrixLayouts.GLOBAL_INEFFICIENT_ACTION_HANDLER = IgnoreHandler
+                try
+                    @test column_sums(matrix) == vec(sum(Array(matrix); dims = 1))
+                finally
+                    TanayLabUtilities.MatrixLayouts.GLOBAL_INEFFICIENT_ACTION_HANDLER = ErrorHandler
+                end
+            end
         end
 
         @testset "strided views are kept unless contiguous" begin

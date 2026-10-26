@@ -785,6 +785,15 @@ function new_column_reader_per_thread(
         return new_lazy_column_reader_per_thread(base_matrix, scratch, matrix, is_serial)
     end
 
+    if major_axis(base_matrix) === nothing
+        handle_abnormal(GLOBAL_INEFFICIENT_ACTION_HANDLER) do
+            return """
+                copying a matrix without a layout
+                for matrix: $(brief(matrix))
+                """
+        end
+    end
+
     # A `BitMatrix` is read through views of its columns. Its `plain_array` would copy all of it.
     plain_storage = base_matrix isa BitMatrix ? base_matrix : plain_array(matrix)
     @assert_matrix(plain_storage, Columns)
@@ -831,7 +840,7 @@ function is_read_by_parent_columns(matrix_view::SubArray)::Bool
     end
     row_indices, column_indices = parentindices(matrix_view)
     if !(row_indices isa AbstractVector{<:Integer} && column_indices isa AbstractVector{<:Integer})
-        return false  # UNTESTED
+        return false
     end
     return !issparse(parent(matrix_view)) || row_indices isa Base.Slice || issorted(row_indices; lt = <=)
 end
@@ -966,7 +975,7 @@ only the entries of the view.
 A `BitMatrix` is read through views of its columns. Any other matrix is read once through `plain_array`, which copies
 nothing for plain storage, read-only and named wrappers, and strided views. A matrix stored in rows (e.g. a transpose)
 is read against the grain, which invokes the [`GLOBAL_INEFFICIENT_ACTION_HANDLER`](@ref). A sparse one is relayouted to
-columns first.
+columns first. A matrix without a layout (one that isn't strided) is copied, which also invokes the handler.
 
 Set `contiguous` to copy each column with gaps (of a strided view or of a transpose) into a buffer, for code that needs
 contiguous memory.
