@@ -53,12 +53,16 @@ export sparsify
 using ..Brief
 using ..Documentation
 using ..MatrixLayouts
+using ..ParallelLoops
 using ..ReadOnlyArrays
 using ..Types
 
+using Base.Threads
 using LinearAlgebra
 using NamedArrays
 using SparseArrays
+
+import Base.Threads.maxthreadid
 
 function Brief.brief(array::AbstractArray)::String
     return brief_array(array, String[]; transposed = false)
@@ -1516,7 +1520,13 @@ function sparse_array_storage(matrix::AbstractMatrix; eltype::Type, indtype::Typ
     if issparse(matrix)
         n_nz = nnz(matrix)
     else
-        n_nz = sum(matrix .!= 0)
+        columns_matrix = major_axis(matrix) == Rows ? flip(matrix) : matrix
+        n_nz_per_thread = zeros(Int64, maxthreadid())
+        parallel_foreach_column(columns_matrix) do _, _, column
+            n_nz_per_thread[threadid()] += count(!iszero, column)
+            return nothing
+        end
+        n_nz = sum(n_nz_per_thread)
     end
 
     return n_nz * (sizeof(eltype) + sizeof(indtype)) + (size(matrix, Columns) + 1) * sizeof(indtype)
@@ -1526,7 +1536,7 @@ function sparse_array_storage(vector::AbstractVector; eltype::Type, indtype::Typ
     if issparse(vector)
         n_nz = nnz(vector)
     else
-        n_nz = sum(vector .!= 0)
+        n_nz = count(!iszero, vector)
     end
 
     return n_nz * (sizeof(eltype) + sizeof(indtype))

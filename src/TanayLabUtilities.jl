@@ -49,9 +49,6 @@ include("read_only_arrays.jl")
 include("matrix_layouts.jl")
 @reexport using .MatrixLayouts
 
-include("matrix_formats.jl")
-@reexport using .MatrixFormats
-
 include("cross_validations.jl")
 @reexport using .CrossValidations
 
@@ -60,6 +57,9 @@ include("global_weak_cache.jl")
 
 include("parallel_loops.jl")
 @reexport using .ParallelLoops
+
+include("matrix_formats.jl")
+@reexport using .MatrixFormats
 
 include("kmeans.jl")
 @reexport using .KMeans

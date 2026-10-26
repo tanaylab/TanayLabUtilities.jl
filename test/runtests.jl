@@ -1867,6 +1867,12 @@ end
         @test counting.n_reads[] == 0
     end
 
+    @testset "bestify of a dense matrix counts its non-zeros without copying it" begin
+        dense = rand(2000, 2000) .+ 1
+        @test bestify(dense) === dense
+        @test @allocated(bestify(dense)) < 100_000
+    end
+
     @testset "brief of a Bool array reads it once" begin
         counting = CountingBools([true, false, true], Ref(0))
         brief(counting)
