@@ -1321,6 +1321,16 @@ end
             @test column_sums(view(sparse_values, [7, 2], :)) ≈ vec(sum(sparse_values[[7, 2], :]; dims = 1))
         end
 
+        @testset "views of a parent that can't be read by columns are copied" begin
+            transposed_values = transpose(Matrix(transpose(values)))
+            transposed_sparse_values = transpose(SparseMatrixCSC(transpose(sparse_values)))
+            for (rows, columns) in ((:, [4, 2, 5]), ([2, 7], [5, 1]))
+                @test column_sums(view(transposed_values, rows, columns)) ≈ vec(sum(values[rows, columns]; dims = 1))
+                @test column_sums(view(transposed_sparse_values, rows, columns)) ≈
+                      vec(sum(sparse_values[rows, columns]; dims = 1))
+            end
+        end
+
         @testset "nested loops run serially and report only when they allocate" begin
             n_outer = 2 * Threads.nthreads()
             is_reported_per_outer = fill(false, n_outer)

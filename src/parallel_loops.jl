@@ -779,13 +779,15 @@ function new_column_reader_per_thread(
 
     base_matrix = base_array(matrix)
     if base_matrix isa SubArray && is_read_by_parent_columns(base_matrix)
-        return new_view_column_reader_per_thread(base_matrix, contiguous, policy, is_serial)
+        parent_reader_per_thread = new_parent_column_reader_per_thread(base_matrix, contiguous, policy, is_serial)
+        if parent_reader_per_thread !== nothing
+            return new_view_column_reader_per_thread(base_matrix, parent_reader_per_thread, contiguous, is_serial)
+        end
     end
 
     scratch = column_scratch(base_matrix)
     if scratch !== nothing
-        create_lazy_reader = () -> LazyColumnReader(base_matrix, column_scratch(base_matrix))
-        return new_scratch_per_thread(LazyColumnReader(base_matrix, scratch), create_lazy_reader, matrix, is_serial)
+        return new_lazy_column_reader_per_thread(base_matrix, scratch, matrix, is_serial)
     end
 
     plain_storage = plain_array(matrix)
@@ -838,18 +840,49 @@ function is_read_by_parent_columns(matrix_view::SubArray)::Bool
     return !issparse(parent(matrix_view)) || row_indices isa Base.Slice || issorted(row_indices; lt = <=)
 end
 
-function new_view_column_reader_per_thread(
+# The readers of the columns of the parent of a `matrix_view`, if the parent is plain storage or a lazy matrix. Reading
+# the columns of any other parent would copy all of it. Such a view is read through `plain_array` instead, which copies
+# only its entries.
+function new_parent_column_reader_per_thread(
     matrix_view::SubArray,
     contiguous::Bool,
     policy::Symbol,
+    is_serial::Bool,
+)::Maybe{AbstractVector{<:ColumnReader}}
+    parent_matrix = parent(matrix_view)
+    if parent_matrix isa Union{Array, SparseMatrixCSC}
+        is_all_rows = parentindices(matrix_view)[1] isa Base.Slice
+        return new_column_reader_per_thread(parent_matrix; contiguous = contiguous && is_all_rows, policy)
+    end
+    scratch = column_scratch(parent_matrix)
+    if scratch === nothing
+        return nothing
+    end
+    return new_lazy_column_reader_per_thread(parent_matrix, scratch, parent_matrix, is_serial)
+end
+
+# The readers of the columns of a lazy `base_matrix`, the first of them using the `scratch`. The `matrix` is reported if
+# the scratch is allocated inside another parallel loop.
+function new_lazy_column_reader_per_thread(
+    base_matrix::AbstractMatrix,
+    scratch::Any,
+    matrix::AbstractMatrix,
+    is_serial::Bool,
+)::AbstractVector{<:ColumnReader}
+    create_lazy_reader = () -> LazyColumnReader(base_matrix, column_scratch(base_matrix))
+    return new_scratch_per_thread(LazyColumnReader(base_matrix, scratch), create_lazy_reader, matrix, is_serial)
+end
+
+function new_view_column_reader_per_thread(
+    matrix_view::SubArray,
+    parent_reader_per_thread::AbstractVector{<:ColumnReader},
+    contiguous::Bool,
     is_serial::Bool,
 )::AbstractVector{<:ColumnReader}
     view_row_indices, column_indices = parentindices(matrix_view)
     row_indices = view_row_indices isa Base.LogicalIndex ? collect(view_row_indices) : view_row_indices
     is_all_rows = row_indices isa Base.Slice
     parent_matrix = parent(matrix_view)
-    parent_reader_per_thread =
-        new_column_reader_per_thread(parent_matrix; contiguous = contiguous && is_all_rows, policy)
 
     create_buffer = nothing
     if !is_all_rows && issparse(parent_matrix)
@@ -927,11 +960,12 @@ column.
 A lazy matrix (which reads its data on demand) is read one column at a time through [`column_scratch`](@ref) and
 [`read_column!`](@ref), so all of it is never held in memory.
 
-A view of some of the rows and columns of a matrix (e.g., by a mask) is read through the columns of its parent. Only the
-parent's columns in the view are read, and a view of a lazy matrix is never held in memory either. A dense column of a
-view of some of the rows is a view of the parent's column. A sparse one is a `SparseVector` holding the parent's stored
-values in these rows. This needs the rows to be increasing. A sparse view of rows in any other order is read through
-`plain_array`.
+A view of some of the rows and columns of plain storage or of a lazy matrix (e.g., by a mask) is read through the
+columns of its parent. Only the parent's columns in the view are read, and a view of a lazy matrix is never held in
+memory either. A dense column of a view of some of the rows is a view of the parent's column. A sparse one is a
+`SparseVector` holding the parent's stored values in these rows. This needs the rows to be increasing. A sparse view of
+rows in any other order is read through `plain_array`. So is a view of any other matrix (e.g. a transpose), which copies
+only the entries of the view.
 
 Any other matrix is read once through `plain_array`, which copies nothing for plain storage, read-only and named
 wrappers, and strided views. A matrix stored in rows (e.g. a transpose) is read against the grain, which invokes the
