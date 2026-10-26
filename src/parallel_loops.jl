@@ -103,22 +103,12 @@ mutable struct ClaimedLoop
     is_guided::Bool
     next_position::Atomic{Int}
     n_active::Atomic{Int}
-    is_waiting::Atomic{Bool}
     is_idle_event::Event
     failure::Maybe{CapturedException}
 end
 
 function ClaimedLoop(run_position::Function, n_positions::Integer, is_guided::Bool, n_active::Integer)::ClaimedLoop
-    return ClaimedLoop(
-        run_position,
-        n_positions,
-        is_guided,
-        Atomic{Int}(1),
-        Atomic{Int}(n_active),
-        Atomic{Bool}(false),
-        Event(),
-        nothing,
-    )
+    return ClaimedLoop(run_position, n_positions, is_guided, Atomic{Int}(1), Atomic{Int}(n_active), Event(), nothing)
 end
 
 const OPEN_LOOPS = ClaimedLoop[]
@@ -186,7 +176,9 @@ function help_loop!(loop::ClaimedLoop)::Nothing
             return nothing
         end
     finally
-        if atomic_sub!(loop.n_active, 1) == 1 && loop.is_waiting[]
+        # The caller of the loop holds one count until it stops claiming positions. So the last helper wakes it up. The
+        # event stays set, so this works even if the caller only waits later.
+        if atomic_sub!(loop.n_active, 1) == 1
             notify(loop.is_idle_event)
         end
     end
@@ -256,12 +248,8 @@ function run_nested_loop(
             deleteat!(OPEN_LOOPS, loop_index)
             return nothing
         end
-        atomic_sub!(loop.n_active, 1)
-        if !spin_until(() -> loop.n_active[] == 0)
-            loop.is_waiting[] = true
-            if loop.n_active[] > 0
-                wait(loop.is_idle_event)
-            end
+        if atomic_sub!(loop.n_active, 1) != 1 && !spin_until(() -> loop.n_active[] == 0)
+            wait(loop.is_idle_event)
         end
     end
 
