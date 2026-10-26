@@ -797,8 +797,7 @@ function new_column_reader_per_thread(
     # A `BitMatrix` is read through views of its columns. Its `plain_array` would copy all of it.
     plain_storage = base_matrix isa BitMatrix ? base_matrix : plain_array(matrix)
     @assert_matrix(plain_storage, Columns)
-    storage =
-        issparse(plain_storage) && major_axis(plain_storage) != Columns ? SparseMatrixCSC(plain_storage) : plain_storage
+    storage = issparse(plain_storage) && major_axis(plain_storage) != Columns ? relayout(plain_storage) : plain_storage
     if contiguous && !issparse(storage) && size(storage, 2) > 0 && !is_contiguous_array(view(storage, :, 1))
         create_copied_reader = () -> CopiedColumnReader(storage, Vector{eltype(storage)}(undef, size(storage, 1)))
         return new_scratch_per_thread(create_copied_reader(), create_copied_reader, matrix, is_serial)
