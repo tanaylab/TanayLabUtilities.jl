@@ -1632,7 +1632,8 @@ end
     base_array(array::AbstractArray)::AbstractArray
 
 Return the simple base array of an wrapped array, as long as this array is index by the same integer indices. This
-removes the read-only and named wrappers. It never copies and never reads the data. See
+removes the read-only and named wrappers. A DiskArrays view becomes the `SubArray` it wraps. It never copies and never
+reads the data. See
 [`MatrixFormats`](@ref TanayLabUtilities.MatrixFormats) for when to use which function.
 """
 function base_array(array::AbstractArray)::AbstractArray
@@ -1653,6 +1654,10 @@ function base_array(array::SubArray)::AbstractArray
         return array
     end
     return view(parent_base, parentindices(array)...)
+end
+
+function base_array(array::DiskArrays.AbstractSubDiskArray)::AbstractArray
+    return base_array(DiskArrays.subarray(array))
 end
 
 """
