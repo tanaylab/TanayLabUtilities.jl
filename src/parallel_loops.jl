@@ -790,7 +790,8 @@ function new_column_reader_per_thread(
         return new_lazy_column_reader_per_thread(base_matrix, scratch, matrix, is_serial)
     end
 
-    plain_storage = plain_array(matrix)
+    # A `BitMatrix` is read through views of its columns. Its `plain_array` would copy all of it.
+    plain_storage = base_matrix isa BitMatrix ? base_matrix : plain_array(matrix)
     @assert_matrix(plain_storage, Columns)
     storage =
         issparse(plain_storage) && major_axis(plain_storage) != Columns ? SparseMatrixCSC(plain_storage) : plain_storage
@@ -850,7 +851,7 @@ function new_parent_column_reader_per_thread(
     is_serial::Bool,
 )::Maybe{AbstractVector{<:ColumnReader}}
     parent_matrix = parent(matrix_view)
-    if parent_matrix isa Union{Array, SparseMatrixCSC}
+    if parent_matrix isa Union{Array, BitMatrix, SparseMatrixCSC}
         is_all_rows = parentindices(matrix_view)[1] isa Base.Slice
         return new_column_reader_per_thread(parent_matrix; contiguous = contiguous && is_all_rows, policy)
     end
@@ -967,9 +968,10 @@ memory either. A dense column of a view of some of the rows is a view of the par
 rows in any other order is read through `plain_array`. So is a view of any other matrix (e.g. a transpose), which copies
 only the entries of the view.
 
-Any other matrix is read once through `plain_array`, which copies nothing for plain storage, read-only and named
-wrappers, and strided views. A matrix stored in rows (e.g. a transpose) is read against the grain, which invokes the
-[`GLOBAL_INEFFICIENT_ACTION_HANDLER`](@ref). A sparse one is relayouted to columns first.
+A `BitMatrix` is read through views of its columns. Any other matrix is read once through `plain_array`, which copies
+nothing for plain storage, read-only and named wrappers, and strided views. A matrix stored in rows (e.g. a transpose)
+is read against the grain, which invokes the [`GLOBAL_INEFFICIENT_ACTION_HANDLER`](@ref). A sparse one is relayouted to
+columns first.
 
 Set `contiguous` to copy each column with gaps (of a strided view or of a transpose) into a buffer, for code that needs
 contiguous memory.

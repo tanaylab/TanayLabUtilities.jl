@@ -1249,6 +1249,36 @@ end
             @test column_sums(values; columns = Int[]) == Float64[]
         end
 
+        @testset "no rows visit empty columns" begin
+            @test column_sums(zeros(0, 3)) == zeros(3)
+        end
+
+        @testset "bit matrices are copied only if contiguous" begin
+            bits = BitMatrix([row % column == 0 for row in 1:7, column in 1:5])
+            expected_bit_sums = vec(sum(bits; dims = 1))
+            @test column_sums(bits) == expected_bit_sums
+            @test column_sums(bits; contiguous = true) == expected_bit_sums
+            @test column_sums(view(bits, [1, 3, 6], [5, 2])) == vec(sum(bits[[1, 3, 6], [5, 2]]; dims = 1))
+            is_view_per_column = fill(false, 5)
+            parallel_foreach_column(bits) do _, column_index, column
+                is_view_per_column[column_index] = parent(column) === bits
+                return nothing
+            end
+            @test all(is_view_per_column)
+            is_vector_per_column = fill(false, 5)
+            parallel_foreach_column(bits; contiguous = true) do _, column_index, column
+                is_vector_per_column[column_index] = column isa Vector{Bool}
+                return nothing
+            end
+            @test all(is_vector_per_column)
+        end
+
+        @testset "matrices without a layout are copied" begin
+            reshaped_values = reshape(1.0:35.0, 7, 5)
+            @test major_axis(reshaped_values) === nothing
+            @test column_sums(reshaped_values) == vec(sum(Matrix(reshaped_values); dims = 1))
+        end
+
         @testset "strided views are kept unless contiguous" begin
             strided_values = view(values, 1:2:7, :)
             expected_strided_sums = vec(sum(strided_values; dims = 1))
