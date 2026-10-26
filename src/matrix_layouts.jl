@@ -1525,30 +1525,31 @@ end
 function flipped(matrix::AbstractMatrix)::AbstractMatrix
     return flame_timed("flipped") do
         axis = require_major_axis(matrix)
-
-        result = if issparse(matrix)
-            flame_timed("flipped.sparse") do
-                @assert axis == Columns
-                return SparseMatrixCSC(flip(plain_array(matrix)))
-            end
-
-        else
-            flame_timed("flipped.dense") do
-                if axis == Columns
-                    transposed = Matrix{eltype(matrix)}(undef, size(matrix, Columns), size(matrix, Rows))
-                    return permutedims!(transposed, plain_array(matrix), (2, 1))
-
-                elseif axis == Rows  # UNTESTED
-                    transposed = Matrix{eltype(matrix)}(undef, size(matrix, Rows), size(matrix, Columns))  # UNTESTED
-                    return flip(permutedims!(transposed, flip(plain_array(matrix)), (2, 1)))  # UNTESTED
-
-                else
-                    @assert false
-                end
-            end
+        if axis == Rows
+            return flip(flipped(flip(matrix)))  # UNTESTED
         end
+        @assert axis == Columns
 
-        @assert major_axis(result) == axis
+        plain_matrix = plain_array(matrix)
+        n_rows, n_columns = size(plain_matrix)
+        if issparse(plain_matrix)
+            n_stored = nnz(plain_matrix)
+            index_type = SparseArrays.indtype(plain_matrix)
+            colptr = fill(index_type(n_stored + 1), n_rows + 1)
+            colptr[1] = 1
+            result = SparseMatrixCSC(
+                n_columns,
+                n_rows,
+                colptr,
+                Vector{index_type}(undef, n_stored),
+                Vector{eltype(plain_matrix)}(undef, n_stored),
+            )
+        else
+            result = Matrix{eltype(plain_matrix)}(undef, n_columns, n_rows)
+        end
+        relayout!(flip(result), plain_matrix)
+
+        @assert major_axis(result) == Columns
         @assert size(result, Rows) == size(matrix, Columns)
         @assert size(result, Columns) == size(matrix, Rows)
 
