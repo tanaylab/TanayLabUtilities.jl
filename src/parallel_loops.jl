@@ -715,12 +715,13 @@ end
 
 # Reads the columns of a view of a matrix through a reader of its parent. The `buffer` holds the column of a view of
 # some of the rows: a `Vector` for a contiguous dense column, a `SparseVector` for a sparse column, or `nothing`
-# otherwise.
+# otherwise. For sparse rows that were sorted, it is a `NamedTuple` of the `column`, the `order` that sorted the rows,
+# and the `renumbered` buffer.
 struct ViewColumnReader{
     R <: ColumnReader,
     I <: AbstractVector{<:Integer},
     C <: AbstractVector{<:Integer},
-    B <: Union{Nothing, Vector, SparseVector},
+    B <: Union{Nothing, Vector, SparseVector, NamedTuple},
 } <: ColumnReader
     parent_reader::R
     parent_row_indices::I
@@ -831,8 +832,8 @@ function read_column(reader::ViewColumnReader, column_index::Integer)::AbstractV
 end
 
 # Whether the columns of a `matrix_view` are read through the columns of its parent, instead of through `plain_array`. A
-# strided view of an `Array` is plain storage by itself. A sparse view of some of the rows needs them to be increasing,
-# so the rows of its columns stay sorted.
+# strided view of an `Array` is plain storage by itself. A sparse view of some of the rows needs them to have no
+# repetitions. Rows in any other order are sorted once, and the stored values of each column are reordered.
 function is_read_by_parent_columns(matrix_view::SubArray)::Bool
     if ndims(matrix_view) != 2 || (parent(matrix_view) isa Array && matrix_view isa StridedArray)
         return false
@@ -841,7 +842,10 @@ function is_read_by_parent_columns(matrix_view::SubArray)::Bool
     if !(row_indices isa AbstractVector{<:Integer} && column_indices isa AbstractVector{<:Integer})
         return false
     end
-    return !issparse(parent(matrix_view)) || row_indices isa Base.Slice || issorted(row_indices; lt = <=)
+    return !issparse(parent(matrix_view)) ||
+           row_indices isa Base.Slice ||
+           issorted(row_indices; lt = <=) ||
+           allunique(row_indices)
 end
 
 # The readers of the columns of the parent of a `matrix_view`, if the parent is plain storage or a lazy matrix. Reading
@@ -888,14 +892,22 @@ function new_view_column_reader_per_thread(
     is_all_rows = row_indices isa Base.Slice
     parent_matrix = parent(matrix_view)
 
+    # Sparse rows in any other order are gathered in increasing order, then renumbered by the `order` that sorted them.
+    order = is_all_rows || !issparse(parent_matrix) || issorted(row_indices; lt = <=) ? nothing : sortperm(row_indices)
+    reader_row_indices = order === nothing ? row_indices : row_indices[order]
+
     create_buffer = nothing
     if !is_all_rows && issparse(parent_matrix)
-        create_buffer =
-            () -> SparseVector(
-                length(row_indices),
-                Vector{SparseArrays.indtype(parent_matrix)}(),
-                Vector{eltype(parent_matrix)}(),
-            )
+        index_type = SparseArrays.indtype(parent_matrix)
+        value_type = eltype(parent_matrix)
+        n_rows = length(row_indices)
+        create_column = () -> SparseVector(n_rows, Vector{index_type}(), Vector{value_type}())
+        if order === nothing
+            create_buffer = create_column
+        else
+            create_buffer =
+                () -> (column = create_column(), order = order, renumbered = Tuple{index_type, value_type}[])
+        end
     elseif !is_all_rows && contiguous
         create_buffer = () -> Vector{eltype(parent_matrix)}(undef, length(row_indices))
     end
@@ -909,7 +921,7 @@ function new_view_column_reader_per_thread(
     return [
         ViewColumnReader(
             parent_reader_per_thread[thread_index],
-            row_indices,
+            reader_row_indices,
             column_indices,
             buffer_per_thread[thread_index],
         ) for thread_index in 1:maxthreadid()
@@ -967,9 +979,9 @@ A lazy matrix (which reads its data on demand) is read one column at a time thro
 A view of some of the rows and columns of plain storage or of a lazy matrix (e.g., by a mask) is read through the
 columns of its parent. Only the parent's columns in the view are read, and a view of a lazy matrix is never held in
 memory either. A dense column of a view of some of the rows is a view of the parent's column. A sparse one is a
-`SparseVector` holding the parent's stored values in these rows. This needs the rows to be increasing. A sparse view of
-rows in any other order is read through `plain_array`. So is a view of any other matrix (e.g. a transpose), which copies
-only the entries of the view.
+`SparseVector` holding the parent's stored values in these rows. The rows may be in any order, but a sparse view of
+repeated rows is read through `plain_array`. So is a view of any other matrix (e.g. a transpose), which copies only the
+entries of the view.
 
 A `BitMatrix` is read through views of its columns. Any other matrix is read once through `plain_array`, which copies
 nothing for plain storage, read-only and named wrappers, and strided views. A matrix stored in rows (e.g. a transpose)

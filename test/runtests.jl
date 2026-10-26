@@ -1376,6 +1376,25 @@ end
             @test column_sums(view(sparse_values, [7, 2], :)) ≈ vec(sum(sparse_values[[7, 2], :]; dims = 1))
         end
 
+        @testset "sparse views of unsorted rows are read through the columns of their parent" begin
+            large = sprand(Random.MersenneTwister(4), 2000, 500, 0.1)
+            unsorted_rows = Random.shuffle(Random.MersenneTwister(5), collect(1:2:2000))
+            gathered_columns = Vector{SparseVector{Float64, Int}}(undef, 500)
+            parallel_foreach_column(view(large, unsorted_rows, :); policy = :serial) do position, _, column
+                gathered_columns[position] = copy(column)
+                return nothing
+            end
+            @test all(gathered_columns[position] == large[unsorted_rows, position] for position in 1:500)
+            @test all(issorted(SparseArrays.nonzeroinds(column)) for column in gathered_columns)
+            @test column_sums(view(large, [9, 1, 9], [3, 2])) ≈ vec(sum(large[[9, 1, 9], [3, 2]]; dims = 1))
+
+            # A copy of the view would take about 870 KB.
+            sums = zeros(500)
+            unsorted_view = view(large, unsorted_rows, :)
+            sum_columns!(sums, unsorted_view, 1:500)
+            @test @allocated(sum_columns!(sums, unsorted_view, 1:500)) < 300_000
+        end
+
         @testset "views of a parent that can't be read by columns are copied" begin
             transposed_values = transpose(Matrix(transpose(values)))
             transposed_sparse_values = transpose(SparseMatrixCSC(transpose(sparse_values)))
@@ -1439,8 +1458,9 @@ end
             end
 
             # A sparse matrix allocates its default weights, one per column. Its views allocate nothing more.
-            sparse_view = view(sparse_wide_values, [1, 3, 6], :)
-            @test n_more_columns_bytes(sparse_view) - n_more_columns_bytes(sparse_wide_values) < 1000
+            for sparse_view in (view(sparse_wide_values, [1, 3, 6], :), view(sparse_wide_values, [6, 1, 3], :))
+                @test n_more_columns_bytes(sparse_view) - n_more_columns_bytes(sparse_wide_values) < 1000
+            end
         end
     end
 

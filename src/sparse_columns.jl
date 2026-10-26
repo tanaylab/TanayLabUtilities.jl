@@ -359,6 +359,18 @@ function ParallelLoops.gathered_view_rows(
     return buffer
 end
 
+# A sparse column of a view of some of the rows, which were sorted by the `order` in the `buffer`. The stored values are
+# gathered in the sorted `row_indices`, then renumbered to the positions of the rows in the view.
+function ParallelLoops.gathered_view_rows(
+    parent_column::SparseVectorUnion,
+    row_indices::AbstractVector{<:Integer},
+    buffer::NamedTuple,
+)::AbstractVector
+    column = ParallelLoops.gathered_view_rows(parent_column, row_indices, buffer.column)
+    renumber_stored_values!(SparseArrays.nonzeroinds(column), nonzeros(column), buffer.order, buffer.renumbered)
+    return column
+end
+
 """
     sum_sparse_columns_per_group!(
         destination::AbstractMatrix,
