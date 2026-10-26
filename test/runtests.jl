@@ -2173,6 +2173,12 @@ end
             @test is_same_as_transpose(relayout_with(source; budget_kb = 1), source)
         end
     end
+
+    @testset "dense relayout of strings" begin
+        source = [string(row, ",", column) for row in 1:37, column in 1:1000]
+        @test parent(relayout_with(source; budget_kb = 1)) == permutedims(source)
+        @test parent(relayout_with(source; budget_kb = 1024 * 1024)) == permutedims(source)
+    end
 end
 
 @testset "mostly_read_write_locks" begin

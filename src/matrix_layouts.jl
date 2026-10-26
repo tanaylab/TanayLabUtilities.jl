@@ -943,9 +943,19 @@ function unnamed_relayout(destination::DenseMatrix, source::AbstractMatrix)::Den
     @assert !issparse(source)
     flipped_source = flip(plain_array(source))
     if !dense_relayout_by_bands!(destination, flipped_source)
-        @assert LinearAlgebra.transpose!(destination, flipped_source) === destination
+        @assert transpose_values!(destination, flipped_source) === destination
     end
     return destination
+end
+
+# Copy the transpose of the `source` into the `destination`. `transpose!` also transposes each element, which only
+# numbers support, so other elements are just moved.
+function transpose_values!(destination::AbstractMatrix, source::AbstractMatrix)::AbstractMatrix
+    if eltype(source) <: Number
+        return transpose!(destination, source)
+    else
+        return permutedims!(destination, source, (2, 1))
+    end
 end
 
 function unnamed_relayout(destination::AbstractMatrix, source::AbstractMatrix)::AbstractMatrix  # UNTESTED
@@ -1292,16 +1302,18 @@ end
 function dense_relayout_by_bands!(destination::DenseMatrix{Td}, source::AbstractMatrix)::Bool where {Td}
     n_destination_rows, n_destination_columns = size(destination)
     @assert size(source) == (n_destination_columns, n_destination_rows)
-    data_bytes = length(destination) * sizeof(Td)
+    # A reference for an element type that isn't a bits type (e.g. `String`).
+    element_bytes = Base.elsize(destination)
+    data_bytes = length(destination) * element_bytes
     if !is_relayout_by_bands(data_bytes)
         return false
     end
 
     n_tasks, budget_bytes = relayout_tasks_and_budget(data_bytes)
-    column_bytes = n_destination_rows * sizeof(Td)
+    column_bytes = n_destination_rows * element_bytes
     band_width = max(1, budget_bytes ÷ (2 * n_tasks * column_bytes))
     n_bands = cld(n_destination_columns, band_width)
-    buffer_rows = max(1, budget_bytes ÷ (n_tasks * n_bands * band_width * sizeof(Td)))
+    buffer_rows = max(1, budget_bytes ÷ (n_tasks * n_bands * band_width * element_bytes))
     destination_values = vec(destination)
 
     chunks = relayout_chunks(0:n_destination_rows, n_tasks)
@@ -1395,7 +1407,7 @@ function transpose_dense_relayout_bands!(
             n_band_values = n_band_columns * n_destination_rows
             position = (first_column - 1) * n_destination_rows + 1
             copyto!(band_values, 1, destination_values, position, n_band_values)
-            transpose!(
+            transpose_values!(
                 reshape(view(transposed_values, 1:n_band_values), n_destination_rows, n_band_columns),
                 reshape(view(band_values, 1:n_band_values), n_band_columns, n_destination_rows),
             )
