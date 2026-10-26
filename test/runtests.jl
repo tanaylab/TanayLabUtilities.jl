@@ -1279,6 +1279,16 @@ end
             @test column_sums(reshaped_values) == vec(sum(Matrix(reshaped_values); dims = 1))
         end
 
+        @testset "views of arrays of more dimensions" begin
+            values_3d = reshape(collect(1.0:60.0), 3, 4, 5)
+            strided_view = view(values_3d,:,1,:)
+            @test major_axis(strided_view) == Columns
+            @test column_sums(strided_view) == vec(sum(Array(strided_view); dims = 1))
+            gathered_view = view(values_3d, [1, 3], 2, :)
+            @test major_axis(gathered_view) === nothing
+            @test column_sums(gathered_view) == vec(sum(Array(gathered_view); dims = 1))
+        end
+
         @testset "strided views are kept unless contiguous" begin
             strided_values = view(values, 1:2:7, :)
             expected_strided_sums = vec(sum(strided_values; dims = 1))

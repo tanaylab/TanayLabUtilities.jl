@@ -200,7 +200,12 @@ function major_axis(matrix::AbstractMatrix)::Maybe{Int8}
 end
 
 function major_axis(matrix::SubArray)::Maybe{Int8}
-    return major_axis(matrix.parent)
+    if ndims(matrix.parent) == 2
+        return major_axis(matrix.parent)
+    else
+        # A view of an array of more dimensions has the layout its strides give it, if any.
+        return invoke(major_axis, Tuple{AbstractMatrix}, matrix)
+    end
 end
 
 function major_axis(matrix::DiskArrays.CachedDiskArray)::Maybe{Int8}  # UNTESTED
