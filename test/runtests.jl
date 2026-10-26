@@ -1378,6 +1378,22 @@ end
             @test all(is_reported_per_outer) == (Threads.nthreads() > 1)
         end
 
+        @testset "nothing is allocated per parallel position" begin
+            function run_loop(n_positions::Integer, policy::Symbol)::Nothing
+                parallel_loop_wo_rng(1:n_positions; policy) do _
+                    return nothing
+                end
+                return nothing
+            end
+            for policy in (:static, :greedy_sticky, :greedy)
+                run_loop(100, policy)
+                run_loop(10_100, policy)
+                n_few_bytes = @allocated run_loop(100, policy)
+                n_many_bytes = @allocated run_loop(10_100, policy)
+                @test (n_many_bytes - n_few_bytes) / 10_000 < 8
+            end
+        end
+
         @testset "nothing is allocated per column" begin
             wide_values = rand(7, 200)
             lazy_wide_values = LazyColumnsMatrix(wide_values, Threads.Atomic{Int}(0))

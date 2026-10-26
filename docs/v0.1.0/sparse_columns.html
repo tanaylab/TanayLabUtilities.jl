@@ -252,15 +252,13 @@
 </p>
 <p>Reading 
 <code>matrix[row, column]
-</code> for many rows costs a binary search per row, while walking a whole column visits every stored value of the column, wanted or not. The functions here take the wanted rows as a sorted vector of row indices, and merge it with the sorted rows of each column, galloping forward for each wanted row. This costs about 
-<code>s * log(nnz / s)
-</code> for 
-<code>s
-</code> wanted rows and 
-<code>nnz
-</code> stored values in the column. So it behaves like 
-<code>s
-</code> binary searches when few rows are wanted, and like a walk of the column when most rows are wanted.
+</code> for many rows costs a binary search per row, while walking a whole column visits every stored value of the column, wanted or not. The functions here take the wanted rows as a sorted vector of row indices, and merge it with the sorted rows of each column. The merge gallops forward in whichever of the two is behind. This costs about 
+<code>m * log(M / m)
+</code>, where 
+<code>m
+</code> is the smaller and 
+<code>M
+</code> is the larger of the number of wanted rows and the number of stored values in the column. So few wanted rows cost about a binary search each, and so do few stored values.
 </p>
 <p>The position of a wanted row is its index in the vector of wanted rows. Callers use it to index their own buffers.
 </p>

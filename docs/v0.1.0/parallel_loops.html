@@ -702,7 +702,15 @@ end
 <a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.read_column!">
 <code>read_column!
 </code>
-</a>, so all of it is never held in memory. Any other matrix is read once through 
+</a>, so all of it is never held in memory.
+</p>
+<p>A view of some of the rows and columns of a matrix (e.g., by a mask) is read through the columns of its parent. Only the parent&#39;s columns in the view are read, and a view of a lazy matrix is never held in memory either. A dense column of a view of some of the rows is a view of the parent&#39;s column. A sparse one is a 
+<code>SparseVector
+</code> holding the parent&#39;s stored values in these rows. This needs the rows to be increasing. A sparse view of rows in any other order is read through 
+<code>plain_array
+</code>.
+</p>
+<p>Any other matrix is read once through 
 <code>plain_array
 </code>, which copies nothing for plain storage, read-only and named wrappers, and strided views. A matrix stored in rows (e.g. a transpose) is read against the grain, which invokes the 
 <a href="matrix_layouts.html#TanayLabUtilities.MatrixLayouts.GLOBAL_INEFFICIENT_ACTION_HANDLER">
@@ -999,6 +1007,158 @@ end
 </article>
 <article>
 <details class="docstring" open="true">
+<summary id="TanayLabUtilities.ParallelLoops.fill_column!">
+<a class="docstring-binding" href="#TanayLabUtilities.ParallelLoops.fill_column!">
+<code>TanayLabUtilities.ParallelLoops.fill_column!
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+</summary>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">fill_column!(fill::Function, matrix::AbstractMatrix, column_index::Integer)::Nothing
+</code>
+</pre>
+<p>Write the column 
+<code>column_index
+</code> of the 
+<code>matrix
+</code> by calling 
+<code>fill(column)
+</code>, which must set every entry of the 
+<code>column
+</code> without keeping a reference to it. By default, the 
+<code>column
+</code> is a view of the column of the 
+<code>matrix
+</code>. A matrix type that can&#39;t be written through such a view (e.g., one that encodes each column as it is written) adds a method, which may pass a buffer instead. This is the write counterpart of 
+<a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.read_column!">
+<code>read_column!
+</code>
+</a>, used by 
+<a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.copy_columns!">
+<code>copy_columns!
+</code>
+</a>.
+</p>
+</div>
+</section>
+</details>
+</article>
+<article>
+<details class="docstring" open="true">
+<summary id="TanayLabUtilities.ParallelLoops.copy_columns!">
+<a class="docstring-binding" href="#TanayLabUtilities.ParallelLoops.copy_columns!">
+<code>TanayLabUtilities.ParallelLoops.copy_columns!
+</code>
+</a> — 
+<span class="docstring-category">Function
+</span>
+</summary>
+<section>
+<div>
+<pre>
+<code class="language-julia hljs">copy_columns!(
+    destination::AbstractMatrix,
+    source::AbstractMatrix;
+    column_offset::Integer = 0,
+)::Nothing
+copy_columns!(
+    colptr::AbstractVector{&lt;:Integer},
+    rowval::AbstractVector{&lt;:Integer},
+    nzval::AbstractVector,
+    source::AbstractMatrix;
+    column_offset::Integer = 0,
+    nnz_offset::Integer = 0,
+)::Nothing
+</code>
+</pre>
+<p>Copy the columns of the 
+<code>source
+</code> into the columns of the 
+<code>destination
+</code> that follow its first 
+<code>column_offset
+</code> columns. The columns are copied in parallel through 
+<a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.parallel_foreach_column">
+<code>parallel_foreach_column
+</code>
+</a>, so a lazy 
+<code>source
+</code> is never held in memory as a whole. The values are converted to the element type of the destination.
+</p>
+<p>A dense 
+<code>destination
+</code> is written through 
+<a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.fill_column!">
+<code>fill_column!
+</code>
+</a>. A sparse 
+<code>source
+</code> column is written into it together with its implicit zeros.
+</p>
+<p>A sparse 
+<code>destination
+</code> is given as its 
+<code>colptr
+</code>, 
+<code>rowval
+</code> and 
+<code>nzval
+</code> (or as a 
+<code>SparseMatrixCSC
+</code>, whose own vectors are used). The 
+<code>source
+</code> must be sparse too. Its stored values are written after the first 
+<code>nnz_offset
+</code> stored values of the 
+<code>destination
+</code>, and its 
+<code>colptr
+</code> is offset to match. This also writes the 
+<code>colptr
+</code> entry after the last column of the 
+<code>source
+</code>. That entry is where the next part of the 
+<code>destination
+</code> starts, so copying several sources into consecutive parts of the 
+<code>destination
+</code> fills all of its 
+<code>colptr
+</code>.
+</p>
+<p>The 
+<code>destination
+</code> must have the same number of rows as the 
+<code>source
+</code>, and room for its columns (and stored values) after the offsets.
+</p>
+<pre>
+<code class="language-julia hljs">using SparseArrays
+
+source = sparse([0 1; 2 0])
+destination = zeros(Float32, 2, 3)
+copy_columns!(destination, source; column_offset = 1)
+@assert destination == Float32[0 0 1; 0 2 0]
+
+colptr = zeros(Int, 3)
+rowval = zeros(Int, 2)
+nzval = zeros(Int, 2)
+copy_columns!(colptr, rowval, nzval, source)
+@assert SparseMatrixCSC(2, 2, colptr, rowval, nzval) == source
+
+# output
+
+</code>
+</pre>
+</div>
+</section>
+</details>
+</article>
+<article>
+<details class="docstring" open="true">
 <summary id="TanayLabUtilities.ParallelLoops.is_in_parallel_loop">
 <a class="docstring-binding" href="#TanayLabUtilities.ParallelLoops.is_in_parallel_loop">
 <code>TanayLabUtilities.ParallelLoops.is_in_parallel_loop
@@ -1123,6 +1283,18 @@ end
 <li>
 <a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.column_scratch">
 <code>TanayLabUtilities.ParallelLoops.column_scratch
+</code>
+</a>
+</li>
+<li>
+<a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.copy_columns!">
+<code>TanayLabUtilities.ParallelLoops.copy_columns!
+</code>
+</a>
+</li>
+<li>
+<a href="parallel_loops.html#TanayLabUtilities.ParallelLoops.fill_column!">
+<code>TanayLabUtilities.ParallelLoops.fill_column!
 </code>
 </a>
 </li>

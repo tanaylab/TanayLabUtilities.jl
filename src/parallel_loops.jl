@@ -516,8 +516,15 @@ function parallel_loop_wo_rng(
                     index_private_storage = task_local_storage()
                     @assert index_private_storage !== base_private_storage
                     index_private_storage[:is_in_parallel_loop] = true
-                    index_flame_stack = [base_flame_stack]
-                    index_private_storage[:flame_stack] = index_flame_stack
+                    # The task keeps its flame stack between positions, since `flame_timed` pops what it pushes.
+                    index_flame_stack = get(index_private_storage, :flame_stack, nothing)
+                    if !(
+                        index_flame_stack isa Vector{Maybe{AbstractString}} &&
+                        length(index_flame_stack) == 1 &&
+                        index_flame_stack[1] === base_flame_stack
+                    )
+                        index_private_storage[:flame_stack] = Maybe{AbstractString}[base_flame_stack]
+                    end
 
                     flame_timed(loop_name) do
                         body(iteration_indices[position])
