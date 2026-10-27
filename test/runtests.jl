@@ -1548,6 +1548,22 @@ end
             @test SparseMatrixCSC(7, 5, colptr, rowval, nzval) == Float32.(sparse_values)
         end
 
+        @testset "sparse destinations of any sparse source" begin
+            for source in (
+                view(sparse_values, :, [4, 2]),
+                view(sparse_values, [1, 3, 7], 2:5),
+                view(sparse_values, [7, 1, 3], :),
+                transpose(sparse(transpose(sparse_values))),
+            )
+                expected = sparse(Matrix(source))
+                colptr = zeros(Int, size(source, 2) + 1)
+                rowval = zeros(Int, nnz(expected))
+                nzval = zeros(Float64, nnz(expected))
+                copy_columns!(colptr, rowval, nzval, source)
+                @test SparseMatrixCSC(size(source)..., colptr, rowval, nzval) == expected
+            end
+        end
+
         @testset "consecutive parts of sparse destinations" begin
             expected = hcat(sparse_values, sparse_values[:, [2, 4]])
             colptr = zeros(Int, 8)
@@ -1576,7 +1592,7 @@ end
         @testset "sizes are checked" begin
             @test_throws "size(destination, 1)" copy_columns!(zeros(6, 5), values)
             @test_throws "column_offset" copy_columns!(zeros(7, 5), values; column_offset = 1)
-            @test_throws "AbstractSparseMatrixCSC" copy_columns!(zeros(Int, 6), zeros(Int, 9), zeros(9), values)
+            @test_throws "issparse(source)" copy_columns!(zeros(Int, 6), zeros(Int, 9), zeros(9), values)
             @test_throws "nnz_offset" copy_columns!(
                 zeros(Int, 6),
                 zeros(Int, 10),

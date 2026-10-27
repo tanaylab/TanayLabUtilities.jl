@@ -1166,7 +1166,8 @@ A dense `destination` is written through [`fill_column!`](@ref). A sparse `sourc
 with its implicit zeros.
 
 A sparse `destination` is given as its `colptr`, `rowval` and `nzval` (or as a `SparseMatrixCSC`, whose own vectors are
-used). The `source` must be sparse too. Its stored values are written after the first `nnz_offset` stored values of the
+used). The `source` must be sparse too. It may be a view of a sparse matrix, or a row-major one, which is relayouted
+first. Its stored values are written after the first `nnz_offset` stored values of the
 `destination`, and its `colptr` is offset to match. This also writes the `colptr` entry after the last column of the
 `source`. That entry is where the next part of the `destination` starts, so copying several sources into consecutive
 parts of the `destination` fills all of its `colptr`.
@@ -1231,9 +1232,14 @@ function copy_columns!(
     column_offset::Integer = 0,
     nnz_offset::Integer = 0,
 )::Nothing
-    base_source = base_array(source)
-    @assert base_source isa AbstractSparseMatrixCSC
-    source_colptr = SparseArrays.getcolptr(base_source)
+    @assert issparse(source)
+    if major_axis(source) == Rows
+        # Copying a row-major source into columns is a relayout.
+        copy_columns!(colptr, rowval, nzval, relayout(source); column_offset, nnz_offset)
+        return nothing
+    end
+
+    source_colptr = stored_colptr(source)
     n_columns = size(source, 2)
     @assert 0 <= column_offset && column_offset + n_columns + 1 <= length(colptr)
     @assert length(rowval) == length(nzval)
@@ -1248,6 +1254,40 @@ function copy_columns!(
         return nothing
     end
     return nothing
+end
+
+# The `colptr` of a column-major sparse `source`. A sparse matrix (or a lazy one) has its own. A view of all the rows of
+# one takes the number of stored values of each column from its parent. Any other view counts them in a pass over its
+# columns.
+function stored_colptr(source::AbstractMatrix)::AbstractVector{<:Integer}
+    base_source = base_array(source)
+    if base_source isa AbstractSparseMatrixCSC
+        return SparseArrays.getcolptr(base_source)
+    end
+
+    @assert base_source isa SubArray
+    n_columns = size(source, 2)
+    n_stored_per_column = Vector{Int}(undef, n_columns)
+    row_indices, column_indices = parentindices(base_source)
+    parent_matrix = parent(base_source)
+    if row_indices isa Base.Slice && parent_matrix isa AbstractSparseMatrixCSC
+        parent_colptr = SparseArrays.getcolptr(parent_matrix)
+        for (position, column_index) in enumerate(column_indices)
+            n_stored_per_column[position] = parent_colptr[column_index + 1] - parent_colptr[column_index]
+        end
+    else
+        parallel_foreach_column(source; name = "copy_columns!.count") do position, _, column
+            n_stored_per_column[position] = nnz(column)
+            return nothing
+        end
+    end
+
+    colptr = Vector{Int}(undef, n_columns + 1)
+    colptr[1] = 1
+    for position in 1:n_columns
+        colptr[position + 1] = colptr[position] + n_stored_per_column[position]
+    end
+    return colptr
 end
 
 # Copy the `source_colptr` into the `colptr`, after its first `column_offset` entries, adding `nnz_offset` to each.
