@@ -129,13 +129,13 @@ end
 function format_brief_array(vector::AbstractVector, prefixes::Vector{String}; transposed::Bool)::String  # NOLINT
     suffix = ""
 
-    try
-        if strides(vector) != (1,)
+    vector_strides = maybe_strides(vector)
+    if vector_strides !== nothing
+        if vector_strides != (1,)
             suffix = "; Strided"  # UNTESTED
         elseif !("Dense" in prefixes)
             suffix = "; Dense"  # UNTESTED
         end
-    catch
     end
 
     type = eltype(vector)
@@ -149,15 +149,14 @@ end
 function format_brief_array(matrix::AbstractMatrix, prefixes::Vector{String}; transposed::Bool)::String
     suffix = ""
 
-    try
-        matrix_strides = strides(matrix)
+    matrix_strides = maybe_strides(matrix)
+    if matrix_strides !== nothing
         matrix_sizes = size(matrix)
         if matrix_strides != (1, matrix_sizes[1]) && matrix_strides != (matrix_sizes[2], 1)
             suffix = "; Strided"  # UNTESTED
         elseif !("Dense" in prefixes)
             suffix = "; Dense"
         end
-    catch
     end
 
     layout = major_axis(matrix)
@@ -177,6 +176,19 @@ function format_brief_array(matrix::AbstractMatrix, prefixes::Vector{String}; tr
     end
     return "$(delimited_number(n_rows)) x $(delimited_number(n_columns)) x $(eltype(matrix)) $(layout_suffix) " *
            "($(join(prefixes, ", "))$(suffix)$(mask_suffix(matrix)))"
+end
+
+# The strides of an array, or `nothing` if it has none.
+function maybe_strides(array::AbstractArray)::Maybe{Tuple}
+    try
+        return strides(array)
+    catch
+        return nothing
+    end
+end
+
+function maybe_strides(::BitArray)::Nothing
+    return nothing
 end
 
 function mask_suffix(::AbstractArray)::AbstractString
@@ -509,7 +521,7 @@ function similar_array(
         eltype = Base.eltype(array)
     end
 
-    if length(size(array)) == 2 && default_major_axis == Rows && major_axis(array) === nothing
+    if array isa AbstractMatrix && default_major_axis == Rows && major_axis(array) === nothing
         n_rows, n_columns = size(array)  # UNTESTED
         similar = flip(Array{eltype}(undef, n_columns, n_rows))  # UNTESTED
     else
