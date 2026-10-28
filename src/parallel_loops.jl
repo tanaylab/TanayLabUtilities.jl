@@ -1196,6 +1196,24 @@ copy_columns!(colptr, rowval, nzval, source)
 function copy_columns!(destination::AbstractMatrix, source::AbstractMatrix; column_offset::Integer = 0)::Nothing
     @assert size(destination, 1) == size(source, 1)
     @assert 0 <= column_offset && column_offset + size(source, 2) <= size(destination, 2)
+    columns = (column_offset + 1):(column_offset + size(source, 2))
+    destination_axis = major_axis(destination)
+    source_axis = major_axis(source)
+
+    if destination_axis == Rows && source_axis == Rows
+        # The columns of both are the rows of their flips.
+        copy_columns!(view(flip(destination), columns, :), flip(source))
+        return nothing
+    end
+
+    if !issparse(source) && source_axis !== nothing && destination_axis == other_axis(source_axis)
+        relayout_destination = relayout_columns(destination, columns)
+        if relayout_destination !== nothing
+            relayout!(relayout_destination, source)
+            return nothing
+        end
+    end
+
     parallel_foreach_column(source; name = "copy_columns!") do _, column_index, column
         fill_column!(destination, column_offset + column_index) do destination_column
             copy_column!(destination_column, column)
@@ -1203,6 +1221,20 @@ function copy_columns!(destination::AbstractMatrix, source::AbstractMatrix; colu
         end
         return nothing
     end
+    return nothing
+end
+
+# The `columns` of the `destination` as a matrix [`relayout!`](@ref) can write, or `nothing` if it can't write them.
+function relayout_columns(destination::AbstractMatrix, columns::UnitRange{<:Integer})::Maybe{AbstractMatrix}
+    if destination isa DenseMatrix
+        return columns == axes(destination, 2) ? destination : view(destination, :, columns)
+    end
+
+    flipped_destination = flip(destination)
+    if flipped_destination isa DenseMatrix
+        return columns == axes(destination, 2) ? destination : flip(view(flipped_destination, columns, :))
+    end
+
     return nothing
 end
 

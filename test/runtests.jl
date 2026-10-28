@@ -1540,6 +1540,23 @@ end
             @test destination == Float32.(hcat(values, dense_sparse_values))
         end
 
+        @testset "dense destinations of any layout" begin
+            for destination_axis in (Columns, Rows),
+                source in (values, relayout(values), LazyColumnsMatrix(values, Threads.Atomic{Int}(0))),
+                column_offset in (0, 5)
+
+                n_columns = column_offset + 5
+                if destination_axis == Columns
+                    destination = zeros(Float32, 7, n_columns)
+                else
+                    destination = flip(zeros(Float32, n_columns, 7))
+                end
+                copy_columns!(destination, source; column_offset)
+                @test major_axis(destination) == destination_axis
+                @test destination == Float32.(hcat(zeros(7, column_offset), values))
+            end
+        end
+
         @testset "sparse destinations" begin
             colptr = zeros(Int32, 6)
             rowval = zeros(Int32, nnz(sparse_values))

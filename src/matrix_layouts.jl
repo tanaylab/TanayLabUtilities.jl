@@ -953,6 +953,14 @@ function unnamed_relayout(destination::DenseMatrix, source::AbstractMatrix)::Den
     return destination
 end
 
+# Relayouting in bands needs a contiguous destination, so a view of a dense matrix is relayouted without them.
+function unnamed_relayout(destination::SubArray{<:Any, 2, <:DenseMatrix}, source::AbstractMatrix)::SubArray
+    @assert size(destination) == size(source)
+    @assert !issparse(source)
+    @assert transpose_values!(destination, flip(plain_array(source))) === destination
+    return destination
+end
+
 # Copy the transpose of the `source` into the `destination`. `transpose!` also transposes each element, which only
 # numbers support, so other elements are just moved.
 function transpose_values!(destination::AbstractMatrix, source::AbstractMatrix)::AbstractMatrix
