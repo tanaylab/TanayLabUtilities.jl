@@ -85,7 +85,7 @@ end
 
 function TanayLabUtilities.MatrixLayouts.plain_array(
     matrix::CountingMatrix;
-    transposed_as::Maybe{Type} = nothing,  # NOLINT
+    flip_as::Maybe{Type} = nothing,  # NOLINT
     contiguous::Bool = false,  # NOLINT
 )::Matrix{Float64}
     return matrix.values
@@ -1395,13 +1395,21 @@ end
             @test @allocated(sum_columns!(sums, unsorted_view, 1:500)) < 300_000
         end
 
-        @testset "views of a parent that can't be read by columns are copied" begin
+        @testset "views of rows are read against the grain" begin
             transposed_values = transpose(Matrix(transpose(values)))
             transposed_sparse_values = transpose(SparseMatrixCSC(transpose(sparse_values)))
             for (rows, columns) in ((:, [4, 2, 5]), ([2, 7], [5, 1]))
-                @test column_sums(view(transposed_values, rows, columns)) ≈ vec(sum(values[rows, columns]; dims = 1))
-                @test column_sums(view(transposed_sparse_values, rows, columns)) ≈
-                      vec(sum(sparse_values[rows, columns]; dims = 1))
+                @test_throws "inefficient major axis: Rows" column_sums(view(transposed_values, rows, columns))
+                @test_throws "inefficient major axis: Rows" column_sums(view(transposed_sparse_values, rows, columns))
+                TanayLabUtilities.MatrixLayouts.GLOBAL_INEFFICIENT_ACTION_HANDLER = IgnoreHandler
+                try
+                    @test column_sums(view(transposed_values, rows, columns)) ≈
+                          vec(sum(values[rows, columns]; dims = 1))
+                    @test column_sums(view(transposed_sparse_values, rows, columns)) ≈
+                          vec(sum(sparse_values[rows, columns]; dims = 1))
+                finally
+                    TanayLabUtilities.MatrixLayouts.GLOBAL_INEFFICIENT_ACTION_HANDLER = ErrorHandler
+                end
             end
         end
 
@@ -1901,20 +1909,78 @@ end
         @test SparseArrays.indtype(named) == SparseArrays.indtype(matrix)
     end
 
-    @testset "base_array unwraps to the array holding the data" begin
+    @testset "canonical_array" begin
         dense = [1 2; 3 4]
-        @test base_array(dense) === dense
-        @test base_array(NamedArray(dense)) === dense
+        @test canonical_array(dense) === dense
+        @test canonical_array(NamedArray(dense)) === dense
 
         values = [1, 2, 3]
-        @test base_array(SparseArrays.ReadOnly(values)) === values
+        @test canonical_array(SparseArrays.ReadOnly(values)) === values
 
         column = view(dense, :, 1)
-        @test base_array(column) === column
+        @test canonical_array(column) === column
 
-        read_only_column = base_array(view(SparseArrays.ReadOnly(dense), :, 1))
+        read_only_column = canonical_array(view(SparseArrays.ReadOnly(dense), :, 1))
         @test parent(read_only_column) === dense
         @test read_only_column == [1, 3]
+
+        matrix = Float64[row + column / 10 for row in 1:4, column in 1:5]
+        strings = [string(row, column) for row in 1:4, column in 1:5]
+        sparse_matrix = sparse(Float64[row == column ? row : 0 for row in 1:4, column in 1:5])
+
+        # Each array, the wrapper of its canonical form (if any), and the array under that wrapper and any view.
+        for (array, wrapper, data) in (
+            (view(transpose(matrix), 2:3, 1:2), Transpose, matrix),
+            (view(adjoint(matrix), 2:3, 1:2), Transpose, matrix),
+            (view(PermutedDimsArray(matrix, (2, 1)), 2:3, 1:2), Transpose, matrix),
+            (view(PermutedDimsArray(strings, (2, 1)), 2:3, 1:2), PermutedDimsArray, strings),
+            (view(transpose(matrix), [3, 1], 2:3), Transpose, matrix),
+            (view(transpose(sparse_matrix), 2:3, 1:2), Transpose, sparse_matrix),
+            (view(view(transpose(matrix), 1:4, 1:3), 2:3, :), Transpose, matrix),
+            (view(read_only_array(transpose(matrix)), 2:3, 1:2), Transpose, matrix),
+            (view(PermutedDimsArray(matrix, (2, 1)), :, 2), nothing, matrix),
+            (PermutedDimsArray(matrix, (1, 2)), nothing, matrix),
+            (view(PermutedDimsArray(matrix, (1, 2)), 2:3, 1:2), nothing, matrix),
+            (transpose(PermutedDimsArray(matrix, (2, 1))), nothing, matrix),
+            (transpose(view(transpose(matrix), :, 2:3)), nothing, matrix),
+            (transpose(view(matrix, 1:2, 2:3)), Transpose, matrix),
+        )
+            canonical = canonical_array(array)
+            @test canonical == array
+            if wrapper === nothing
+                @test !(canonical isa Union{Transpose, Adjoint, PermutedDimsArray})
+                unwrapped = canonical
+            else
+                @test canonical isa wrapper
+                unwrapped = parent(canonical)
+            end
+            @test (unwrapped isa SubArray ? parent(unwrapped) : unwrapped) === data
+        end
+
+        @test canonical_array(view(transpose(matrix), 2:3, 1:2); flip_as = PermutedDimsArray) isa PermutedDimsArray
+        @test canonical_array(view(transpose(matrix), 2:3, 1:2); flip_as = Adjoint) isa Adjoint
+        @test canonical_array(transpose(transpose(matrix)); flip_as = PermutedDimsArray) === matrix
+    end
+
+    @testset "flip of a view of a flip is the view of its parent" begin
+        matrix = Float64[row + column / 10 for row in 1:4, column in 1:5]
+        flipped_view = flip(view(transpose(matrix), 2:3, 1:2))
+        @test flipped_view isa SubArray
+        @test parent(flipped_view) === matrix
+        @test flipped_view == transpose(view(transpose(matrix), 2:3, 1:2))
+        @test flip(view(matrix, 1:2, 2:3)) isa Transpose
+    end
+
+    @testset "columns of a flip of a view of a flip are read as a view" begin
+        matrix = Float64[row + column / 10 for row in 1:4, column in 1:5]
+        flipped = transpose(view(transpose(matrix), :, 2:3))
+        @test major_axis(flipped) == Columns
+        @test column_sums(flipped) == vec(sum(flipped; dims = 1))
+    end
+
+    @testset "brief of a view of a flip" begin
+        sparse_matrix = sparse(Float64[row == column ? row : 0 for row in 1:4, column in 1:5])
+        @test brief(view(transpose(sparse_matrix), :, 1:2)) == "5 x 2 x Float64 in Rows (Transpose, Sparse ? [Int64])"
     end
 
     @testset "sparse_matrix_csc of a wrapped sparse matrix doesn't read it element by element" begin
@@ -1978,20 +2044,48 @@ end
                 result = plain_array(transposed)
                 @test result isa Transpose
                 @test parent(result) === dense
-                result = plain_array(transposed; transposed_as = PermutedDimsArray)
+                result = plain_array(transposed; flip_as = PermutedDimsArray)
                 @test result isa PermutedDimsArray
                 @test parent(result) === dense
             end
-            result = plain_array(read_only_array(flip(sparse_matrix)); transposed_as = Adjoint)
+            result = plain_array(read_only_array(flip(sparse_matrix)); flip_as = Adjoint)
             @test result isa Adjoint
             @test parent(result) === sparse_matrix
-            result = plain_array(PermutedDimsArray(dense, (2, 1)); transposed_as = Transpose)
+            result = plain_array(PermutedDimsArray(dense, (2, 1)); flip_as = Transpose)
             @test result isa Transpose
             @test parent(result) === dense
             result = plain_array(PermutedDimsArray(strings, (2, 1)))
             @test result isa PermutedDimsArray
             @test parent(result) === strings
             @test plain_array(transpose(PermutedDimsArray(dense, (2, 1)))) === dense
+
+            transposed_vector = transpose([1.0, 2.0])
+            result = plain_array(transposed_vector)
+            @test result isa Matrix
+            @test result == transposed_vector
+        end
+
+        @testset "views of flips keep their layout" begin
+            for flipped_view in (
+                view(transpose(dense), 2:3, 1:2),
+                view(PermutedDimsArray(strings, (2, 1)), 1:2, 1:2),
+                transpose(view(transpose(dense), :, 1:2)),
+            )
+                result = plain_array(flipped_view)
+                @test result == flipped_view
+                @test major_axis(result) == major_axis(flipped_view)
+                @test !(result isa Array)
+            end
+
+            result = plain_array(view(transpose(dense), 2:3, 1:2); flip_as = Adjoint)
+            @test result isa Adjoint
+            @test parent(parent(result)) === dense
+
+            sparse_view = view(transpose(sparse_matrix), 2:3, 1:2)
+            result = plain_array(sparse_view)
+            @test result == sparse_view
+            @test major_axis(result) == Rows
+            @test parent(result) isa SparseMatrixCSC
         end
 
         @testset "strided views are kept" begin

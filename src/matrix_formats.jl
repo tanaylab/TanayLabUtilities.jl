@@ -21,8 +21,8 @@ built-in functions (for example, copying arrays). Sigh.
 
 Pick the function by what you will do with the array:
 
-  - To inspect it (element type, sparsity, number of non-zeros, `brief`), use [`base_array`](@ref). It removes the
-    read-only and named wrappers. It never copies and never reads the data.
+  - To inspect it (element type, sparsity, number of non-zeros, `brief`), use [`canonical_array`](@ref). It removes the
+    read-only and named wrappers, and moves any flip outside the views. It never copies and never reads the data.
   - To read all of its values, use [`plain_array`](@ref). It returns plain storage, a strided view of it, or a transpose
     of either. A lazy array (which reads its data on demand) is read as a whole. The result may share the storage of
     the array, so don't modify it. Code that needs contiguous memory (e.g. HDF5 writers) passes `contiguous = true`.
@@ -62,6 +62,7 @@ using LinearAlgebra
 using NamedArrays
 using SparseArrays
 
+import ..MatrixLayouts.is_flipped_matrix
 import Base.Threads.maxthreadid
 
 function Brief.brief(array::AbstractArray)::String
@@ -102,6 +103,16 @@ end
 function brief_array(array::Adjoint, prefixes::Vector{String}; transposed::Bool)::String
     push!(prefixes, "Adjoint")
     return brief_array(parent(array), prefixes; transposed = !transposed)
+end
+
+# A view of a flip is described as the flip of a view.
+function brief_array(array::SubArray, prefixes::Vector{String}; transposed::Bool)::String
+    canonical = canonical_array(array)
+    if is_flipped_matrix(canonical)
+        return brief_array(canonical, prefixes; transposed)
+    else
+        return invoke(brief_array, Tuple{AbstractArray, Vector{String}}, array, prefixes; transposed)
+    end
 end
 
 function brief_array(array::DenseArray, prefixes::Vector{String}; transposed::Bool)::String

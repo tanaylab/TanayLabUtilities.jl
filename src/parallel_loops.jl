@@ -773,20 +773,20 @@ function new_column_reader_per_thread(
     @assert policy in (:greedy_sticky, :static, :serial)
     is_serial = is_serial_loop(policy)
 
-    base_matrix = base_array(matrix)
-    if base_matrix isa SubArray && is_read_by_parent_columns(base_matrix)
-        parent_reader_per_thread = new_parent_column_reader_per_thread(base_matrix, contiguous, policy, is_serial)
+    canonical_matrix = canonical_array(matrix)
+    if canonical_matrix isa SubArray && is_read_by_parent_columns(canonical_matrix)
+        parent_reader_per_thread = new_parent_column_reader_per_thread(canonical_matrix, contiguous, policy, is_serial)
         if parent_reader_per_thread !== nothing
-            return new_view_column_reader_per_thread(base_matrix, parent_reader_per_thread, contiguous, is_serial)
+            return new_view_column_reader_per_thread(canonical_matrix, parent_reader_per_thread, contiguous, is_serial)
         end
     end
 
-    scratch = column_scratch(base_matrix)
+    scratch = column_scratch(canonical_matrix)
     if scratch !== nothing
-        return new_lazy_column_reader_per_thread(base_matrix, scratch, matrix, is_serial)
+        return new_lazy_column_reader_per_thread(canonical_matrix, scratch, matrix, is_serial)
     end
 
-    if major_axis(base_matrix) === nothing
+    if major_axis(canonical_matrix) === nothing
         handle_abnormal(GLOBAL_INEFFICIENT_ACTION_HANDLER) do
             return """
                 copying a matrix without a layout
@@ -796,7 +796,7 @@ function new_column_reader_per_thread(
     end
 
     # A `BitMatrix` is read through views of its columns. Its `plain_array` would copy all of it.
-    plain_storage = base_matrix isa BitMatrix ? base_matrix : plain_array(matrix)
+    plain_storage = canonical_matrix isa BitMatrix ? canonical_matrix : plain_array(matrix)
     @assert_matrix(plain_storage, Columns)
     storage = issparse(plain_storage) && major_axis(plain_storage) != Columns ? relayout(plain_storage) : plain_storage
     if contiguous && !issparse(storage) && size(storage, 2) > 0 && !is_contiguous_array(view(storage, :, 1))
@@ -869,16 +869,16 @@ function new_parent_column_reader_per_thread(
     return new_lazy_column_reader_per_thread(parent_matrix, scratch, parent_matrix, is_serial)
 end
 
-# The readers of the columns of a lazy `base_matrix`, the first of them using the `scratch`. The `matrix` is reported if
-# the scratch is allocated inside another parallel loop.
+# The readers of the columns of a lazy `canonical_matrix`, the first of them using the `scratch`. The `matrix` is
+# reported if the scratch is allocated inside another parallel loop.
 function new_lazy_column_reader_per_thread(
-    base_matrix::AbstractMatrix,
+    canonical_matrix::AbstractMatrix,
     scratch::Any,
     matrix::AbstractMatrix,
     is_serial::Bool,
 )::AbstractVector{<:ColumnReader}
-    create_lazy_reader = () -> LazyColumnReader(base_matrix, column_scratch(base_matrix))
-    return new_scratch_per_thread(LazyColumnReader(base_matrix, scratch), create_lazy_reader, matrix, is_serial)
+    create_lazy_reader = () -> LazyColumnReader(canonical_matrix, column_scratch(canonical_matrix))
+    return new_scratch_per_thread(LazyColumnReader(canonical_matrix, scratch), create_lazy_reader, matrix, is_serial)
 end
 
 function new_view_column_reader_per_thread(
@@ -1031,12 +1031,12 @@ function parallel_foreach_column(
         return nothing
     end
 
-    base_matrix = base_array(matrix)
-    stored_matrix = base_matrix
+    canonical_matrix = canonical_array(matrix)
+    stored_matrix = canonical_matrix
     stored_columns = columns
-    if base_matrix isa SubArray && is_read_by_parent_columns(base_matrix)
-        stored_matrix = parent(base_matrix)
-        stored_columns = view(parentindices(base_matrix)[2], columns)
+    if canonical_matrix isa SubArray && is_read_by_parent_columns(canonical_matrix)
+        stored_matrix = parent(canonical_matrix)
+        stored_columns = view(parentindices(canonical_matrix)[2], columns)
     end
 
     # A local of its own keeps the type of the default weights concrete.
@@ -1292,16 +1292,16 @@ end
 # one takes the number of stored values of each column from its parent. Any other view counts them in a pass over its
 # columns.
 function stored_colptr(source::AbstractMatrix)::AbstractVector{<:Integer}
-    base_source = base_array(source)
-    if base_source isa AbstractSparseMatrixCSC
-        return SparseArrays.getcolptr(base_source)
+    canonical_source = canonical_array(source)
+    if canonical_source isa AbstractSparseMatrixCSC
+        return SparseArrays.getcolptr(canonical_source)
     end
 
-    @assert base_source isa SubArray
+    @assert canonical_source isa SubArray
     n_columns = size(source, 2)
     n_stored_per_column = Vector{Int}(undef, n_columns)
-    row_indices, column_indices = parentindices(base_source)
-    parent_matrix = parent(base_source)
+    row_indices, column_indices = parentindices(canonical_source)
+    parent_matrix = parent(canonical_source)
     if row_indices isa Base.Slice && parent_matrix isa AbstractSparseMatrixCSC
         parent_colptr = SparseArrays.getcolptr(parent_matrix)
         for (position, column_index) in enumerate(column_indices)

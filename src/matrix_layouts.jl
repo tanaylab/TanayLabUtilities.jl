@@ -31,7 +31,7 @@ export @check_turbo_vector
 export Columns
 export Rows
 export axis_name
-export base_array
+export canonical_array
 export is_contiguous_array
 export major_axis
 export minor_axis
@@ -1612,7 +1612,8 @@ Flip the axes of a matrix. This applies `PermutedDimsArray` to the matrix. Howev
 which in their infinite wisdom blindly add a wrapper on top of the matrix, this function looks at the input first. As
 long as it is not a matrix of `Complex` values, it will strip away an existing `Transpose` and/or `Adjoint` and/or
 `PermutedDimsArray` wrapper, instead of attaching an additional one. In addition, `flip` will also look inside a
-`ReadOnlyArray` and/or `NamedArray` to cancel out an internal flip wrapper.
+`ReadOnlyArray` and/or `NamedArray` to cancel out an internal flip wrapper. A view of a flipped matrix flips to the view
+of the matrix.
 
 !!! note
 
@@ -1643,10 +1644,16 @@ function flip(matrix::PermutedDimsArray{T, 2, P, IP, A})::AbstractMatrix where {
 end
 
 function flip(matrix::AbstractMatrix)::AbstractMatrix
-    if eltype(matrix) <: Number
-        return Transpose(matrix)
+    return flipped_array(matrix, nothing)
+end
+
+function flip(matrix::SubArray{<:Any, 2})::AbstractMatrix
+    indices = parentindices(matrix)
+    if length(indices) == 2 && is_flipped_matrix(parent(matrix))
+        # A view of a flip flips to the view of its parent, with the indices swapped.
+        return view(parent(parent(matrix)), reverse(indices)...)
     else
-        return PermutedDimsArray(matrix, (Columns, Rows))
+        return flipped_array(matrix, nothing)
     end
 end
 
@@ -1660,55 +1667,145 @@ function flip(matrix::NamedArray)::AbstractMatrix
 end
 
 """
-    base_array(array::AbstractArray)::AbstractArray
+    canonical_array(array::AbstractArray; flip_as::Maybe{Type} = nothing)::AbstractArray
 
-Return the simple base array of an wrapped array, as long as this array is index by the same integer indices. This
-removes the read-only and named wrappers. A DiskArrays view becomes the `SubArray` it wraps. It never copies and never
-reads the data. See
-[`MatrixFormats`](@ref TanayLabUtilities.MatrixFormats) for when to use which function.
+Return the `array` in a canonical form, which has the same values at the same indices. It never copies and never reads
+the data. See [`MatrixFormats`](@ref TanayLabUtilities.MatrixFormats) for when to use which function.
+
+  - Read-only and named wrappers are removed. A DiskArrays view becomes the `SubArray` it wraps.
+  - A flip is a `Transpose`, an `Adjoint`, or a `PermutedDimsArray` that swaps the dimensions. There is at most one
+    flip, and it is the outermost wrapper. A view of a flip becomes a flip of a view.
+    Two flips cancel out. A `PermutedDimsArray` that keeps the dimensions is removed.
+  - By default, the flip is the one [`flip`](@ref) uses: a `Transpose` for numbers, and a `PermutedDimsArray`
+    otherwise. Set `flip_as` to `Transpose`, `PermutedDimsArray` or `Adjoint` (for real numbers) to get a specific one.
+
+```jldoctest
+using LinearAlgebra
+
+matrix = [1 2 3; 4 5 6]
+@assert canonical_array(read_only_array(matrix)) === matrix
+@assert canonical_array(PermutedDimsArray(transpose(matrix), (2, 1))) === matrix
+
+canonical = canonical_array(view(transpose(matrix), 2:3, 1:2))
+@assert canonical isa Transpose
+@assert parent(parent(canonical)) === matrix
+@assert canonical == view(transpose(matrix), 2:3, 1:2)
+
+@assert canonical_array(transpose(matrix); flip_as = PermutedDimsArray) isa PermutedDimsArray
+
+# output
+
+```
 """
-function base_array(array::AbstractArray)::AbstractArray
+function canonical_array(array::AbstractArray; flip_as::Maybe{Type} = nothing)::AbstractArray  # NOLINT
     return array
 end
 
-function base_array(array::SparseArrays.ReadOnly)::AbstractArray
-    return base_array(parent(array))
+function canonical_array(array::SparseArrays.ReadOnly; flip_as::Maybe{Type} = nothing)::AbstractArray
+    return canonical_array(parent(array); flip_as)
 end
 
-function base_array(array::NamedArray)::AbstractArray
-    return base_array(array.array)
+function canonical_array(array::NamedArray; flip_as::Maybe{Type} = nothing)::AbstractArray
+    return canonical_array(array.array; flip_as)
 end
 
-function base_array(array::SubArray)::AbstractArray
-    parent_base = base_array(parent(array))
-    if parent_base === parent(array)
+function canonical_array(array::DiskArrays.AbstractSubDiskArray; flip_as::Maybe{Type} = nothing)::AbstractArray
+    return canonical_array(DiskArrays.subarray(array); flip_as)
+end
+
+function canonical_array(
+    matrix::Union{
+        Transpose{<:Any, <:AbstractMatrix},
+        Adjoint{<:Any, <:AbstractMatrix},
+        PermutedDimsArray{<:Any, 2, (Columns, Rows)},
+    };
+    flip_as::Maybe{Type} = nothing,
+)::AbstractMatrix
+    return flipped_canonical_array(parent(matrix), flip_as)
+end
+
+function canonical_array(
+    matrix::PermutedDimsArray{<:Any, 2, (Rows, Columns)};
+    flip_as::Maybe{Type} = nothing,
+)::AbstractMatrix
+    return canonical_array(parent(matrix); flip_as)
+end
+
+function canonical_array(array::SubArray; flip_as::Maybe{Type} = nothing)::AbstractArray
+    parent_array = canonical_array(parent(array))
+    indices = parentindices(array)
+    if length(indices) == 2 && is_flipped_matrix(parent_array)
+        # A view of a flip is a flip of the view of its parent, with the indices swapped.
+        flipped_view = view(parent(parent_array), reverse(indices)...)
+        return ndims(flipped_view) == 2 ? flipped_array(flipped_view, flip_as) : flipped_view
+    elseif parent_array === parent(array)
         return array
+    else
+        return view(parent_array, indices...)
     end
-    return view(parent_base, parentindices(array)...)
 end
 
-function base_array(array::DiskArrays.AbstractSubDiskArray)::AbstractArray
-    return base_array(DiskArrays.subarray(array))
+# The canonical flip of the `matrix`. A flip of a flip cancels out.
+function flipped_canonical_array(matrix::AbstractMatrix, flip_as::Maybe{Type})::AbstractMatrix
+    canonical_matrix = canonical_array(matrix)
+    if is_flipped_matrix(canonical_matrix)
+        return parent(canonical_matrix)
+    else
+        return flipped_array(canonical_matrix, flip_as)
+    end
+end
+
+# A flip of the `matrix`, of the class `flip_as`. By default, a `Transpose` for numbers, and a `PermutedDimsArray`
+# otherwise.
+function flipped_array(matrix::AbstractMatrix, flip_as::Maybe{Type})::AbstractMatrix
+    if flip_as === nothing
+        flip_as = eltype(matrix) <: Number ? Transpose : PermutedDimsArray
+    end
+    if flip_as === PermutedDimsArray
+        return PermutedDimsArray(matrix, (Columns, Rows))
+    elseif flip_as === Adjoint
+        @assert eltype(matrix) <: Real
+        return Adjoint(matrix)
+    else
+        @assert flip_as === Transpose
+        return Transpose(matrix)
+    end
+end
+
+# Whether the `array` is a flip of a matrix: a `Transpose`, an `Adjoint`, or a `PermutedDimsArray` that swaps the
+# dimensions.
+function is_flipped_matrix(::AbstractArray)::Bool
+    return false
+end
+
+function is_flipped_matrix(
+    ::Union{
+        Transpose{<:Any, <:AbstractMatrix},
+        Adjoint{<:Any, <:AbstractMatrix},
+        PermutedDimsArray{<:Any, 2, (Columns, Rows)},
+    },
+)::Bool
+    return true
 end
 
 """
     plain_array(
         array::AbstractArray;
-        transposed_as::Maybe{Type} = nothing,
+        flip_as::Maybe{Type} = nothing,
         contiguous::Bool = false,
     )::AbstractArray
 
 Return the values of the `array`, for reading all of them. The result is plain storage (an `Array`, `SparseMatrixCSC` or
-`SparseVector`), a strided view of an `Array`, or a transpose of either. It may share the storage of the `array`, so it
-must not be modified. See [`MatrixFormats`](@ref TanayLabUtilities.MatrixFormats) for when to use which function.
+`SparseVector`), a strided view of an `Array`, or a flip of either. It may share the storage of the `array`, so it must
+not be modified. See [`MatrixFormats`](@ref TanayLabUtilities.MatrixFormats) for when to use which function.
 
-Read-only and named wrappers are removed without copying. A strided view is kept, since code reads it efficiently. Set
-`contiguous` to copy a view with gaps, for code that needs contiguous memory (e.g. HDF5 writers).
+The `array` is first put in its [`canonical_array`](@ref) form. This removes read-only and named wrappers without
+copying. A strided view is kept, since code reads it efficiently. Set `contiguous` to copy a view with gaps, for code
+that needs contiguous memory (e.g. HDF5 writers).
 
-A transpose (`Transpose`, the `Adjoint` of a real matrix, or a `PermutedDimsArray` that swaps the dimensions) is never
-copied. Instead its plain parent is wrapped again. By default this is the same wrapper [`flip`](@ref) uses: a
-`Transpose` for numbers, and a `PermutedDimsArray` otherwise. Set `transposed_as` to `Transpose`, `PermutedDimsArray` or
-`Adjoint` (for real numbers) to get a specific one, for code that only handles that one.
+A flip is never copied. Instead its plain parent is flipped again. By default this is the same wrapper [`flip`](@ref)
+uses: a `Transpose` for numbers, and a `PermutedDimsArray` otherwise. Set `flip_as` to `Transpose`,
+`PermutedDimsArray` or `Adjoint` (for real numbers) to get a specific one, for code that only handles that one.
 
 Any other array is copied. A lazy array type (which reads its data on demand) may add a method that returns its
 materialization.
@@ -1716,7 +1813,7 @@ materialization.
 ```jldoctest
 matrix = [1 2; 3 4]
 @assert plain_array(read_only_array(matrix)) === matrix
-@assert parent(plain_array(transpose(matrix); transposed_as = PermutedDimsArray)) === matrix
+@assert parent(plain_array(transpose(matrix); flip_as = PermutedDimsArray)) === matrix
 
 vector = [1, 2, 3, 4, 5]
 @assert plain_array(view(vector, 1:2:5)) isa SubArray
@@ -1728,7 +1825,7 @@ vector = [1, 2, 3, 4, 5]
 """
 function plain_array(
     array::AbstractArray;
-    transposed_as::Maybe{Type} = nothing,  # NOLINT
+    flip_as::Maybe{Type} = nothing,  # NOLINT
     contiguous::Bool = false,  # NOLINT
 )::AbstractArray
     return plain_copy(array)
@@ -1736,58 +1833,43 @@ end
 
 function plain_array(
     array::Union{Array, SparseMatrixCSC, SparseVector};
-    transposed_as::Maybe{Type} = nothing,  # NOLINT
+    flip_as::Maybe{Type} = nothing,  # NOLINT
     contiguous::Bool = false,  # NOLINT
 )::AbstractArray
     return array
 end
 
-function plain_array(
-    array::SubArray;
-    transposed_as::Maybe{Type} = nothing,  # NOLINT
-    contiguous::Bool = false,
-)::AbstractArray
-    base_view = base_array(array)
-    if parent(base_view) isa Array && base_view isa StridedArray && (!contiguous || is_contiguous_array(base_view))
-        return base_view
+function plain_array(array::SubArray; flip_as::Maybe{Type} = nothing, contiguous::Bool = false)::AbstractArray
+    canonical_view = canonical_array(array; flip_as)
+    if canonical_view !== array
+        return plain_array(canonical_view; flip_as, contiguous)
+    elseif parent(array) isa Array && array isa StridedArray && (!contiguous || is_contiguous_array(array))
+        return array
     else
         return plain_copy(array)
     end
 end
 
+function plain_array(array::ReadOnlyArray; flip_as::Maybe{Type} = nothing, contiguous::Bool = false)::AbstractArray
+    return plain_array(parent(array); flip_as, contiguous)
+end
+
+function plain_array(array::NamedArray; flip_as::Maybe{Type} = nothing, contiguous::Bool = false)::AbstractArray
+    return plain_array(array.array; flip_as, contiguous)
+end
+
 function plain_array(
-    array::ReadOnlyArray;
-    transposed_as::Maybe{Type} = nothing,
+    array::Union{Transpose, Adjoint, PermutedDimsArray};
+    flip_as::Maybe{Type} = nothing,
     contiguous::Bool = false,
 )::AbstractArray
-    return plain_array(parent(array); transposed_as, contiguous)
-end
-
-function plain_array(array::NamedArray; transposed_as::Maybe{Type} = nothing, contiguous::Bool = false)::AbstractArray
-    return plain_array(array.array; transposed_as, contiguous)
-end
-
-function plain_array(array::Transpose; transposed_as::Maybe{Type} = nothing, contiguous::Bool = false)::AbstractArray
-    return transposed_plain_array(parent(array), transposed_as, contiguous)
-end
-
-function plain_array(array::Adjoint; transposed_as::Maybe{Type} = nothing, contiguous::Bool = false)::AbstractArray
-    if eltype(array) <: Complex
-        return Array(array)  # UNTESTED # NOJET
+    canonical = canonical_array(array; flip_as)
+    if is_flipped_matrix(canonical)
+        return flipped_plain_array(parent(canonical), flip_as, contiguous)
+    elseif canonical !== array
+        return plain_array(canonical; flip_as, contiguous)
     else
-        return transposed_plain_array(parent(array), transposed_as, contiguous)
-    end
-end
-
-function plain_array(
-    array::PermutedDimsArray{T, 2, P, IP, A};
-    transposed_as::Maybe{Type} = nothing,
-    contiguous::Bool = false,
-)::AbstractArray where {T, P, IP, A}
-    if P == (Columns, Rows)
-        return transposed_plain_array(parent(array), transposed_as, contiguous)
-    else
-        return plain_array(parent(array); transposed_as, contiguous)  # UNTESTED
+        return plain_copy(array)  # NOJET
     end
 end
 
@@ -1832,21 +1914,13 @@ function is_contiguous_array(array::StridedArray)::Bool
     return true
 end
 
-# The transpose of the `matrix`, wrapping its plain storage. A transposed plain storage is flipped back to the storage.
-function transposed_plain_array(matrix::AbstractMatrix, transposed_as::Maybe{Type}, contiguous::Bool)::AbstractMatrix
+# The flip of the `matrix`, wrapping its plain storage. A flipped plain storage is flipped back to the storage.
+function flipped_plain_array(matrix::AbstractMatrix, flip_as::Maybe{Type}, contiguous::Bool)::AbstractMatrix
     plain_matrix = plain_array(matrix; contiguous)
-    if plain_matrix isa Union{Transpose, PermutedDimsArray}
+    if is_flipped_matrix(plain_matrix)
         return parent(plain_matrix)
-    elseif transposed_as === nothing
-        return flip(plain_matrix)
-    elseif transposed_as === PermutedDimsArray
-        return PermutedDimsArray(plain_matrix, (Columns, Rows))
-    elseif transposed_as === Adjoint
-        @assert eltype(plain_matrix) <: Real
-        return Adjoint(plain_matrix)
     else
-        @assert transposed_as === Transpose
-        return Transpose(plain_matrix)
+        return flipped_array(plain_matrix, flip_as)
     end
 end
 

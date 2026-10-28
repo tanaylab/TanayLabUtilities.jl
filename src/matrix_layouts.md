@@ -12,7 +12,7 @@ TanayLabUtilities.MatrixLayouts.require_minor_axis
 TanayLabUtilities.MatrixLayouts.other_axis
 TanayLabUtilities.MatrixLayouts.flip
 TanayLabUtilities.MatrixLayouts.flipped
-TanayLabUtilities.MatrixLayouts.base_array
+TanayLabUtilities.MatrixLayouts.canonical_array
 TanayLabUtilities.MatrixLayouts.plain_array
 TanayLabUtilities.MatrixLayouts.is_contiguous_array
 TanayLabUtilities.MatrixLayouts.relayout!
