@@ -1355,11 +1355,18 @@ function plain_array(array::SubArray; flip_as::Maybe{Type} = nothing, contiguous
     canonical_view = canonical_array(array; flip_as)
     if canonical_view !== array
         return plain_array(canonical_view; flip_as, contiguous)
-    elseif parent(array) isa Array && array isa StridedArray && (!contiguous || is_contiguous_array(array))
+    elseif is_plain_array(array) && (!contiguous || is_contiguous_array(array))
         return array
     else
         return plain_copy(array)
     end
+end
+
+# Whether the `array` is plain storage (an `Array`, `SparseMatrixCSC` or `SparseVector`) or a strided view of an
+# `Array`, which [`plain_array`](@ref) returns as is (unless it must be contiguous).
+function is_plain_array(array::AbstractArray)::Bool
+    return array isa Union{Array, SparseMatrixCSC, SparseVector} ||
+           (array isa SubArray && parent(array) isa Array && array isa StridedArray)
 end
 
 function plain_array(array::ReadOnlyArray; flip_as::Maybe{Type} = nothing, contiguous::Bool = false)::AbstractArray

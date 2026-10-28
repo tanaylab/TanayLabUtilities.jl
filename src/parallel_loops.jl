@@ -29,6 +29,7 @@ using Logging
 using ProgressMeter
 using SparseArrays
 
+import ..MatrixLayouts.is_plain_array
 import Base.Threads.maxthreadid
 import ProgressMeter.AbstractProgress  # NOLINT
 using Random
@@ -783,6 +784,8 @@ function new_column_reader_per_thread(
 
     scratch = column_scratch(canonical_matrix)
     if scratch !== nothing
+        # A lazy matrix is read through its columns, so it is column-major.
+        @assert major_axis(canonical_matrix) == Columns
         return new_lazy_column_reader_per_thread(canonical_matrix, scratch, matrix, is_serial)
     end
 
@@ -1435,9 +1438,9 @@ end
 function MatrixLayouts.unnamed_relayout(destination::DenseMatrix, source::AbstractMatrix)::DenseMatrix
     @assert size(destination) == size(source)
     @assert !issparse(source)
-    flipped_source = flip(plain_array(source))
+    flipped_source = flip(source)
     if !dense_relayout_by_bands!(destination, flipped_source)
-        @assert transpose_values!(destination, flipped_source) === destination
+        transpose_columns!(destination, flipped_source)
     end
     return destination
 end
@@ -1449,8 +1452,25 @@ function MatrixLayouts.unnamed_relayout(
 )::SubArray
     @assert size(destination) == size(source)
     @assert !issparse(source)
-    @assert transpose_values!(destination, flip(plain_array(source))) === destination
+    transpose_columns!(destination, flip(source))
     return destination
+end
+
+# Copy the transpose of the column-major `flipped_source` into the `destination`. Plain storage is copied by
+# `transpose!`. Any other matrix (e.g. a lazy one) is read through its columns, each written into a row of the
+# `destination`.
+function transpose_columns!(destination::AbstractMatrix, flipped_source::AbstractMatrix)::Nothing
+    canonical_source = canonical_array(flipped_source)
+    @assert canonical_source isa AbstractMatrix
+    if is_plain_array(canonical_source)
+        @assert transpose_values!(destination, canonical_source) === destination
+    else
+        parallel_foreach_column(flipped_source; name = "relayout.transpose_columns") do _, column_index, column
+            view(destination, column_index, :) .= column
+            return nothing
+        end
+    end
+    return nothing
 end
 
 # Copy the transpose of the `source` into the `destination`. `transpose!` also transposes each element, which only
@@ -1794,8 +1814,16 @@ function dense_relayout_by_bands!(destination::DenseMatrix{Td}, source::Abstract
     destination_values = vec(destination)
 
     chunks = relayout_chunks(0:n_destination_rows, n_tasks)
+    column_reader_per_thread = new_column_reader_per_thread(source)
     parallel_loop_wo_rng(1:n_tasks; name = "relayout.fill_bands") do chunk_index
-        fill_dense_relayout_bands!(destination_values, source, chunks[chunk_index], band_width, buffer_rows)
+        fill_dense_relayout_bands!(
+            destination_values,
+            column_reader_per_thread[threadid()],
+            size(source, 1),
+            chunks[chunk_index],
+            band_width,
+            buffer_rows,
+        )
         return nothing
     end
 
@@ -1814,23 +1842,26 @@ function dense_relayout_by_bands!(destination::DenseMatrix{Td}, source::Abstract
     return true
 end
 
-# Pass 1 of a dense relayout. Append the band slices of the `destination_rows` (which are `source` columns) to their
-# bands in the `destination_values`. Each band's region ends up holding the band's `source` rows, in column-major order.
-# The slices are buffered, and the buffers are written when they hold `buffer_rows` rows.
+# Pass 1 of a dense relayout. Append the band slices of the `destination_rows` (which are `source` columns, read through
+# the `column_reader`) to their bands in the `destination_values`. Each band's region ends up holding the band's
+# `source` rows, in column-major order. The slices are buffered, and the buffers are written when they hold
+# `buffer_rows` rows.
 function fill_dense_relayout_bands!(
     destination_values::AbstractVector{Td},
-    source::AbstractMatrix,
+    column_reader::ColumnReader,
+    n_destination_columns::Int,
     destination_rows::UnitRange{Int},
     band_width::Int,
     buffer_rows::Int,
 )::Nothing where {Td}
-    n_destination_columns, n_destination_rows = size(source)
+    n_destination_rows = length(destination_values) ÷ n_destination_columns
     n_bands = cld(n_destination_columns, band_width)
     buffers = [Vector{Td}(undef, band_width * buffer_rows) for _ in 1:n_bands]
     n_buffered_rows = 0
 
     for destination_row in destination_rows
         n_buffered_rows += 1
+        source_column = read_column(column_reader, destination_row)
         for band_index in 1:n_bands
             first_column = (band_index - 1) * band_width + 1
             last_column = min(first_column + band_width - 1, n_destination_columns)
@@ -1838,7 +1869,7 @@ function fill_dense_relayout_bands!(
             copyto!(
                 buffers[band_index],
                 (n_buffered_rows - 1) * n_band_columns + 1,
-                view(source, first_column:last_column, destination_row),
+                view(source_column, first_column:last_column),
                 1,
                 n_band_columns,
             )

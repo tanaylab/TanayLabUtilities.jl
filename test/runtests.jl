@@ -103,6 +103,10 @@ function Base.getindex(::LazyColumnsMatrix, ::Int, ::Int)::Float64  # UNTESTED
     return error("read a lazy matrix element by element")
 end
 
+function TanayLabUtilities.MatrixLayouts.major_axis(::LazyColumnsMatrix)::Maybe{Int8}
+    return Columns
+end
+
 function TanayLabUtilities.ParallelLoops.column_scratch(matrix::LazyColumnsMatrix)::Vector{Float64}
     Threads.atomic_add!(matrix.n_scratches, 1)
     return Vector{Float64}(undef, size(matrix, 1))
@@ -2295,6 +2299,18 @@ end
                    actual.nzval[1:nnz(source)] == expected.nzval
         else
             return actual == expected
+        end
+    end
+
+    @testset "dense relayout reads a lazy source by columns" begin
+        values = Float64[row + column / 10 for row in 1:300, column in 1:200]
+        for budget_kb in (1, 1_000_000)
+            lazy = LazyColumnsMatrix(values, Threads.Atomic{Int}(0))
+            for (source, expected) in ((lazy, values), (view(lazy, 1:2:300, 10:150), values[1:2:300, 10:150]))
+                result = relayout_with(source; budget_kb)
+                @test result == expected
+                @test major_axis(result) == Rows
+            end
         end
     end
 
