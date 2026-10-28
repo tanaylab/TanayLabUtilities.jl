@@ -63,6 +63,8 @@ using NamedArrays
 using SparseArrays
 
 import ..MatrixLayouts.is_flipped_matrix
+import ..ParallelLoops.copy_stored_columns!
+import ..ParallelLoops.stored_colptr
 import Base.Threads.maxthreadid
 
 function Brief.brief(array::AbstractArray)::String
@@ -398,11 +400,15 @@ function copy_array(
     if is_sparse
         @assert major_axis(matrix) == Columns
         return sparse_matrix_csc(matrix; eltype, indtype)
-    elseif major_axis(matrix) == Rows
-        return flip(Matrix{eltype}(flip(matrix)))  # UNTESTED
-    else
-        return Matrix{eltype}(matrix)
     end
+
+    if major_axis(matrix) == Rows
+        copied = flip(Matrix{eltype}(undef, reverse(size(matrix))))
+    else
+        copied = Matrix{eltype}(undef, size(matrix))
+    end
+    copy_columns!(copied, matrix)
+    return copied
 end
 
 function copy_array(
@@ -1131,7 +1137,20 @@ function sparse_matrix_csc(
     eltype::Maybe{Type} = nothing,
     indtype::Maybe{Type} = nothing,
 )::SparseMatrixCSC
-    _, eltype, indtype = parse_sparse_array(matrix; eltype, indtype)
+    is_sparse, eltype, indtype = parse_sparse_array(matrix; eltype, indtype)
+
+    if is_sparse
+        if major_axis(matrix) == Rows
+            matrix = relayout(matrix)
+        end
+        source_colptr = stored_colptr(matrix)
+        n_stored = source_colptr[end] - 1
+        colptr = Vector{indtype}(undef, size(matrix, 2) + 1)
+        rowval = Vector{indtype}(undef, n_stored)
+        nzval = Vector{eltype}(undef, n_stored)
+        copy_stored_columns!(colptr, rowval, nzval, matrix, source_colptr)
+        return SparseMatrixCSC(size(matrix)..., colptr, rowval, nzval)
+    end
 
     # The constructor reads a wrapped or lazy matrix element by element, so it gets plain storage.
     matrix = plain_array(matrix)

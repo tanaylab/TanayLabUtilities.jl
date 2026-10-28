@@ -2011,6 +2011,31 @@ end
         @test counting.n_reads[] == 0
     end
 
+    @testset "copy_array reads a lazy matrix by columns" begin
+        values = Float64[row + column / 10 for row in 1:7, column in 1:5]
+        copied = copy_array(LazyColumnsMatrix(values, Threads.Atomic{Int}(0)); eltype = Float32)
+        @test copied isa Matrix{Float32}
+        @test copied == Float32.(values)
+    end
+
+    @testset "copy_array of a row-major view keeps its layout" begin
+        source = view(relayout(Float64[row + column / 10 for row in 1:7, column in 1:5]), :, 2:4)
+        @test major_axis(source) == Rows
+        copied = copy_array(source)
+        @test major_axis(copied) == Rows
+        @test copied == source
+    end
+
+    @testset "copy_array of a sparse matrix copies its stored values once" begin
+        large = sprand(10_000, 1_000, 0.01)
+        copy_array(large; eltype = Float32)
+        allocated = @allocated copied = copy_array(large; eltype = Float32)
+        @test copied == Float32.(large)
+        @test SparseArrays.indtype(copied) == SparseArrays.indtype(large)
+        # The result holds 12 bytes per stored value. Copying the values before converting them takes 20.
+        @test allocated < 15 * nnz(large)
+    end
+
     @testset "bestify of a dense matrix counts its non-zeros without copying it" begin
         dense = rand(2000, 2000) .+ 1
         @test bestify(dense) === dense

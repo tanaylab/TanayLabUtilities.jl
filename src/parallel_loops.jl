@@ -1271,7 +1271,20 @@ function copy_columns!(
         return nothing
     end
 
-    source_colptr = stored_colptr(source)
+    copy_stored_columns!(colptr, rowval, nzval, source, stored_colptr(source); column_offset, nnz_offset)
+    return nothing
+end
+
+# Copy the stored values of a column-major sparse `source`, whose `colptr` is `source_colptr`, as in `copy_columns!`.
+function copy_stored_columns!(
+    colptr::AbstractVector{<:Integer},
+    rowval::AbstractVector{<:Integer},
+    nzval::AbstractVector,
+    source::AbstractMatrix,
+    source_colptr::AbstractVector{<:Integer};
+    column_offset::Integer = 0,
+    nnz_offset::Integer = 0,
+)::Nothing
     n_columns = size(source, 2)
     @assert 0 <= column_offset && column_offset + n_columns + 1 <= length(colptr)
     @assert length(rowval) == length(nzval)
