@@ -635,7 +635,8 @@ end
             gathered_rows(large, sorted_rows)
             n_sorted_bytes = @allocated gathered_rows(large, sorted_rows)
             n_unsorted_bytes = @allocated gathered_rows(large, unsorted_rows)
-            @test n_unsorted_bytes < 1.2 * n_sorted_bytes
+            # A second copy of the result would double the bytes. They vary by about 10% between runs.
+            @test n_unsorted_bytes < 1.5 * n_sorted_bytes
         end
     end
 
