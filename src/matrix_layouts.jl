@@ -175,6 +175,11 @@ function major_axis(matrix::Union{Transpose, Adjoint})::Maybe{Int8}
     return other_axis(major_axis(matrix.parent))
 end
 
+# A flipped vector is a single row of adjacent elements.
+function major_axis(::Union{Transpose{<:Any, <:AbstractVector}, Adjoint{<:Any, <:AbstractVector}})::Maybe{Int8}
+    return Rows
+end
+
 function major_axis(::AbstractSparseMatrix)::Maybe{Int8}
     return Columns
 end

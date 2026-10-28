@@ -2134,6 +2134,8 @@ end
 
 @testset "matrix_layouts" begin
     @test major_axis(falses(2, 3)) == Columns
+    @test major_axis(transpose([1.0, 2.0])) == Rows
+    @test major_axis(adjoint([1.0, 2.0])) == Rows
 
     # Relayout the `source` with the given budget and minimal write sizes, so large matrices are relayouted in bands.
     function relayout_with(source::AbstractMatrix; budget_kb::Integer, min_write_kb::Integer = 1)::AbstractMatrix
