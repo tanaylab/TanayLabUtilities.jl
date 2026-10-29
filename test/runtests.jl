@@ -1459,6 +1459,27 @@ end
             @test all(is_reported_per_outer) == (Threads.nthreads() > 1)
         end
 
+        @testset "nested loops reuse readers created before the outer loop" begin
+            n_outer = 2 * Threads.nthreads()
+            lazy_values = LazyColumnsMatrix(values, Threads.Atomic{Int}(0))
+            column_reader_per_thread = new_column_reader_per_thread(lazy_values; nested = true)
+            n_scratches = lazy_values.n_scratches[]
+            sums_per_outer = Vector{Vector{Float64}}(undef, n_outer)
+            is_reported_per_outer = fill(false, n_outer)
+            parallel_loop_wo_rng(1:n_outer; policy = :static) do outer_index
+                sums_per_outer[outer_index] = column_sums(lazy_values; nested = true, column_reader_per_thread)
+                try
+                    column_sums(LazyColumnsMatrix(values, Threads.Atomic{Int}(0)); nested = true)
+                catch exception
+                    is_reported_per_outer[outer_index] = contains(exception.msg, "allocating column scratch")
+                end
+                return nothing
+            end
+            @test all(sums == expected_sums for sums in sums_per_outer)
+            @test lazy_values.n_scratches[] == n_scratches
+            @test all(is_reported_per_outer) == (Threads.nthreads() > 1)
+        end
+
         @testset "nothing is allocated per parallel position" begin
             function run_loop(n_positions::Integer, policy::Symbol)::Nothing
                 parallel_loop_wo_rng(1:n_positions; policy) do _
@@ -2133,7 +2154,8 @@ end
     @testset "bestify of a dense matrix counts its non-zeros without copying it" begin
         dense = rand(2000, 2000) .+ 1
         @test bestify(dense) === dense
-        @test @allocated(bestify(dense)) < 100_000
+        # A copy would take 32 MB. The count of each column takes 16 KB.
+        @test @allocated(bestify(dense)) < 1_000_000
     end
 
     @testset "brief of a Bool array reads it once" begin

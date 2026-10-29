@@ -806,6 +806,7 @@ end
         matrix::AbstractMatrix;
         contiguous::Bool = false,
         policy::Symbol = :greedy_sticky,
+        nested::Bool = false,
     )::AbstractVector{<:ColumnReader}
 
 A [`ColumnReader`](@ref) of the `matrix` for each thread, indexed by `threadid()`, for a parallel loop with the
@@ -814,8 +815,10 @@ A [`ColumnReader`](@ref) of the `matrix` for each thread, indexed by `threadid()
 these readers.
 
 The readers are created before the loop, so the `policy` must keep each task on its thread (`:greedy_sticky`, `:static`
-or `:serial`). If the loop runs serially, all threads share one reader. If this is invoked from inside another parallel
-loop and the readers need buffers, it invokes the [`GLOBAL_INEFFICIENT_ACTION_HANDLER`](@ref).
+or `:serial`). If the loop runs serially, all threads share one reader. A loop inside another parallel loop runs
+serially, unless it is `nested` (see [`parallel_loop_wo_rng`](@ref)). Set `nested` for the readers of such a loop. If
+this is invoked from inside another parallel loop and the readers need buffers, it invokes the
+[`GLOBAL_INEFFICIENT_ACTION_HANDLER`](@ref). To avoid this, create them before the other loop.
 
 ```jldoctest
 using SparseArrays
@@ -841,13 +844,15 @@ function new_column_reader_per_thread(
     matrix::AbstractMatrix;
     contiguous::Bool = false,
     policy::Symbol = :greedy_sticky,
+    nested::Bool = false,
 )::AbstractVector{<:ColumnReader}
     @assert policy in (:greedy_sticky, :static, :serial)
-    is_serial = is_serial_loop(policy)
+    is_serial = is_serial_loop(policy; nested)
 
     canonical_matrix = canonical_array(matrix)
     if canonical_matrix isa SubArray && is_read_by_parent_columns(canonical_matrix)
-        parent_reader_per_thread = new_parent_column_reader_per_thread(canonical_matrix, contiguous, policy, is_serial)
+        parent_reader_per_thread =
+            new_parent_column_reader_per_thread(canonical_matrix, contiguous, policy, nested, is_serial)
         if parent_reader_per_thread !== nothing
             return new_view_column_reader_per_thread(
                 matrix,
@@ -945,12 +950,13 @@ function new_parent_column_reader_per_thread(
     matrix_view::SubArray,
     contiguous::Bool,
     policy::Symbol,
+    nested::Bool,
     is_serial::Bool,
 )::Maybe{AbstractVector{<:ColumnReader}}
     parent_matrix = parent(matrix_view)
     if parent_matrix isa Union{Array, BitMatrix, SparseMatrixCSC}
         is_all_rows = parentindices(matrix_view)[1] isa Base.Slice
-        return new_column_reader_per_thread(parent_matrix; contiguous = contiguous && is_all_rows, policy)
+        return new_column_reader_per_thread(parent_matrix; contiguous = contiguous && is_all_rows, policy, nested)
     end
     scratch = column_scratch(parent_matrix)
     if scratch === nothing
@@ -1056,6 +1062,7 @@ end
         weights::Maybe{AbstractVector{<:Integer}} = nothing,
         progress::Maybe{AbstractProgress} = nothing,
         progress_chunk::Maybe{Integer} = nothing,
+        nested::Bool = false,
         column_reader_per_thread::Maybe{AbstractVector{<:ColumnReader}} = nothing,
     )::Nothing
 
@@ -1090,16 +1097,19 @@ contiguous memory.
 
 Buffers are allocated before the loop, one per thread, and dropped after it. They are indexed by `threadid()`, so the
 `policy` must keep each task on its thread (`:greedy_sticky`, `:static` or `:serial`). If this is invoked from inside
-another parallel loop, it runs serially (see [`parallel_loop_wo_rng`](@ref)) and allocates a single buffer. Since this
-allocates inside the other loop, it invokes the [`GLOBAL_INEFFICIENT_ACTION_HANDLER`](@ref).
+another parallel loop, it runs serially (see [`parallel_loop_wo_rng`](@ref)) and allocates a single buffer. If it is
+`nested`, the idle threads help it, and it allocates a buffer per thread. Either way, this allocates inside the other
+loop, so it invokes the [`GLOBAL_INEFFICIENT_ACTION_HANDLER`](@ref).
 
 A loop that runs this many times over the same `matrix` (e.g. once per group of columns) can create the readers once
 with [`new_column_reader_per_thread`](@ref), and pass them as `column_reader_per_thread`. These must be readers of this
-`matrix`, created for the same `policy`, and `contiguous` is then ignored.
+`matrix`, created for the same `policy` and `nested`, and `contiguous` is then ignored. A `nested` loop given readers
+created before the other loop allocates nothing. The caller runs some of its columns in its own task, through the reader
+of its own thread, so these readers must not be the ones the iteration of the other loop uses.
 
 For a sparse matrix, the `weights` default to the number of stored values in each of the `columns`, unless a
-`progress_chunk` is given. The `weights`, the `name`, the `policy`, the `progress` and the `progress_chunk` are passed
-to [`parallel_loop_wo_rng`](@ref).
+`progress_chunk` is given. The `weights`, the `name`, the `policy`, the `nested` flag, the `progress` and the
+`progress_chunk` are passed to [`parallel_loop_wo_rng`](@ref).
 
 ```jldoctest
 using SparseArrays
@@ -1126,6 +1136,7 @@ function parallel_foreach_column(
     weights::Maybe{AbstractVector{<:Integer}} = nothing,
     progress::Maybe{AbstractProgress} = nothing,
     progress_chunk::Maybe{Integer} = nothing,
+    nested::Bool = false,
     column_reader_per_thread::Maybe{AbstractVector{<:ColumnReader}} = nothing,
 )::Nothing
     @assert policy in (:greedy_sticky, :static, :serial)
@@ -1151,7 +1162,7 @@ function parallel_foreach_column(
     end
 
     if column_reader_per_thread === nothing
-        column_reader_per_thread = new_column_reader_per_thread(matrix; contiguous, policy)
+        column_reader_per_thread = new_column_reader_per_thread(matrix; contiguous, policy, nested)
     end
     foreach_column_through_readers(
         visit,
@@ -1159,6 +1170,7 @@ function parallel_foreach_column(
         columns;
         name,
         policy,
+        nested,
         weights = weight_per_position,
         progress,
         progress_chunk,
@@ -1166,23 +1178,21 @@ function parallel_foreach_column(
     return nothing
 end
 
-# Whether a parallel loop with the `policy` runs serially, which is also the case inside another parallel loop.
-function is_serial_loop(policy::Symbol)::Bool
-    return policy == :serial || nthreads() == 1 || is_in_parallel_loop()
+# Whether a parallel loop with the `policy` runs serially, which is also the case inside another parallel loop, unless
+# it is `nested`.
+function is_serial_loop(policy::Symbol; nested::Bool = false)::Bool
+    return policy == :serial || nthreads() == 1 || (is_in_parallel_loop() && !nested)
 end
 
 # The scratch of each thread, starting with the `first_scratch`, the rest made by `create_scratch`. A serial loop shares
-# the `first_scratch` between all threads. If it is nested inside another parallel loop, this allocation is inside that
-# loop, which invokes the `GLOBAL_INEFFICIENT_ACTION_HANDLER`.
+# the `first_scratch` between all threads. Inside another parallel loop, this allocation is inside that loop, which
+# invokes the `GLOBAL_INEFFICIENT_ACTION_HANDLER`.
 function new_scratch_per_thread(
     first_scratch::Any,
     create_scratch::Function,
     matrix::AbstractMatrix,
     is_serial::Bool,
 )::AbstractVector
-    if !is_serial
-        return [thread_index == 1 ? first_scratch : create_scratch() for thread_index in 1:maxthreadid()]
-    end
     if is_in_parallel_loop()
         handle_abnormal(GLOBAL_INEFFICIENT_ACTION_HANDLER) do
             return """
@@ -1191,7 +1201,11 @@ function new_scratch_per_thread(
                 """
         end
     end
-    return fill(first_scratch, maxthreadid())
+    if is_serial
+        return fill(first_scratch, maxthreadid())
+    else
+        return [thread_index == 1 ? first_scratch : create_scratch() for thread_index in 1:maxthreadid()]
+    end
 end
 
 # Run `visit(position, column_index, column)` for each of the `columns`, reading the column through the reader of the
@@ -1202,11 +1216,12 @@ function foreach_column_through_readers(
     columns::AbstractVector{<:Integer};
     name::AbstractString,
     policy::Symbol,
+    nested::Bool,
     weights::Maybe{AbstractVector{<:Integer}},
     progress::Maybe{AbstractProgress},
     progress_chunk::Maybe{Integer},
 )::Nothing
-    parallel_loop_wo_rng(1:length(columns); name, policy, weights, progress, progress_chunk) do position
+    parallel_loop_wo_rng(1:length(columns); name, policy, nested, weights, progress, progress_chunk) do position
         column_index = columns[position]
         visit(position, column_index, read_column(column_reader_per_thread[threadid()], column_index))
         return nothing
