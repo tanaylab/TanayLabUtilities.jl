@@ -15,6 +15,8 @@ setup_logger(; level = Info)
 
 TanayLabUtilities.MatrixLayouts.GLOBAL_INEFFICIENT_ACTION_HANDLER = ErrorHandler
 
+start_hang_watchdog()
+
 @logged function logged_sum(x::Int; y::Int = 1)::Int
     return x + y
 end
@@ -1471,6 +1473,22 @@ end
                 n_many_bytes = @allocated run_loop(10_100, policy)
                 @test (n_many_bytes - n_few_bytes) / 10_000 < 8
             end
+        end
+
+        @testset "the hang watchdog reports a stall once" begin
+            report = mktemp() do path, io
+                redirect_stderr(io) do
+                    watchdog = start_hang_watchdog(; idle_seconds = 1, check_seconds = 0.1)
+                    sleep(3)
+                    close(watchdog)
+                    return nothing
+                end
+                close(io)
+                return read(path, String)
+            end
+            @test count("It may be hung", report) == 1
+            @test contains(report, "Open nested loops: 0")
+            @test contains(report, "==== Thread")
         end
 
         @testset "nothing is allocated per column" begin

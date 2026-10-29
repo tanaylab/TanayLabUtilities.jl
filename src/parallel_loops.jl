@@ -16,6 +16,7 @@ export parallel_loop_with_rng
 export parallel_loop_wo_rng
 export read_column
 export read_column!
+export start_hang_watchdog
 
 using ..Brief
 using ..Types
@@ -313,6 +314,68 @@ function run_top_level_loop(run_position::Function, n_positions::Integer, policy
             run_worker(worker_index)
         end
     end
+    return nothing
+end
+
+"""
+    start_hang_watchdog(; idle_seconds::Real = 60, check_seconds::Real = 5)::Timer
+
+Start a watchdog for hangs, e.g. of a task waiting for a wake-up that never comes. Every `check_seconds`, it samples
+the CPU time of the process. If this grows by less than 1% of the elapsed time for `idle_seconds`, the process looks
+hung. The watchdog then prints to `stderr` the state of the open nested parallel loops, and the backtraces of all the
+tasks. It prints once per stall, and again only after the process works and then stalls again. Close the returned
+`Timer` to stop it.
+
+This is for tests and long runs. A process that waits on purpose (e.g. an interactive session) looks hung too.
+"""
+function start_hang_watchdog(; idle_seconds::Real = 60, check_seconds::Real = 5)::Timer
+    stall_seconds = time()
+    stall_cpu_seconds = process_cpu_seconds()
+    is_reported = false
+    return Timer(check_seconds; interval = check_seconds) do _
+        now_seconds = time()
+        now_cpu_seconds = process_cpu_seconds()
+        if now_cpu_seconds - stall_cpu_seconds > 0.01 * (now_seconds - stall_seconds)
+            stall_seconds = now_seconds
+            stall_cpu_seconds = now_cpu_seconds
+            is_reported = false
+        elseif !is_reported && now_seconds - stall_seconds >= idle_seconds
+            is_reported = true
+            report_hang(now_seconds - stall_seconds)
+            # The report itself uses CPU, which isn't work of the process.
+            stall_seconds = time()
+            stall_cpu_seconds = process_cpu_seconds()
+        end
+        return nothing
+    end
+end
+
+# The user and system CPU time of the process, in seconds.
+function process_cpu_seconds()::Float64
+    # The `uv_rusage_t` starts with the user and the system `uv_timeval_t`, each of seconds and microseconds.
+    rusage = zeros(Int64, 32)
+    @assert ccall(:uv_getrusage, Cint, (Ptr{Int64},), rusage) == 0
+    return rusage[1] + rusage[2] / 1e6 + rusage[3] + rusage[4] / 1e6
+end
+
+# Print the state of the open nested loops, and the backtraces of all the tasks, after `stalled_seconds` without work.
+# This doesn't lock `OPEN_LOOPS_CONDITION`, since a hung task may hold it.
+function report_hang(stalled_seconds::Real)::Nothing
+    open_loops = copy(OPEN_LOOPS)
+    println(
+        stderr,
+        "The process used almost no CPU for $(round(Int, stalled_seconds)) seconds. It may be hung. ",
+        "Open nested loops: $(length(open_loops)), version: $(OPEN_LOOPS_VERSION[]).",
+    )
+    for (loop_index, loop) in enumerate(open_loops)
+        println(
+            stderr,
+            "Open nested loop $(loop_index): next position: $(loop.next_position[]) of $(loop.n_positions), ",
+            "active: $(loop.n_active[]).",
+        )
+    end
+    flush(stderr)
+    ccall(:jl_print_task_backtraces, Cvoid, (Cint,), 0)
     return nothing
 end
 

@@ -13,6 +13,7 @@ TanayLabUtilities.ParallelLoops.read_column!
 TanayLabUtilities.ParallelLoops.fill_column!
 TanayLabUtilities.ParallelLoops.copy_columns!
 TanayLabUtilities.ParallelLoops.is_in_parallel_loop
+TanayLabUtilities.ParallelLoops.start_hang_watchdog
 TanayLabUtilities.ParallelLoops.DebugProgress
 TanayLabUtilities.ParallelLoops.DebugProgressUnknown
 ```
