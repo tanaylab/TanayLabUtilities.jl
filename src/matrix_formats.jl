@@ -400,9 +400,19 @@ function copy_array(
     if is_sparse
         @assert major_axis(matrix) == Columns
         return sparse_matrix_csc(matrix; eltype, indtype)
+    else
+        return dense_copy(matrix, eltype)
     end
+end
 
-    if major_axis(matrix) == Rows
+# A dense copy of the `matrix` with the `eltype`, in the layout of the `matrix`. It is filled in parallel by
+# `copy_columns!`, so a lazy `matrix` is read by columns. A matrix with no layout isn't lazy (a lazy matrix is
+# column-major), so it is copied element by element.
+function dense_copy(matrix::AbstractMatrix, eltype::Type)::AbstractMatrix
+    axis = major_axis(matrix)
+    if axis === nothing
+        return Matrix{eltype}(matrix)
+    elseif axis == Rows
         copied = flip(Matrix{eltype}(undef, reverse(size(matrix))))
     else
         copied = Matrix{eltype}(undef, size(matrix))
@@ -986,7 +996,7 @@ function densify(matrix::AbstractMatrix; copy::Bool = false, eltype::Maybe{Type}
     is_sparse, eltype = parse_dense_array(matrix; eltype)
 
     if is_sparse || copy || major_axis(matrix) === nothing || eltype != Base.eltype(matrix)
-        matrix = Matrix{eltype}(matrix)
+        matrix = dense_copy(matrix, eltype)
     end
 
     return matrix

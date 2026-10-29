@@ -2061,6 +2061,23 @@ end
         @test allocated < 15 * nnz(large)
     end
 
+    @testset "densify reads a lazy matrix by columns" begin
+        values = Float64[row + column / 10 for row in 1:7, column in 1:5]
+        densified = densify(LazyColumnsMatrix(values, Threads.Atomic{Int}(0)); eltype = Float32)
+        @test densified isa Matrix{Float32}
+        @test densified == Float32.(values)
+    end
+
+    @testset "densify of a row-major sparse view keeps its layout" begin
+        sparse_values = sparse(Float64[row == column || row == 7 ? row + column / 10 : 0 for row in 1:7, column in 1:5])
+        source = view(transpose(sparse_values), :, 2:6)
+        @test major_axis(source) == Rows
+        densified = densify(source)
+        @test major_axis(densified) == Rows
+        @test !issparse(densified)
+        @test densified == source
+    end
+
     @testset "bestify of a dense matrix counts its non-zeros without copying it" begin
         dense = rand(2000, 2000) .+ 1
         @test bestify(dense) === dense
