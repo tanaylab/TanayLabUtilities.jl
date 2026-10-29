@@ -29,6 +29,7 @@ using Logging
 using ProgressMeter
 using SparseArrays
 
+import ..MatrixLayouts.is_flipped_matrix
 import ..MatrixLayouts.is_plain_array
 import Base.Threads.maxthreadid
 import ProgressMeter.AbstractProgress  # NOLINT
@@ -798,8 +799,17 @@ function new_column_reader_per_thread(
         end
     end
 
-    # A `BitMatrix` is read through views of its columns. Its `plain_array` would copy all of it.
-    plain_storage = canonical_matrix isa BitMatrix ? canonical_matrix : plain_array(matrix)
+    if canonical_matrix isa BitMatrix
+        # A `BitMatrix` is read through views of its columns. Its `plain_array` would copy all of it.
+        plain_storage = canonical_matrix
+    elseif is_flipped_matrix(canonical_matrix) && !is_plain_array(parent(canonical_matrix))
+        # A flip of a lazy matrix (or of a view) is relayouted through its columns. Its `plain_array` would hold all of
+        # it in memory.
+        @assert_matrix(matrix, Columns)
+        plain_storage = relayout(matrix)
+    else
+        plain_storage = plain_array(matrix)
+    end
     @assert_matrix(plain_storage, Columns)
     storage = issparse(plain_storage) && major_axis(plain_storage) != Columns ? relayout(plain_storage) : plain_storage
     if contiguous && !issparse(storage) && size(storage, 2) > 0 && !is_contiguous_array(view(storage, :, 1))
@@ -989,7 +999,9 @@ entries of the view.
 A `BitMatrix` is read through views of its columns. Any other matrix is read once through `plain_array`, which copies
 nothing for plain storage, read-only and named wrappers, and strided views. A matrix stored in rows (e.g. a transpose)
 is read against the grain, which invokes the [`GLOBAL_INEFFICIENT_ACTION_HANDLER`](@ref). A sparse one is relayouted to
-columns first. A matrix without a layout (one that isn't strided) is copied, which also invokes the handler.
+columns first. So is a flip of a lazy matrix (or of a view), which is relayouted through its columns, so all of it is
+never held in memory twice. A matrix without a layout (one that isn't strided) is copied, which also invokes the
+handler.
 
 Set `contiguous` to copy each column with gaps (of a strided view or of a transpose) into a buffer, for code that needs
 contiguous memory.
@@ -1428,11 +1440,47 @@ end
 function MatrixLayouts.unnamed_relayout(destination::SparseMatrixCSC, source::AbstractMatrix)::SparseMatrixCSC
     @assert size(destination) == size(source)
     @assert issparse(source)
-    flipped_source = flip(plain_array(source))
-    if !(flipped_source isa SparseMatrixCSC && sparse_relayout_by_bands!(destination, flipped_source))
-        @assert LinearAlgebra.transpose!(destination, flipped_source) === destination
+    flipped_source = flip(source)
+    if !sparse_relayout_by_bands!(destination, flipped_source)
+        @assert LinearAlgebra.transpose!(destination, canonical_array(flipped_source)) === destination
     end
     return destination
+end
+
+function MatrixLayouts.flipped(matrix::AbstractMatrix)::AbstractMatrix
+    return flame_timed("flipped") do
+        axis = require_major_axis(matrix)
+        if axis == Rows
+            return flip(flipped(flip(matrix)))  # UNTESTED
+        end
+        @assert axis == Columns
+
+        n_rows, n_columns = size(matrix)
+        if issparse(matrix)
+            n_stored = stored_colptr(matrix)[end] - 1
+            canonical_matrix = canonical_array(matrix)
+            index_type =
+                SparseArrays.indtype(canonical_matrix isa SubArray ? parent(canonical_matrix) : canonical_matrix)
+            colptr = fill(index_type(n_stored + 1), n_rows + 1)
+            colptr[1] = 1
+            result = SparseMatrixCSC(
+                n_columns,
+                n_rows,
+                colptr,
+                Vector{index_type}(undef, n_stored),
+                Vector{eltype(matrix)}(undef, n_stored),
+            )
+        else
+            result = Matrix{eltype(matrix)}(undef, n_columns, n_rows)
+        end
+        relayout!(flip(result), matrix)
+
+        @assert major_axis(result) == Columns
+        @assert size(result, Rows) == size(matrix, Columns)
+        @assert size(result, Columns) == size(matrix, Rows)
+
+        return result
+    end
 end
 
 function MatrixLayouts.unnamed_relayout(destination::DenseMatrix, source::AbstractMatrix)::DenseMatrix
@@ -1518,17 +1566,23 @@ function n_bits_for(value::Integer)::Int
     return 64 - leading_zeros(UInt64(value))
 end
 
-# Relayout the large sparse `source` into the `destination` in bands of the `destination` columns, which are the
-# `source` rows. Pass 1 stores each entry with a packed index, which holds both its column in the band and its row. A
-# band is therefore at most as wide as the index type allows. Returns whether this was done; if not, use `transpose!`
-# instead.
-function sparse_relayout_by_bands!(destination::SparseMatrixCSC{Td, Id}, source::SparseMatrixCSC)::Bool where {Td, Id}
+# Relayout the sparse `source` into the `destination` in bands of the `destination` columns, which are the `source`
+# rows. The `source` is read through its columns, so a lazy one is never held in memory as a whole. Each pass runs over
+# chunks of the `source` columns. Pass 1 counts the entries of each `source` row in each chunk. Pass 2 stores each entry
+# with a packed index, which holds both its column in the band and its row. A band is therefore at most as wide as the
+# index type allows. Pass 3 sorts each band. Returns whether this was done; a small `SparseMatrixCSC` isn't, so use
+# `transpose!` for it instead.
+function sparse_relayout_by_bands!(destination::SparseMatrixCSC{Td, Id}, source::AbstractMatrix)::Bool where {Td, Id}
     n_destination_rows, n_destination_columns = size(destination)
     @assert size(source) == (n_destination_columns, n_destination_rows)
-    n_entries = nnz(source)
+    source_colptr = stored_colptr(source)
+    n_entries = source_colptr[end] - 1
     entry_bytes = sizeof(Id) + sizeof(Td)
-    if !is_relayout_by_bands(n_entries * entry_bytes)
+    if canonical_array(source) isa SparseMatrixCSC && !is_relayout_by_bands(n_entries * entry_bytes)
         return false
+    elseif n_entries == 0
+        destination.colptr .= 1
+        return true
     end
     row_bits = n_bits_for(n_destination_rows - 1)
     band_column_bits = 8 * sizeof(Id) - (Id <: Signed ? 1 : 0) - row_bits
@@ -1537,8 +1591,23 @@ function sparse_relayout_by_bands!(destination::SparseMatrixCSC{Td, Id}, source:
     @assert length(destination.nzval) >= n_entries
 
     n_tasks, budget_bytes = relayout_tasks_and_budget(n_entries * entry_bytes)
-    colptr = flame_timed("relayout.count") do
-        return count_sparse_relayout_colptr(source, n_destination_columns)
+    chunks = relayout_chunks(source_colptr, n_tasks)
+    column_reader_per_thread = new_column_reader_per_thread(source)
+
+    n_entries_per_row_per_chunk = zeros(Int, n_destination_columns, n_tasks)
+    parallel_loop_wo_rng(1:n_tasks; name = "relayout.count") do chunk_index
+        count_sparse_relayout_chunk!(
+            view(n_entries_per_row_per_chunk, :, chunk_index),
+            column_reader_per_thread[threadid()],
+            chunks[chunk_index],
+        )
+        return nothing
+    end
+    colptr = Vector{Int}(undef, n_destination_columns + 1)
+    colptr[1] = 1
+    @inbounds for destination_column in 1:n_destination_columns
+        colptr[destination_column + 1] =
+            colptr[destination_column] + sum(view(n_entries_per_row_per_chunk, destination_column, :))
     end
     copyto!(destination.colptr, colptr)
 
@@ -1546,18 +1615,13 @@ function sparse_relayout_by_bands!(destination::SparseMatrixCSC{Td, Id}, source:
     band_first_columns, band_of_column = sparse_relayout_bands(colptr, max_band_entries, 1 << min(band_column_bits, 62))
     n_bands = length(band_first_columns) - 1
 
-    chunks = relayout_chunks(source.colptr, n_tasks)
     positions = Matrix{Int}(undef, n_bands, n_tasks)
-    parallel_loop_wo_rng(1:n_tasks; name = "relayout.count_bands") do chunk_index
-        count_sparse_relayout_chunk_bands!(view(positions, :, chunk_index), source, chunks[chunk_index], band_of_column)
-        return nothing
-    end
     @inbounds for band_index in 1:n_bands
-        position = colptr[band_first_columns[band_index]]
+        band_columns = band_first_columns[band_index]:(band_first_columns[band_index + 1] - 1)
+        position = colptr[first(band_columns)]
         for chunk_index in 1:n_tasks
-            n_chunk_band_entries = positions[band_index, chunk_index]
             positions[band_index, chunk_index] = position
-            position += n_chunk_band_entries
+            position += sum(view(n_entries_per_row_per_chunk, band_columns, chunk_index))
         end
     end
 
@@ -1565,7 +1629,7 @@ function sparse_relayout_by_bands!(destination::SparseMatrixCSC{Td, Id}, source:
     parallel_loop_wo_rng(1:n_tasks; name = "relayout.fill_bands") do chunk_index
         fill_sparse_relayout_bands!(
             destination,
-            source,
+            column_reader_per_thread[threadid()],
             chunks[chunk_index],
             band_first_columns,
             band_of_column,
@@ -1598,17 +1662,6 @@ function sparse_relayout_by_bands!(destination::SparseMatrixCSC{Td, Id}, source:
     return true
 end
 
-# The `colptr` of the relayout of the sparse `source`, which counts the entries of each of its rows.
-function count_sparse_relayout_colptr(source::SparseMatrixCSC, n_destination_columns::Integer)::Vector{Int}
-    colptr = zeros(Int, n_destination_columns + 1)
-    colptr[1] = 1
-    source_rowval = source.rowval
-    @inbounds for source_position in 1:nnz(source)
-        colptr[source_rowval[source_position] + 1] += 1
-    end
-    return cumsum!(colptr, colptr)
-end
-
 # Split the relayout destination columns into bands. A band has at most `max_band_entries` entries (unless it is a
 # single column), and at most `max_band_columns` columns. Returns the first column of each band (followed by one past
 # the last column), and the band of each column.
@@ -1636,31 +1689,27 @@ function sparse_relayout_bands(
     return (band_first_columns, band_of_column)
 end
 
-# Count the entries of the `source_columns` of the sparse `source` that go to each band.
-function count_sparse_relayout_chunk_bands!(
-    n_band_entries::AbstractVector{Int},
-    source::SparseMatrixCSC,
+# Pass 1 of a sparse relayout. Count the entries of each `source` row in the `source_columns`, which are read through
+# the `column_reader`.
+function count_sparse_relayout_chunk!(
+    n_entries_per_row::AbstractVector{Int},
+    column_reader::ColumnReader,
     source_columns::UnitRange{Int},
-    band_of_column::Vector{Int32},
 )::Nothing
-    n_band_entries .= 0
-    if !isempty(source_columns)
-        source_rowval = source.rowval
-        @inbounds for source_position in
-                      source.colptr[first(source_columns)]:(source.colptr[last(source_columns) + 1] - 1)
-
-            n_band_entries[band_of_column[source_rowval[source_position]]] += 1
+    for source_column in source_columns
+        @inbounds for source_row in SparseArrays.nonzeroinds(read_column(column_reader, source_column))
+            n_entries_per_row[source_row] += 1
         end
     end
     return nothing
 end
 
-# Pass 1 of a sparse relayout. Append the entries of the `source_columns` of the sparse `source` to their bands in the
-# `destination`, starting at the `positions` of this chunk in each band. Each entry is buffered with a packed index of
-# its column in the band and its row, and the buffers are written when full.
+# Pass 2 of a sparse relayout. Append the entries of the `source_columns`, which are read through the `column_reader`,
+# to their bands in the `destination`, starting at the `positions` of this chunk in each band. Each entry is buffered
+# with a packed index of its column in the band and its row, and the buffers are written when full.
 function fill_sparse_relayout_bands!(
     destination::SparseMatrixCSC{Td, Id},
-    source::SparseMatrixCSC,
+    column_reader::ColumnReader,
     source_columns::UnitRange{Int},
     band_first_columns::Vector{Int},
     band_of_column::Vector{Int32},
@@ -1672,19 +1721,19 @@ function fill_sparse_relayout_bands!(
     indices_buffers = Matrix{Id}(undef, buffer_entries, n_bands)
     values_buffers = Matrix{Td}(undef, buffer_entries, n_bands)
     n_buffered_entries = zeros(Int, n_bands)
-    source_colptr = source.colptr
-    source_rowval = source.rowval
-    source_nzval = source.nzval
 
-    @inbounds for source_column in source_columns
+    for source_column in source_columns
+        column = read_column(column_reader, source_column)
+        column_rows = SparseArrays.nonzeroinds(column)
+        column_values = nonzeros(column)
         packed_row = Id(source_column - 1)
-        for source_position in source_colptr[source_column]:(source_colptr[source_column + 1] - 1)
-            destination_column = source_rowval[source_position]
+        @inbounds for entry_index in eachindex(column_rows)
+            destination_column = column_rows[entry_index]
             band_index = band_of_column[destination_column]
             n_buffered = n_buffered_entries[band_index] + 1
             packed_column = Id(destination_column - band_first_columns[band_index]) << row_bits
             indices_buffers[n_buffered, band_index] = packed_column | packed_row
-            values_buffers[n_buffered, band_index] = source_nzval[source_position]
+            values_buffers[n_buffered, band_index] = column_values[entry_index]
             if n_buffered == buffer_entries
                 write_sparse_relayout_buffer!(
                     destination,
@@ -1731,7 +1780,7 @@ end
     return nothing
 end
 
-# Pass 2 of a sparse relayout. Take the next band until there are none left. Sort the entries of each band by their
+# Pass 3 of a sparse relayout. Take the next band until there are none left. Sort the entries of each band by their
 # column in the band, keeping the order of the rows in each column, and unpack the rows from the packed indices. A band
 # of a single column needs no sorting, so it is unpacked in pieces, and may be larger than `max_band_entries`.
 function sort_sparse_relayout_bands!(

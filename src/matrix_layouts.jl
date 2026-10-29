@@ -161,7 +161,10 @@ function major_axis(matrix::Union{NamedMatrix, ReadOnlyArray})::Maybe{Int8}
     return major_axis(parent(matrix))
 end
 
-function major_axis(matrix::PermutedDimsArray{T, 2, P, IP, A})::Maybe{Int8} where {T, P, IP, A}
+# DiskArrays wraps its arrays in its own `PermutedDiskArray` instead of a `PermutedDimsArray`.
+function major_axis(
+    matrix::Union{PermutedDimsArray{T, 2, P, IP, A}, DiskArrays.AbstractPermutedDiskArray{T, 2, P, IP, A}},
+)::Maybe{Int8} where {T, P, IP, A}
     if P == (Rows, Columns)
         return major_axis(parent(matrix))
     elseif P == (Columns, Rows)
@@ -1052,40 +1055,7 @@ function flip_tuple(tuple::Tuple{T1, T2})::Tuple{T2, T1} where {T1, T2}
     return (value2, value1)
 end
 
-function flipped(matrix::AbstractMatrix)::AbstractMatrix
-    return flame_timed("flipped") do
-        axis = require_major_axis(matrix)
-        if axis == Rows
-            return flip(flipped(flip(matrix)))  # UNTESTED
-        end
-        @assert axis == Columns
-
-        plain_matrix = plain_array(matrix)
-        n_rows, n_columns = size(plain_matrix)
-        if issparse(plain_matrix)
-            n_stored = nnz(plain_matrix)
-            index_type = SparseArrays.indtype(plain_matrix)
-            colptr = fill(index_type(n_stored + 1), n_rows + 1)
-            colptr[1] = 1
-            result = SparseMatrixCSC(
-                n_columns,
-                n_rows,
-                colptr,
-                Vector{index_type}(undef, n_stored),
-                Vector{eltype(plain_matrix)}(undef, n_stored),
-            )
-        else
-            result = Matrix{eltype(plain_matrix)}(undef, n_columns, n_rows)
-        end
-        relayout!(flip(result), plain_matrix)
-
-        @assert major_axis(result) == Columns
-        @assert size(result, Rows) == size(matrix, Columns)
-        @assert size(result, Columns) == size(matrix, Rows)
-
-        return result
-    end
-end
+# The method for any other matrix is defined with the parallel loops it uses.
 
 function flipped(matrix::ReadOnlyArray)::AbstractMatrix
     return flipped(parent(matrix))
@@ -1145,7 +1115,9 @@ function flip(matrix::Adjoint{T}) where {T}
     end
 end
 
-function flip(matrix::PermutedDimsArray{T, 2, P, IP, A})::AbstractMatrix where {T, P, IP, A}
+function flip(
+    matrix::Union{PermutedDimsArray{T, 2, P, IP, A}, DiskArrays.AbstractPermutedDiskArray{T, 2, P, IP, A}},
+)::AbstractMatrix where {T, P, IP, A}
     if P == (Columns, Rows)
         return parent(matrix)
     elseif P == (Rows, Columns)
@@ -1230,6 +1202,7 @@ function canonical_array(
         Transpose{<:Any, <:AbstractMatrix},
         Adjoint{<:Any, <:AbstractMatrix},
         PermutedDimsArray{<:Any, 2, (Columns, Rows)},
+        DiskArrays.AbstractPermutedDiskArray{<:Any, 2, (Columns, Rows)},
     };
     flip_as::Maybe{Type} = nothing,
 )::AbstractMatrix
@@ -1237,7 +1210,10 @@ function canonical_array(
 end
 
 function canonical_array(
-    matrix::PermutedDimsArray{<:Any, 2, (Rows, Columns)};
+    matrix::Union{
+        PermutedDimsArray{<:Any, 2, (Rows, Columns)},
+        DiskArrays.AbstractPermutedDiskArray{<:Any, 2, (Rows, Columns)},
+    };
     flip_as::Maybe{Type} = nothing,
 )::AbstractMatrix
     return canonical_array(parent(matrix); flip_as)
@@ -1284,8 +1260,8 @@ function flipped_array(matrix::AbstractMatrix, flip_as::Maybe{Type})::AbstractMa
     end
 end
 
-# Whether the `array` is a flip of a matrix: a `Transpose`, an `Adjoint`, or a `PermutedDimsArray` that swaps the
-# dimensions.
+# Whether the `array` is a flip of a matrix: a `Transpose`, an `Adjoint`, or a `PermutedDimsArray` (or the
+# `PermutedDiskArray` of DiskArrays) that swaps the dimensions.
 function is_flipped_matrix(::AbstractArray)::Bool
     return false
 end
@@ -1295,6 +1271,7 @@ function is_flipped_matrix(
         Transpose{<:Any, <:AbstractMatrix},
         Adjoint{<:Any, <:AbstractMatrix},
         PermutedDimsArray{<:Any, 2, (Columns, Rows)},
+        DiskArrays.AbstractPermutedDiskArray{<:Any, 2, (Columns, Rows)},
     },
 )::Bool
     return true
@@ -1378,7 +1355,7 @@ function plain_array(array::NamedArray; flip_as::Maybe{Type} = nothing, contiguo
 end
 
 function plain_array(
-    array::Union{Transpose, Adjoint, PermutedDimsArray};
+    array::Union{Transpose, Adjoint, PermutedDimsArray, DiskArrays.AbstractPermutedDiskArray};
     flip_as::Maybe{Type} = nothing,
     contiguous::Bool = false,
 )::AbstractArray

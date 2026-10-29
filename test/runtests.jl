@@ -1336,6 +1336,17 @@ end
             end
         end
 
+        @testset "flips of lazy matrices are relayouted through their columns" begin
+            flipped_lazy_values = flip(LazyColumnsMatrix(Matrix(transpose(values)), Threads.Atomic{Int}(0)))
+            @test_throws "inefficient major axis: Rows" column_sums(flipped_lazy_values)
+            TanayLabUtilities.MatrixLayouts.GLOBAL_INEFFICIENT_ACTION_HANDLER = IgnoreHandler
+            try
+                @test column_sums(flipped_lazy_values) == expected_sums
+            finally
+                TanayLabUtilities.MatrixLayouts.GLOBAL_INEFFICIENT_ACTION_HANDLER = ErrorHandler
+            end
+        end
+
         @testset "lazy matrices are read through one scratch per thread" begin
             lazy_values = LazyColumnsMatrix(values, Threads.Atomic{Int}(0))
             @test column_sums(lazy_values) == expected_sums
@@ -1967,6 +1978,15 @@ end
         @test canonical_array(transpose(transpose(matrix)); flip_as = PermutedDimsArray) === matrix
     end
 
+    @testset "the PermutedDiskArray of DiskArrays is a flip" begin
+        DiskArrays = TanayLabUtilities.MatrixLayouts.DiskArrays
+        disk_strings = DiskArrays.TestTypes.AccessCountDiskArray([string(row, column) for row in 1:4, column in 1:5])
+        permuted = PermutedDimsArray(disk_strings, (2, 1))
+        @test permuted isa DiskArrays.PermutedDiskArray
+        @test flip(permuted) === disk_strings
+        @test canonical_array(PermutedDimsArray(permuted, (2, 1))) === disk_strings
+    end
+
     @testset "flip of a view of a flip is the view of its parent" begin
         matrix = Float64[row + column / 10 for row in 1:4, column in 1:5]
         flipped_view = flip(view(transpose(matrix), 2:3, 1:2))
@@ -2312,6 +2332,31 @@ end
                 @test major_axis(result) == Rows
             end
         end
+    end
+
+    @testset "sparse relayout reads a view by columns" begin
+        large = sprand(Random.MersenneTwister(4), 3000, 2000, 0.01)
+        saved_budget_kb = TanayLabUtilities.MatrixLayouts.RELAYOUT_BUDGET_KB
+        try
+            for budget_kb in (1, 1_000_000)
+                TanayLabUtilities.MatrixLayouts.RELAYOUT_BUDGET_KB = budget_kb
+                for source in (view(large, 1:3:3000, 10:1900), view(large, 1:0, :))
+                    result = relayout(source)
+                    @test result == source
+                    @test issparse(result)
+                    @test major_axis(result) == Rows
+                end
+            end
+        finally
+            TanayLabUtilities.MatrixLayouts.RELAYOUT_BUDGET_KB = saved_budget_kb
+        end
+    end
+
+    @testset "flipped reads a lazy matrix by columns" begin
+        values = Float64[row + column / 10 for row in 1:300, column in 1:200]
+        result = flipped(LazyColumnsMatrix(values, Threads.Atomic{Int}(0)))
+        @test result == transpose(values)
+        @test major_axis(result) == Columns
     end
 
     @testset "sparse relayout in bands" begin
