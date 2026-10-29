@@ -2068,6 +2068,29 @@ end
         @test densified == Float32.(values)
     end
 
+    @testset "sparse_matrix_csc reads a dense matrix by columns" begin
+        values = Float64[(row + column) % 3 == 0 ? row + column / 10 : 0 for row in 1:7, column in 1:5]
+        sparsified = sparse_matrix_csc(LazyColumnsMatrix(values, Threads.Atomic{Int}(0)); eltype = Float32)
+        @test sparsified isa SparseMatrixCSC{Float32}
+        @test sparsified == sparse(Float32.(values))
+
+        sparsified = sparse_matrix_csc(relayout(values))
+        @test sparsified isa SparseMatrixCSC{Float64}
+        @test sparsified == sparse(values)
+    end
+
+    @testset "bestify of a dense matrix counts its non-zeros once" begin
+        values = Float64[(row + column) % 9 == 0 ? row + column / 10 : 0 for row in 1:70, column in 1:50]
+        lazy_values = LazyColumnsMatrix(values, Threads.Atomic{Int}(0))
+        sparse_matrix_csc(lazy_values)
+        n_sparse_scratches = lazy_values.n_scratches[]
+        lazy_values.n_scratches[] = 0
+        bestified = bestify(lazy_values)
+        @test bestified isa SparseMatrixCSC
+        @test bestified == sparse(values)
+        @test lazy_values.n_scratches[] == n_sparse_scratches
+    end
+
     @testset "densify of a row-major sparse view keeps its layout" begin
         sparse_values = sparse(Float64[row == column || row == 7 ? row + column / 10 : 0 for row in 1:7, column in 1:5])
         source = view(transpose(sparse_values), :, 2:6)

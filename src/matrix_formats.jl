@@ -1162,14 +1162,13 @@ function sparse_matrix_csc(
         return SparseMatrixCSC(size(matrix)..., colptr, rowval, nzval)
     end
 
-    # The constructor reads a wrapped or lazy matrix element by element, so it gets plain storage.
-    matrix = plain_array(matrix)
-    if eltype != Base.eltype(matrix)
-        matrix = SparseMatrixCSC{Base.eltype(matrix), indtype}(matrix)
-        return SparseMatrixCSC{eltype, indtype}(size(matrix)..., matrix.colptr, matrix.rowval, eltype.(matrix.nzval))
-    else
-        return SparseMatrixCSC{eltype, indtype}(matrix)
+    if major_axis(matrix) === nothing
+        # Reading the columns of a matrix without a layout would copy it anyway, and report that.
+        matrix = plain_array(matrix)
     end
+    n_nonzeros_per_column = dense_n_nonzeros_per_column(matrix)
+    @assert n_nonzeros_per_column !== nothing
+    return dense_sparse_matrix_csc(matrix, eltype, indtype, n_nonzeros_per_column)
 end
 
 function sparse_matrix_csc(
@@ -1186,6 +1185,59 @@ function sparse_matrix_csc(
     else
         return SparseMatrixCSC(n_columns, n_rows, colptr, rowval, nzval)
     end
+end
+
+# The number of non-zero values in each column of a dense `matrix`, or in each row if it is row-major, counted in
+# parallel. This is `nothing` for a sparse array, a vector, or a matrix without a layout.
+function dense_n_nonzeros_per_column(array::AbstractArray)::Maybe{Vector{Int}}
+    if !(array isa AbstractMatrix) || issparse(array) || major_axis(array) === nothing
+        return nothing
+    end
+    columns_matrix = major_axis(array) == Rows ? flip(array) : array
+    n_nonzeros_per_column = Vector{Int}(undef, size(columns_matrix, 2))
+    parallel_foreach_column(columns_matrix; name = "n_nonzeros_per_column") do _, column_index, column
+        n_nonzeros_per_column[column_index] = count(!iszero, column)
+        return nothing
+    end
+    return n_nonzeros_per_column
+end
+
+# A `SparseMatrixCSC` of a dense `matrix`, given the `dense_n_nonzeros_per_column`. Its columns are filled in parallel,
+# converting the values to the `eltype` as they are written. A row-major `matrix` is built from its flip, which is read
+# by columns, and is then relayouted.
+function dense_sparse_matrix_csc(
+    matrix::AbstractMatrix,
+    eltype::Type,
+    indtype::Type,
+    n_nonzeros_per_column::AbstractVector{<:Integer},
+)::SparseMatrixCSC
+    if major_axis(matrix) == Rows
+        return flipped(dense_sparse_matrix_csc(flip(matrix), eltype, indtype, n_nonzeros_per_column))
+    end
+
+    n_rows, n_columns = size(matrix)
+    colptr = Vector{indtype}(undef, n_columns + 1)
+    colptr[1] = 1
+    for column_index in 1:n_columns
+        colptr[column_index + 1] = colptr[column_index] + n_nonzeros_per_column[column_index]
+    end
+    rowval = Vector{indtype}(undef, colptr[end] - 1)
+    nzval = Vector{eltype}(undef, colptr[end] - 1)
+
+    parallel_foreach_column(matrix; name = "sparse_matrix_csc") do _, column_index, column
+        position = colptr[column_index]
+        @inbounds for row_index in eachindex(column)
+            value = column[row_index]
+            if !iszero(value)
+                rowval[position] = row_index
+                nzval[position] = value
+                position += 1
+            end
+        end
+        return nothing
+    end
+
+    return SparseMatrixCSC(n_rows, n_columns, colptr, rowval, nzval)
 end
 
 """
@@ -1475,9 +1527,10 @@ sparse = sparse_vector(dense)
     indtype::Maybe{Type} = nothing,
 )::AbstractArray
     is_sparse, eltype, indtype = parse_sparse_array(array; eltype, indtype)
+    n_nonzeros_per_column = dense_n_nonzeros_per_column(array)
 
     dense_storage = dense_array_storage(array; eltype)
-    sparse_storage = sparse_array_storage(array; eltype, indtype)
+    sparse_storage = sparse_array_storage(array; eltype, indtype, n_nonzeros_per_column)
 
     if sparse_storage > dense_storage * (1.0 - min_sparse_saving_fraction)
         return densify(array; eltype, copy)
@@ -1486,6 +1539,11 @@ sparse = sparse_vector(dense)
     if !copy && is_sparse
         current_storage = sparse_array_storage(array; eltype, indtype = SparseArrays.indtype(array))
         copy = sparse_storage <= current_storage * (1.0 - min_sparse_saving_fraction)
+    end
+
+    if n_nonzeros_per_column !== nothing
+        @assert array isa AbstractMatrix
+        return dense_sparse_matrix_csc(array, eltype, indtype, n_nonzeros_per_column)
     end
 
     return sparsify(array; eltype, indtype, copy)
@@ -1568,23 +1626,31 @@ function bestify(
     end
 end
 
-function sparse_array_storage(matrix::AbstractMatrix; eltype::Type, indtype::Type)::Int64
+# The storage of the `matrix` if it were sparse. A dense one has its `dense_n_nonzeros_per_column`, unless it has no
+# layout.
+function sparse_array_storage(
+    matrix::AbstractMatrix;
+    eltype::Type,
+    indtype::Type,
+    n_nonzeros_per_column::Maybe{AbstractVector{<:Integer}} = nothing,
+)::Int64
     if issparse(matrix)
         n_nz = nnz(matrix)
+    elseif n_nonzeros_per_column !== nothing
+        n_nz = sum(n_nonzeros_per_column)
     else
-        columns_matrix = major_axis(matrix) == Rows ? flip(matrix) : matrix
-        n_nz_per_thread = zeros(Int64, maxthreadid())
-        parallel_foreach_column(columns_matrix) do _, _, column
-            n_nz_per_thread[threadid()] += count(!iszero, column)
-            return nothing
-        end
-        n_nz = sum(n_nz_per_thread)
+        n_nz = count(!iszero, matrix)
     end
 
     return n_nz * (sizeof(eltype) + sizeof(indtype)) + (size(matrix, Columns) + 1) * sizeof(indtype)
 end
 
-function sparse_array_storage(vector::AbstractVector; eltype::Type, indtype::Type)::Int64
+function sparse_array_storage(
+    vector::AbstractVector;
+    eltype::Type,
+    indtype::Type,
+    n_nonzeros_per_column::Nothing = nothing,  # NOLINT
+)::Int64
     if issparse(vector)
         n_nz = nnz(vector)
     else
