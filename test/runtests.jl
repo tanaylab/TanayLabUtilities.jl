@@ -1347,6 +1347,17 @@ end
             end
         end
 
+        @testset "readers are reused by repeated loops" begin
+            lazy_values = LazyColumnsMatrix(values, Threads.Atomic{Int}(0))
+            column_reader_per_thread = new_column_reader_per_thread(lazy_values)
+            n_scratches = lazy_values.n_scratches[]
+            for columns in (1:5, [4, 2], 3:3)
+                @test column_sums(lazy_values; columns, column_reader_per_thread) == expected_sums[columns]
+            end
+            @test lazy_values.n_scratches[] == n_scratches
+            @test_throws "column_reader_per_thread === nothing" column_sums(values; column_reader_per_thread)
+        end
+
         @testset "lazy matrices are read through one scratch per thread" begin
             lazy_values = LazyColumnsMatrix(values, Threads.Atomic{Int}(0))
             @test column_sums(lazy_values) == expected_sums

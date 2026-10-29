@@ -698,20 +698,25 @@ reader, from [`new_column_reader_per_thread`](@ref). The columns are read by [`r
 """
 abstract type ColumnReader end
 
+# Each reader holds the `matrix` it reads, so a loop given readers can check they are its own.
+
 # Reads the columns of plain storage as views.
-struct PlainColumnReader{M <: AbstractMatrix} <: ColumnReader
+struct PlainColumnReader{A <: AbstractMatrix, M <: AbstractMatrix} <: ColumnReader
+    matrix::A
     storage::M
 end
 
 # Reads the columns of plain storage, which have gaps, by copying them into a contiguous buffer.
-struct CopiedColumnReader{M <: AbstractMatrix, T} <: ColumnReader
+struct CopiedColumnReader{A <: AbstractMatrix, M <: AbstractMatrix, T} <: ColumnReader
+    matrix::A
     storage::M
     buffer::Vector{T}
 end
 
 # Reads the columns of a lazy matrix through its column scratch.
-struct LazyColumnReader{M <: AbstractMatrix, S} <: ColumnReader
-    matrix::M
+struct LazyColumnReader{A <: AbstractMatrix, M <: AbstractMatrix, S} <: ColumnReader
+    matrix::A
+    lazy_matrix::M
     scratch::S
 end
 
@@ -720,11 +725,13 @@ end
 # otherwise. For sparse rows that were sorted, it is a `NamedTuple` of the `column`, the `order` that sorted the rows,
 # and the `renumbered` buffer.
 struct ViewColumnReader{
+    A <: AbstractMatrix,
     R <: ColumnReader,
     I <: AbstractVector{<:Integer},
     C <: AbstractVector{<:Integer},
     B <: Union{Nothing, Vector, SparseVector, NamedTuple},
 } <: ColumnReader
+    matrix::A
     parent_reader::R
     parent_row_indices::I
     parent_column_indices::C
@@ -779,7 +786,13 @@ function new_column_reader_per_thread(
     if canonical_matrix isa SubArray && is_read_by_parent_columns(canonical_matrix)
         parent_reader_per_thread = new_parent_column_reader_per_thread(canonical_matrix, contiguous, policy, is_serial)
         if parent_reader_per_thread !== nothing
-            return new_view_column_reader_per_thread(canonical_matrix, parent_reader_per_thread, contiguous, is_serial)
+            return new_view_column_reader_per_thread(
+                matrix,
+                canonical_matrix,
+                parent_reader_per_thread,
+                contiguous,
+                is_serial,
+            )
         end
     end
 
@@ -813,10 +826,11 @@ function new_column_reader_per_thread(
     @assert_matrix(plain_storage, Columns)
     storage = issparse(plain_storage) && major_axis(plain_storage) != Columns ? relayout(plain_storage) : plain_storage
     if contiguous && !issparse(storage) && size(storage, 2) > 0 && !is_contiguous_array(view(storage, :, 1))
-        create_copied_reader = () -> CopiedColumnReader(storage, Vector{eltype(storage)}(undef, size(storage, 1)))
+        create_copied_reader =
+            () -> CopiedColumnReader(matrix, storage, Vector{eltype(storage)}(undef, size(storage, 1)))
         return new_scratch_per_thread(create_copied_reader(), create_copied_reader, matrix, is_serial)
     end
-    return fill(PlainColumnReader(storage), maxthreadid())
+    return fill(PlainColumnReader(matrix, storage), maxthreadid())
 end
 
 """
@@ -836,7 +850,7 @@ function read_column(reader::CopiedColumnReader, column_index::Integer)::Abstrac
 end
 
 function read_column(reader::LazyColumnReader, column_index::Integer)::AbstractVector
-    return read_column!(reader.scratch, reader.matrix, column_index)  # NOLINT # NOJET
+    return read_column!(reader.scratch, reader.lazy_matrix, column_index)  # NOLINT # NOJET
 end
 
 function read_column(reader::ViewColumnReader, column_index::Integer)::AbstractVector
@@ -882,19 +896,22 @@ function new_parent_column_reader_per_thread(
     return new_lazy_column_reader_per_thread(parent_matrix, scratch, parent_matrix, is_serial)
 end
 
-# The readers of the columns of a lazy `canonical_matrix`, the first of them using the `scratch`. The `matrix` is
-# reported if the scratch is allocated inside another parallel loop.
+# The readers of the columns of the `matrix`, whose lazy `canonical_matrix` is read, the first of them using the
+# `scratch`. The `matrix` is reported if the scratch is allocated inside another parallel loop.
 function new_lazy_column_reader_per_thread(
     canonical_matrix::AbstractMatrix,
     scratch::Any,
     matrix::AbstractMatrix,
     is_serial::Bool,
 )::AbstractVector{<:ColumnReader}
-    create_lazy_reader = () -> LazyColumnReader(canonical_matrix, column_scratch(canonical_matrix))
-    return new_scratch_per_thread(LazyColumnReader(canonical_matrix, scratch), create_lazy_reader, matrix, is_serial)
+    create_lazy_reader = () -> LazyColumnReader(matrix, canonical_matrix, column_scratch(canonical_matrix))
+    first_reader = LazyColumnReader(matrix, canonical_matrix, scratch)
+    return new_scratch_per_thread(first_reader, create_lazy_reader, matrix, is_serial)
 end
 
+# The readers of the columns of the `matrix`, whose canonical `matrix_view` is read through the readers of its parent.
 function new_view_column_reader_per_thread(
+    matrix::AbstractMatrix,
     matrix_view::SubArray,
     parent_reader_per_thread::AbstractVector{<:ColumnReader},
     contiguous::Bool,
@@ -933,6 +950,7 @@ function new_view_column_reader_per_thread(
 
     return [
         ViewColumnReader(
+            matrix,
             parent_reader_per_thread[thread_index],
             reader_row_indices,
             column_indices,
@@ -975,6 +993,7 @@ end
         weights::Maybe{AbstractVector{<:Integer}} = nothing,
         progress::Maybe{AbstractProgress} = nothing,
         progress_chunk::Maybe{Integer} = nothing,
+        column_reader_per_thread::Maybe{AbstractVector{<:ColumnReader}} = nothing,
     )::Nothing
 
 Run `visit(position, column_index, column)` in parallel for each of the `columns` of the `matrix`. The `position` is the
@@ -1011,6 +1030,10 @@ Buffers are allocated before the loop, one per thread, and dropped after it. The
 another parallel loop, it runs serially (see [`parallel_loop_wo_rng`](@ref)) and allocates a single buffer. Since this
 allocates inside the other loop, it invokes the [`GLOBAL_INEFFICIENT_ACTION_HANDLER`](@ref).
 
+A loop that runs this many times over the same `matrix` (e.g. once per group of columns) can create the readers once
+with [`new_column_reader_per_thread`](@ref), and pass them as `column_reader_per_thread`. These must be readers of this
+`matrix`, created for the same `policy`, and `contiguous` is then ignored.
+
 For a sparse matrix, the `weights` default to the number of stored values in each of the `columns`, unless a
 `progress_chunk` is given. The `weights`, the `name`, the `policy`, the `progress` and the `progress_chunk` are passed
 to [`parallel_loop_wo_rng`](@ref).
@@ -1040,8 +1063,10 @@ function parallel_foreach_column(
     weights::Maybe{AbstractVector{<:Integer}} = nothing,
     progress::Maybe{AbstractProgress} = nothing,
     progress_chunk::Maybe{Integer} = nothing,
+    column_reader_per_thread::Maybe{AbstractVector{<:ColumnReader}} = nothing,
 )::Nothing
     @assert policy in (:greedy_sticky, :static, :serial)
+    @assert column_reader_per_thread === nothing || column_reader_per_thread[1].matrix === matrix
     if isempty(columns)
         return nothing
     end
@@ -1062,7 +1087,9 @@ function parallel_foreach_column(
             [Int(column_pointers[column_index + 1] - column_pointers[column_index]) for column_index in stored_columns]
     end
 
-    column_reader_per_thread = new_column_reader_per_thread(matrix; contiguous, policy)
+    if column_reader_per_thread === nothing
+        column_reader_per_thread = new_column_reader_per_thread(matrix; contiguous, policy)
+    end
     foreach_column_through_readers(
         visit,
         column_reader_per_thread,
