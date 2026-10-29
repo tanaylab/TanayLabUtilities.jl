@@ -304,9 +304,8 @@ function gathered_sorted_rows(
 
     colptr = Vector{I}(undef, n_columns + 1)
     colptr[1] = 1
-    for column_index in 1:n_columns
-        colptr[column_index + 1] = colptr[column_index] + n_stored_per_column[column_index]
-    end
+    colptr[2:end] .= n_stored_per_column
+    cumsum!(colptr, colptr)
     rowval = Vector{I}(undef, colptr[end] - 1)
     nzval = Vector{T}(undef, colptr[end] - 1)
     parallel_loop_wo_rng(1:n_columns; name = "gathered_rows") do column_index

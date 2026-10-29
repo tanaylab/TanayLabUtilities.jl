@@ -1431,28 +1431,20 @@ function stored_colptr(source::AbstractMatrix)::AbstractVector{<:Integer}
     end
 
     @assert canonical_source isa SubArray
-    n_columns = size(source, 2)
-    n_stored_per_column = Vector{Int}(undef, n_columns)
+    colptr = Vector{Int}(undef, size(source, 2) + 1)
+    colptr[1] = 1
     row_indices, column_indices = parentindices(canonical_source)
     parent_matrix = parent(canonical_source)
     if row_indices isa Base.Slice && parent_matrix isa AbstractSparseMatrixCSC
         parent_colptr = SparseArrays.getcolptr(parent_matrix)
-        for (position, column_index) in enumerate(column_indices)
-            n_stored_per_column[position] = parent_colptr[column_index + 1] - parent_colptr[column_index]
-        end
+        @views colptr[2:end] .= parent_colptr[column_indices .+ 1] .- parent_colptr[column_indices]
     else
         parallel_foreach_column(source; name = "copy_columns!.count") do position, _, column
-            n_stored_per_column[position] = nnz(column)
+            colptr[position + 1] = nnz(column)
             return nothing
         end
     end
-
-    colptr = Vector{Int}(undef, n_columns + 1)
-    colptr[1] = 1
-    for position in 1:n_columns
-        colptr[position + 1] = colptr[position] + n_stored_per_column[position]
-    end
-    return colptr
+    return cumsum!(colptr, colptr)
 end
 
 # Copy the `source_colptr` into the `colptr`, after its first `column_offset` entries, adding `nnz_offset` to each.
@@ -1710,10 +1702,8 @@ function sparse_relayout_by_bands!(destination::SparseMatrixCSC{Td, Id}, source:
     end
     colptr = Vector{Int}(undef, n_destination_columns + 1)
     colptr[1] = 1
-    @inbounds for destination_column in 1:n_destination_columns
-        colptr[destination_column + 1] =
-            colptr[destination_column] + sum(view(n_entries_per_row_per_chunk, destination_column, :))
-    end
+    sum!(view(colptr, 2:(n_destination_columns + 1)), n_entries_per_row_per_chunk)
+    cumsum!(colptr, colptr)
     copyto!(destination.colptr, colptr)
 
     max_band_entries = max(1, budget_bytes ÷ (2 * n_tasks * entry_bytes))
@@ -1745,11 +1735,8 @@ function sparse_relayout_by_bands!(destination::SparseMatrixCSC{Td, Id}, source:
         return nothing
     end
 
-    max_band_width =
-        maximum(band_first_columns[band_index + 1] - band_first_columns[band_index] for band_index in 1:n_bands)
-    max_entries_in_band = maximum(
-        colptr[band_first_columns[band_index + 1]] - colptr[band_first_columns[band_index]] for band_index in 1:n_bands
-    )
+    max_band_width = maximum(diff(band_first_columns))
+    max_entries_in_band = maximum(diff(colptr[band_first_columns]))
     next_band_index = Atomic{Int}(1)
     parallel_loop_wo_rng(1:n_tasks; name = "relayout.sort_bands") do _
         sort_sparse_relayout_bands!(

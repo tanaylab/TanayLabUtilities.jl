@@ -2129,6 +2129,35 @@ end
         @test sparsified == sparse(values)
     end
 
+    @testset "embed a matrix in a larger sparse matrix" begin
+        rows_indices = collect(2:3:300)
+        columns_indices = collect(1:2:400)
+        dense_values = rand(Float32, length(rows_indices), length(columns_indices))
+        embedded = embed_dense_matrix_in_sparse_matrix(
+            dense_values;
+            rows_indices,
+            n_rows = 300,
+            columns_indices,
+            n_columns = 400,
+        )
+        expected = zeros(Float32, 300, 400)
+        expected[rows_indices, columns_indices] .= dense_values
+        @test embedded == expected
+
+        sparse_values = sprand(Float32, length(rows_indices), length(columns_indices), 0.1)
+        embedded = embed_sparse_matrix_in_sparse_matrix(
+            sparse_values;
+            rows_indices,
+            n_rows = 300,
+            columns_indices,
+            n_columns = 400,
+        )
+        expected = zeros(Float32, 300, 400)
+        expected[rows_indices, columns_indices] .= sparse_values
+        @test embedded == expected
+        @test nnz(embedded) == nnz(sparse_values)
+    end
+
     @testset "bestify of a dense matrix counts its non-zeros once" begin
         values = Float64[(row + column) % 9 == 0 ? row + column / 10 : 0 for row in 1:70, column in 1:50]
         lazy_values = LazyColumnsMatrix(values, Threads.Atomic{Int}(0))

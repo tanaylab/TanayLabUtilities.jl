@@ -1218,9 +1218,8 @@ function dense_sparse_matrix_csc(
     n_rows, n_columns = size(matrix)
     colptr = Vector{indtype}(undef, n_columns + 1)
     colptr[1] = 1
-    for column_index in 1:n_columns
-        colptr[column_index + 1] = colptr[column_index] + n_nonzeros_per_column[column_index]
-    end
+    copyto!(colptr, 2, n_nonzeros_per_column, 1, n_columns)
+    cumsum!(colptr, colptr)
     rowval = Vector{indtype}(undef, colptr[end] - 1)
     nzval = Vector{eltype}(undef, colptr[end] - 1)
 
@@ -1899,23 +1898,17 @@ function embed_dense_matrix_in_sparse_matrix(
 
     index_type = indtype_for_size(n_rows * n_columns)
 
-    colptr = Vector{index_type}(undef, n_columns + 1)
+    colptr = zeros(index_type, n_columns + 1)
     colptr[1] = 1
-    dense_column_index = 1
-    for column_index in 1:n_columns
-        if dense_column_index <= n_dense_cols && columns_indices[dense_column_index] == column_index
-            colptr[column_index + 1] = colptr[column_index] + n_dense_rows
-            dense_column_index += 1
-        else
-            colptr[column_index + 1] = colptr[column_index]
-        end
-    end
+    @views colptr[2:end][columns_indices] .= n_dense_rows
+    cumsum!(colptr, colptr)
 
     nnz = n_dense_rows * n_dense_cols
     rowval_vector = Vector{index_type}(undef, nnz)
-    for dense_column_index in 1:n_dense_cols
+    parallel_loop_wo_rng(1:n_dense_cols; name = "embed_dense_matrix_in_sparse_matrix") do dense_column_index
         offset = (dense_column_index - 1) * n_dense_rows
         @view(rowval_vector[(offset + 1):(offset + n_dense_rows)]) .= rows_indices
+        return nothing
     end
 
     return SparseMatrixCSC(n_rows, n_columns, colptr, rowval_vector, vec(matrix))
@@ -1976,22 +1969,17 @@ function embed_sparse_matrix_in_sparse_matrix(
     old_colptr = matrix.colptr
     old_rowval = matrix.rowval
 
-    new_colptr = Vector{index_type}(undef, n_columns + 1)
+    new_colptr = zeros(index_type, n_columns + 1)
     new_colptr[1] = 1
-    sparse_column_index = 1
-    for column_index in 1:n_columns
-        if sparse_column_index <= length(columns_indices) && columns_indices[sparse_column_index] == column_index
-            new_colptr[column_index + 1] =
-                new_colptr[column_index] + (old_colptr[sparse_column_index + 1] - old_colptr[sparse_column_index])
-            sparse_column_index += 1
-        else
-            new_colptr[column_index + 1] = new_colptr[column_index]
-        end
-    end
+    @views new_colptr[2:end][columns_indices] .= diff(old_colptr)
+    cumsum!(new_colptr, new_colptr)
 
     new_rowval = Vector{index_type}(undef, nnz(matrix))
-    for i in eachindex(old_rowval)
-        new_rowval[i] = rows_indices[old_rowval[i]]
+    parallel_loop_wo_rng(1:length(columns_indices); name = "embed_sparse_matrix_in_sparse_matrix") do column_index
+        @inbounds for position in old_colptr[column_index]:(old_colptr[column_index + 1] - 1)
+            new_rowval[position] = rows_indices[old_rowval[position]]
+        end
+        return nothing
     end
 
     return SparseMatrixCSC(n_rows, n_columns, new_colptr, new_rowval, matrix.nzval)

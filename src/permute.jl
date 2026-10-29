@@ -414,11 +414,8 @@ function permute_sparse_matrix_columns_buffers!(;
     @assert source_n_rows >= 0
 
     destination_colptr[1] = 1
-    @inbounds for destination_column in 1:n_columns
-        source_column = columns_permutation[destination_column]
-        column_length = source_colptr[source_column + 1] - source_colptr[source_column]
-        destination_colptr[destination_column + 1] = destination_colptr[destination_column] + column_length
-    end
+    @views destination_colptr[2:end] .= diff(source_colptr)[columns_permutation]
+    cumsum!(destination_colptr, destination_colptr)
 
     parallel_loop_wo_rng(1:n_columns; name = "permute_sparse_matrix_columns_buffers!") do destination_column
         source_column = columns_permutation[destination_column]
@@ -695,11 +692,8 @@ function permute_sparse_matrix_both_buffers!(;
     @assert length(columns_permutation) == n_columns
 
     destination_colptr[1] = 1
-    @inbounds for destination_column in 1:n_columns
-        source_column = columns_permutation[destination_column]
-        column_length = source_colptr[source_column + 1] - source_colptr[source_column]
-        destination_colptr[destination_column + 1] = destination_colptr[destination_column] + column_length
-    end
+    @views destination_colptr[2:end] .= diff(source_colptr)[columns_permutation]
+    cumsum!(destination_colptr, destination_colptr)
 
     parallel_loop_wo_rng(1:n_columns; name = "permute_sparse_matrix_both_buffers!") do destination_column
         source_column = columns_permutation[destination_column]
