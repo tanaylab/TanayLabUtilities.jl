@@ -2129,6 +2129,15 @@ end
         @test sparsified == sparse(values)
     end
 
+    @testset "sparse_matrix_csc of a row-major sparse matrix" begin
+        values = sparse(Int32[1, 2, 2], Int32[1, 1, 2], [1.0, 2.0, 3.0], 2, 3)
+        for flipped_values in (transpose(values), adjoint(values), PermutedDimsArray(values, (2, 1)))
+            sparsified = sparse_matrix_csc(flipped_values)
+            @test sparsified isa SparseMatrixCSC{Float64, Int32}
+            @test sparsified == permutedims(values)
+        end
+    end
+
     @testset "embed a matrix in a larger sparse matrix" begin
         rows_indices = collect(2:3:300)
         columns_indices = collect(1:2:400)

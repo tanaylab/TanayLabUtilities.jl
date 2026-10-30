@@ -1682,6 +1682,12 @@ end
     end
 end
 
+@static if !hasmethod(SparseArrays.indtype, Tuple{Transpose})
+    function SparseArrays.indtype(flipped::Union{Transpose, Adjoint, PermutedDimsArray})::Type
+        return SparseArrays.indtype(parent(flipped))
+    end
+end
+
 @static if !hasmethod(SparseArrays.nnz, Tuple{ReadOnlyArray})
     function SparseArrays.nnz(read_only::ReadOnlyArray)::Integer
         return SparseArrays.nnz(parent(read_only))
