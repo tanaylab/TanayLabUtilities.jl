@@ -93,6 +93,25 @@ function TanayLabUtilities.MatrixLayouts.plain_array(
     return matrix.values
 end
 
+# A matrix whose plain storage is row-major. Its plain storage is the flip of the wrapped matrix.
+struct RowMajorMatrix <: AbstractMatrix{Float64}
+    flipped_values::Matrix{Float64}
+end
+
+Base.size(matrix::RowMajorMatrix) = reverse(size(matrix.flipped_values))
+
+function Base.getindex(matrix::RowMajorMatrix, row::Int, column::Int)::Float64  # UNTESTED
+    return matrix.flipped_values[column, row]
+end
+
+function TanayLabUtilities.MatrixLayouts.plain_array(
+    matrix::RowMajorMatrix;
+    flip_as::Maybe{Type} = nothing,  # NOLINT
+    contiguous::Bool = false,  # NOLINT
+)::Transpose{Float64, Matrix{Float64}}
+    return transpose(matrix.flipped_values)
+end
+
 # A lazy matrix that reads its columns one at a time. Reading it element by element, or all of it, fails.
 struct LazyColumnsMatrix <: AbstractMatrix{Float64}
     values::Matrix{Float64}
@@ -1299,7 +1318,11 @@ end
             @test major_axis(strided_view) == Columns
             @test column_sums(strided_view) == vec(sum(Array(strided_view); dims = 1))
 
-            for matrix in (reshape(1.0:35.0, 7, 5), view(values_3d, [1, 3], 2, :))
+            for matrix in (
+                reshape(1.0:35.0, 7, 5),
+                view(values_3d, [1, 3], 2, :),
+                view(CountingMatrix(rand(7, 5), Ref(0)), :, 2:4),
+            )
                 @test major_axis(matrix) === nothing
                 @test_throws "copying a matrix without a layout" column_sums(matrix)
                 TanayLabUtilities.MatrixLayouts.GLOBAL_INEFFICIENT_ACTION_HANDLER = IgnoreHandler
@@ -1512,6 +1535,27 @@ end
             @test contains(report, "==== Thread")
         end
 
+        @testset "the hang watchdog reports the open nested loops" begin
+            report = mktemp() do path, io
+                redirect_stderr(io) do
+                    watchdog = start_hang_watchdog(; idle_seconds = 1, check_seconds = 0.1)
+                    parallel_loop_wo_rng(1:1) do _
+                        parallel_loop_wo_rng(1:2; nested = true) do _
+                            sleep(3)
+                            return nothing
+                        end
+                        return nothing
+                    end
+                    close(watchdog)
+                    return nothing
+                end
+                close(io)
+                return read(path, String)
+            end
+            @test contains(report, "Open nested loops: 1")
+            @test contains(report, "Open nested loop 1: ")
+        end
+
         @testset "nothing is allocated per column" begin
             wide_values = rand(7, 200)
             lazy_wide_values = LazyColumnsMatrix(wide_values, Threads.Atomic{Int}(0))
@@ -1605,6 +1649,13 @@ end
             copy_columns!(destination, values)
             @test destination.values == Float32.(values)
             @test destination.n_filled[] == 5
+        end
+
+        @testset "strided row-major destinations" begin
+            destination = transpose(view(zeros(5, 14), :, 1:2:14))
+            @test major_axis(destination) == Rows
+            copy_columns!(destination, values)
+            @test destination == values
         end
 
         @testset "consecutive parts of dense destinations" begin
@@ -2058,6 +2109,11 @@ end
         @test brief(view(transpose(sparse_matrix), :, 1:2)) == "5 x 2 x Float64 in Rows (Transpose, Sparse ? [Int64])"
     end
 
+    @testset "brief of a dense view and of a BitMatrix" begin
+        @test brief(view(zeros(4, 4), :, 1:2)) == "4 x 2 x Float64 in Columns (SubArray; Dense)"
+        @test brief(falses(3, 4)) == "3 x 4 x Bool in Columns (BitArray; 0 (0%) true)"
+    end
+
     @testset "sparse_matrix_csc of a wrapped sparse matrix doesn't read it element by element" begin
         large = sparse(Int32[1, 50_000], Int32[1, 5_000], [1.0, 2.0], 50_000, 5_000)
         wrapped = NamedArray(read_only_array(large))
@@ -2194,6 +2250,27 @@ end
         @test bestify(dense) === dense
         # A copy would take 32 MB. The count of each column takes 16 KB.
         @test @allocated(bestify(dense)) < 1_000_000
+    end
+
+    @testset "bestify of a matrix without a layout" begin
+        values = reshape(1.0:12.0, 3, 4)
+        @test major_axis(values) === nothing
+        bestified = bestify(values)
+        @test bestified isa Matrix{Float64}
+        @test bestified == values
+    end
+
+    @testset "canonical_array of a DiskArrays view is its SubArray" begin
+        DiskArrays = TanayLabUtilities.MatrixLayouts.DiskArrays
+        disk_values = DiskArrays.TestTypes.AccessCountDiskArray(rand(3, 4))
+        canonical = canonical_array(view(disk_values, 1:2, :))
+        @test canonical isa SubArray
+        @test parent(canonical) === disk_values
+    end
+
+    @testset "plain_array of a flip of row-major plain storage is the storage" begin
+        values = rand(3, 4)
+        @test plain_array(transpose(RowMajorMatrix(values))) === values
     end
 
     @testset "brief of a costly Bool array doesn't count its true values" begin
