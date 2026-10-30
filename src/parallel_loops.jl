@@ -329,22 +329,22 @@ tasks. It prints once per stall, and again only after the process works and then
 This is for tests and long runs. A process that waits on purpose (e.g. an interactive session) looks hung too.
 """
 function start_hang_watchdog(; idle_seconds::Real = 60, check_seconds::Real = 5)::Timer
-    stall_seconds = time()
-    stall_cpu_seconds = process_cpu_seconds()
-    is_reported = false
+    stall_seconds = Ref(time())
+    stall_cpu_seconds = Ref(process_cpu_seconds())
+    is_reported = Ref(false)
     return Timer(check_seconds; interval = check_seconds) do _
         now_seconds = time()
         now_cpu_seconds = process_cpu_seconds()
-        if now_cpu_seconds - stall_cpu_seconds > 0.01 * (now_seconds - stall_seconds)
-            stall_seconds = now_seconds
-            stall_cpu_seconds = now_cpu_seconds
-            is_reported = false
-        elseif !is_reported && now_seconds - stall_seconds >= idle_seconds
-            is_reported = true
-            report_hang(now_seconds - stall_seconds)
+        if now_cpu_seconds - stall_cpu_seconds[] > 0.01 * (now_seconds - stall_seconds[])
+            stall_seconds[] = now_seconds
+            stall_cpu_seconds[] = now_cpu_seconds
+            is_reported[] = false
+        elseif !is_reported[] && now_seconds - stall_seconds[] >= idle_seconds
+            is_reported[] = true
+            report_hang(now_seconds - stall_seconds[])
             # The report itself uses CPU, which isn't work of the process.
-            stall_seconds = time()
-            stall_cpu_seconds = process_cpu_seconds()
+            stall_seconds[] = time()
+            stall_cpu_seconds[] = process_cpu_seconds()
         end
         return nothing
     end
@@ -1548,7 +1548,7 @@ function MatrixLayouts.flipped(matrix::AbstractMatrix)::AbstractMatrix
     return flame_timed("flipped") do
         axis = require_major_axis(matrix)
         if axis == Rows
-            return flip(flipped(flip(matrix)))  # UNTESTED
+            return flip(flipped(flip(matrix)))
         end
         @assert axis == Columns
 
