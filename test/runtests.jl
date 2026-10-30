@@ -2187,6 +2187,14 @@ end
         @test @allocated(bestify(dense)) < 1_000_000
     end
 
+    @testset "brief of a costly Bool array doesn't count its true values" begin
+        DiskArrays = TanayLabUtilities.MatrixLayouts.DiskArrays
+        disk_mask = DiskArrays.TestTypes.AccessCountDiskArray([true false; false true])
+        @test is_costly_to_read(disk_mask)
+        @test endswith(brief(disk_mask), "; ? true)")
+        @test endswith(brief(view(disk_mask, :, 1)), "; ? true)")
+    end
+
     @testset "brief of a Bool array reads it once" begin
         counting = CountingBools([true, false, true], Ref(0))
         brief(counting)

@@ -209,6 +209,9 @@ function mask_suffix(::AbstractArray)::AbstractString
 end
 
 function mask_suffix(array::AbstractArray{Bool})::AbstractString
+    if is_costly_to_read(array)
+        return "; ? true"
+    end
     n_true = sum(array)
     if issparse(array) && n_true == nnz(array)
         return ""

@@ -33,6 +33,7 @@ export Rows
 export axis_name
 export canonical_array
 export is_contiguous_array
+export is_costly_to_read
 export major_axis
 export minor_axis
 export other_axis
@@ -1407,6 +1408,38 @@ function is_contiguous_array(array::StridedArray)::Bool
         end
         expected_stride *= size(array, dimension)
     end
+    return true
+end
+
+"""
+    is_costly_to_read(array::AbstractArray)::Bool
+
+Whether reading all the values of the `array` is costly, so code that doesn't need them (e.g. [`brief`](@ref)) should
+avoid reading them. This is `false` by default. It is `true` for a DiskArrays array, which reads its values from storage
+on demand, and for a view or a wrapper of a costly array. A lazy array type (which reads its data on demand) may add a
+method, which returns `true` until its data is in memory.
+
+```jldoctest
+DiskArrays = TanayLabUtilities.MatrixLayouts.DiskArrays
+
+@assert !is_costly_to_read(rand(3, 4))
+@assert is_costly_to_read(view(transpose(DiskArrays.TestTypes.AccessCountDiskArray(rand(3, 4))), 1:2, :))
+
+# output
+
+```
+"""
+function is_costly_to_read(::AbstractArray)::Bool
+    return false
+end
+
+function is_costly_to_read(
+    array::Union{SubArray, Transpose, Adjoint, PermutedDimsArray, SparseArrays.ReadOnly, NamedArray},
+)::Bool
+    return is_costly_to_read(parent(array))
+end
+
+function is_costly_to_read(::DiskArrays.AbstractDiskArray)::Bool
     return true
 end
 

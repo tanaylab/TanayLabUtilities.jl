@@ -15,6 +15,7 @@ TanayLabUtilities.MatrixLayouts.flipped
 TanayLabUtilities.MatrixLayouts.canonical_array
 TanayLabUtilities.MatrixLayouts.plain_array
 TanayLabUtilities.MatrixLayouts.is_contiguous_array
+TanayLabUtilities.MatrixLayouts.is_costly_to_read
 TanayLabUtilities.MatrixLayouts.relayout!
 TanayLabUtilities.MatrixLayouts.relayout
 TanayLabUtilities.MatrixLayouts.@assert_vector
