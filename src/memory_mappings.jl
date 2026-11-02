@@ -1,21 +1,14 @@
 """
-Memory-map files with small pages, and keep track of the mappings.
+Memory-map files with small pages.
 
 A page fault reads at least its whole page. Linux may back a mapping with 2 MB transparent huge pages, so an access of a
 few bytes would read 2 MB. This defeats the point of memory-mapping a large file, which is to read only the bytes that
 are used. So every mapping made here turns off transparent huge pages.
-
-Every mapping is also recorded in a process-wide registry, which maps its addresses back to its file and offset (see
-[`mapped_file_position`](@ref)). The entry is removed when the mapped array is garbage collected. Parallel loops use it
-to read the memory-mapped data they need ahead of time (see [`PREFETCH_MAPPED_DATA`](@ref)).
 """
 module MemoryMappings
 
-export mapped_file_position
 export mmap_with_small_pages
 export remap_with_small_pages!
-
-using DataStructures
 
 using ..Types
 
@@ -38,64 +31,6 @@ const F_GETFL = Cint(3)
 const O_ACCMODE = Cint(3)
 const O_RDONLY = Cint(0)
 
-# A range of mapped addresses, starting at its key in `MAPPINGS`. It is mutable so that each mapping has its own
-# identity. A finalizer removes only its own entry, never a later mapping at the same address.
-mutable struct MappedRange
-    n_bytes::UInt
-    path::String
-    file_offset::UInt64
-end
-
-const MAPPINGS = SortedDict{UInt, MappedRange}()
-
-# A spin lock disables finalizers while it is held, so a finalizer can't run inside the critical section on that thread.
-# It never switches tasks, so a finalizer may take it.
-const MAPPINGS_LOCK = Threads.SpinLock()
-
-"""
-Whether parallel loops read the memory-mapped data of their positions ahead of time (see
-[`parallel_foreach_column`](@ref TanayLabUtilities.ParallelLoops.parallel_foreach_column)).
-
-Linux kernels before 5.7 handle the page faults of one process one at a time. Many threads reading memory-mapped data
-from a network disk through their page faults get about 100 MB/s. Reading it ahead with `pread` gets about 500 MB/s, and
-the page faults then find the data in memory. This is `true` on such kernels, and `false` otherwise. It can be set by
-the `TLU_PREFETCH_MAPPED_DATA` environment variable.
-"""
-PREFETCH_MAPPED_DATA::Bool = false
-
-"""
-The number of threads of a parallel loop that read memory-mapped data ahead of time at once (see
-[`PREFETCH_MAPPED_DATA`](@ref)). More threads in one process read more slowly.
-"""
-N_PREFETCH_READERS::Int = 8
-
-"""
-The number of bytes of memory-mapped data that a thread reads ahead of time at once (see
-[`PREFETCH_MAPPED_DATA`](@ref)).
-"""
-PREFETCH_CHUNK_BYTES::Int = 8 * 1024 * 1024
-
-"""
-The number of bytes of memory-mapped data that a parallel loop reads ahead of its computation (see
-[`PREFETCH_MAPPED_DATA`](@ref)). Reading further ahead could evict data from memory before it is used.
-"""
-PREFETCH_WINDOW_BYTES::Int = 1024 * 1024 * 1024
-
-function __init__()::Nothing
-    global PREFETCH_MAPPED_DATA
-    prefetch_mapped_data = get(ENV, "TLU_PREFETCH_MAPPED_DATA", nothing)
-    if prefetch_mapped_data !== nothing
-        PREFETCH_MAPPED_DATA = parse(Bool, prefetch_mapped_data)  # UNTESTED
-    else
-        @static if Sys.islinux()
-            version = split(read("/proc/version", String), " ")[3]
-            major, minor = parse.(Int, split(version, ".")[1:2])
-            PREFETCH_MAPPED_DATA = (major, minor) < (5, 7)
-        end
-    end
-    return nothing
-end
-
 """
     mmap_with_small_pages(
         path::AbstractString,
@@ -117,8 +52,7 @@ end
 Memory-map an array of `dims` elements from a file, starting `offset` bytes into it. If `dims` is `nothing`, the array
 is a vector of the rest of the file. The file is given by its `path`, and opened in the `mode` (`"r"` or `"r+"`), or as
 an open `io`. The `io` form avoids opening the file again, when mapping several parts of an open file. The mapping never
-grows the file, and turns off transparent huge pages. It is recorded for [`mapped_file_position`](@ref) until the array
-is garbage collected.
+grows the file, and turns off transparent huge pages. It is unmapped when the array is garbage collected.
 
 If `reserved_bytes` is given, the array is a `Vector{UInt8}` of `reserved_bytes` of address space. The first `dims`
 bytes of the file are mapped at its start, and the rest can't be accessed until [`remap_with_small_pages!`](@ref) maps
@@ -134,7 +68,7 @@ function mmap_with_small_pages(
 )::ArrayT where {T, ArrayT <: Array{T}}
     @assert mode in ("r", "r+")
     return open(path, mode) do io
-        return mmap_file(io, String(path), ArrayT, dims, offset, reserved_bytes)
+        return mmap_file(io, ArrayT, dims, offset, reserved_bytes)
     end
 end
 
@@ -145,15 +79,7 @@ function mmap_with_small_pages(
     offset::Integer = 0;
     reserved_bytes::Maybe{Integer} = nothing,
 )::ArrayT where {T, ArrayT <: Array{T}}
-    return mmap_file(io, io_path(io), ArrayT, dims, offset, reserved_bytes)
-end
-
-function io_path(io::IOStream)::String
-    @static if Sys.islinux()
-        return readlink("/proc/self/fd/$(file_descriptor(io))")
-    else
-        return chop(io.name; head = 6, tail = 1)  # `open` names the stream `<file path>`. # UNTESTED
-    end
+    return mmap_file(io, ArrayT, dims, offset, reserved_bytes)
 end
 
 function file_descriptor(io::IOStream)::Cint
@@ -172,7 +98,6 @@ end
 
 function mmap_file(
     io::IOStream,
-    path::String,
     ::Type{ArrayT},
     maybe_dims::Maybe{Union{Integer, Tuple{Vararg{Integer}}}},
     offset::Integer,
@@ -186,7 +111,7 @@ function mmap_file(
     end
     n_bytes = prod(dims) * sizeof(T)
     if offset + n_bytes > filesize(io)
-        error("mapping $(n_bytes) bytes at offset $(offset) is past the end of the file: $(path)")
+        error("mapping $(n_bytes) bytes at offset $(offset) is past the end of the file: $(io.name)")
     end
     protection = mapping_protection(io)
 
@@ -199,7 +124,7 @@ function mmap_file(
             map_file_at(base, io, n_bytes, protection)
         end
         disable_huge_pages(base, reserved_bytes)
-        return track_mapping(Vector{UInt8}, base, reserved_bytes, reserved_bytes, path, UInt64(0))
+        return wrap_mapping(Vector{UInt8}, base, reserved_bytes, reserved_bytes)
     end
 
     if n_bytes == 0
@@ -219,10 +144,10 @@ function mmap_file(
         Int64(offset - page_offset),
     )
     if reinterpret(Int, base) == -1
-        error("mmap of $(n_bytes) bytes at offset $(offset) failed: $(Base.Libc.strerror()): $(path)")  # UNTESTED
+        error("mmap of $(n_bytes) bytes at offset $(offset) failed: $(Base.Libc.strerror()): $(io.name)")  # UNTESTED
     end
     disable_huge_pages(base, mapped_bytes)
-    return track_mapping(ArrayT, base, mapped_bytes, dims, path, UInt64(offset - page_offset))
+    return wrap_mapping(ArrayT, base, mapped_bytes, dims)
 end
 
 # Reserve `n_bytes` of address space as an anonymous `PROT_NONE` mapping. It takes no RAM and no file space. On failure
@@ -283,32 +208,18 @@ function disable_huge_pages(base::Ptr{Cvoid}, n_bytes::Integer)::Nothing
     return nothing
 end
 
-# Wrap the `mapped_bytes` at `base` as an array, which starts at the end of the page offset, and record the mapping. The
-# array's finalizer removes the entry, then unmaps, so no other mapping can reuse the addresses while they are recorded.
-function track_mapping(
+# Wrap the `mapped_bytes` at `base` as an array, which starts at the end of the page offset. The array's finalizer
+# unmaps them.
+function wrap_mapping(
     ::Type{ArrayT},
     base::Ptr{Cvoid},
     mapped_bytes::Integer,
     dims::Union{Integer, Tuple{Vararg{Integer}}},
-    path::String,
-    base_file_offset::UInt64,
 )::ArrayT where {T, ArrayT <: Array{T}}
     page_offset = mapped_bytes - prod(dims) * sizeof(T)
     array = unsafe_wrap(ArrayT, Ptr{T}(base + page_offset), dims; own = false)
-    start = UInt(base)
-    mapped_range = MappedRange(UInt(mapped_bytes), path, base_file_offset)
-    lock(MAPPINGS_LOCK) do
-        MAPPINGS[start] = mapped_range
-        return nothing
-    end
     finalizer(array) do _
-        lock(MAPPINGS_LOCK) do
-            if get(MAPPINGS, start, nothing) === mapped_range
-                delete!(MAPPINGS, start)
-            end
-            return nothing
-        end
-        ccall(:munmap, Cint, (Ptr{Cvoid}, Csize_t), Ptr{Cvoid}(start), Csize_t(mapped_bytes))
+        ccall(:munmap, Cint, (Ptr{Cvoid}, Csize_t), base, Csize_t(mapped_bytes))
         return nothing
     end
     return array
@@ -325,61 +236,6 @@ function remap_with_small_pages!(array::Vector{UInt8}, io::IOStream, n_bytes::In
     @assert n_bytes <= length(array)
     if n_bytes > 0
         map_file_at(Ptr{Cvoid}(pointer(array)), io, n_bytes, mapping_protection(io))
-    end
-    return nothing
-end
-
-"""
-    mapped_file_position(address::Union{Ptr, Integer})::Maybe{Tuple{String, UInt64}}
-
-Return the path of the file mapped at the `address`, and the offset in the file of the byte there. Returns `nothing` if
-no mapping made by [`mmap_with_small_pages`](@ref) contains the `address`.
-"""
-function mapped_file_position(address::Union{Ptr, Integer})::Maybe{Tuple{String, UInt64}}
-    return mapped_file_range(UInt(address):UInt(address))
-end
-
-# Return the path of the file mapped at the `addresses`, and the offset in the file of their first byte, or `nothing`
-# if no single mapping contains them all.
-function mapped_file_range(addresses::UnitRange{UInt})::Maybe{Tuple{String, UInt64}}
-    return lock(MAPPINGS_LOCK) do
-        token = searchsortedlast(MAPPINGS, first(addresses))
-        if token == beforestartsemitoken(MAPPINGS)
-            return nothing
-        end
-        start, mapped_range = deref((MAPPINGS, token))
-        if last(addresses) >= start + mapped_range.n_bytes
-            return nothing
-        end
-        return (mapped_range.path, mapped_range.file_offset + UInt64(first(addresses) - start))
-    end
-end
-
-# Read the `n_bytes` at the `offset` of the file at the `path` through the `buffer`, so they are in memory when they are
-# used. This doesn't stop other threads from collecting garbage. A failure is only logged, since the data is still read
-# when it is used.
-function prefetch_file_range(path::String, offset::UInt64, n_bytes::Integer, buffer::Vector{UInt8})::Nothing
-    try
-        open(path, "r") do io
-            file = file_descriptor(io)
-            n_read = 0
-            while n_read < n_bytes
-                n_wanted = min(length(buffer), n_bytes - n_read)
-                result = GC.@preserve buffer @ccall gc_safe = true pread(  # NOLINT
-                    file::Cint,
-                    pointer(buffer)::Ptr{UInt8},
-                    n_wanted::Csize_t,
-                    (offset + n_read)::Int64,
-                )::Cssize_t
-                if result > 0
-                    n_read += result
-                elseif result == 0 || Libc.errno() != Libc.EINTR  # UNTESTED
-                    return nothing  # UNTESTED
-                end
-            end
-        end
-    catch exception
-        @warn "failed to read ahead $(n_bytes) bytes at $(offset) of: $(path)" exception  # UNTESTED
     end
     return nothing
 end

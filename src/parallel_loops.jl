@@ -6,7 +6,6 @@ module ParallelLoops
 export ColumnReader
 export DebugProgress
 export DebugProgressUnknown
-export column_memory_ranges
 export column_scratch
 export copy_columns!
 export fill_column!
@@ -24,7 +23,6 @@ using ..Types
 using ..FlameTime
 using ..Handlers
 using ..MatrixLayouts
-using ..MemoryMappings
 
 using Base.Threads
 using LinearAlgebra
@@ -34,9 +32,6 @@ using SparseArrays
 
 import ..MatrixLayouts.is_flipped_matrix
 import ..MatrixLayouts.is_plain_array
-import ..MemoryMappings
-import ..MemoryMappings.mapped_file_range
-import ..MemoryMappings.prefetch_file_range
 import Base.Threads.maxthreadid
 import ProgressMeter.AbstractProgress  # NOLINT
 using Random
@@ -308,275 +303,6 @@ function run_top_level_loop(run_position::Function, n_positions::Integer, policy
     return nothing
 end
 
-# A run of consecutive positions of a `PrefetchedLoop`, which a worker reads in one go.
-mutable struct PrefetchChunk
-    last_position::Int
-    n_bytes::Int
-    is_read::Bool
-end
-
-# A loop whose workers read the memory-mapped data of its positions ahead of time. Each position uses a range of
-# addresses of each of the same arrays (`ranges_of_position`). The positions are read in chunks of consecutive
-# positions, where the ranges of each array that touch are read together. The `chunks` are those that were claimed and
-# that the computation hasn't passed yet, in order. A position is claimed for computation only once its chunk was read
-# (up to the `ready_position`). The `version` changes whenever a worker might do something new.
-mutable struct PrefetchedLoop
-    ranges_of_position::Function
-    n_positions::Int
-    buffer_per_thread::Vector{Vector{UInt8}}
-    chunks_lock::ReentrantLock
-    chunks::Vector{PrefetchChunk}
-    next_read_position::Atomic{Int}
-    ready_position::Atomic{Int}
-    next_position::Atomic{Int}
-    n_reading::Atomic{Int}
-    n_computing::Atomic{Int}
-    n_waiting::Atomic{Int}
-    version::Atomic{Int}
-    version_condition::Threads.Condition
-end
-
-# The `PrefetchedLoop` of `n_positions`, or `nothing` if the data of the positions isn't in memory-mapped files, which
-# is decided by the first position with any data.
-function new_prefetched_loop(ranges_of_position::Function, n_positions::Integer)::Maybe{PrefetchedLoop}
-    is_mapped = false
-    for position in 1:n_positions
-        ranges = ranges_of_position(position)
-        if ranges === nothing
-            return nothing
-        end
-        if any(range -> !isempty(range), ranges)
-            is_mapped = all(range -> isempty(range) || mapped_file_range(range) !== nothing, ranges)
-            break
-        end
-    end
-    if !is_mapped
-        return nothing
-    end
-
-    return PrefetchedLoop(
-        ranges_of_position,
-        n_positions,
-        [Vector{UInt8}(undef, 1024 * 1024) for _ in 1:maxthreadid()],
-        ReentrantLock(),
-        PrefetchChunk[],
-        Atomic{Int}(1),
-        Atomic{Int}(0),
-        Atomic{Int}(1),
-        Atomic{Int}(0),
-        Atomic{Int}(0),
-        Atomic{Int}(0),
-        Atomic{Int}(0),
-        Threads.Condition(),
-    )
-end
-
-# The number of bytes of the data of the `position`.
-function position_n_bytes(loop::PrefetchedLoop, position::Integer)::Int
-    return sum(length, loop.ranges_of_position(position))
-end
-
-# Claim the next chunk to read, and return its first and last positions, or `nothing` if no chunk may be read now: when
-# all positions are claimed, enough workers are reading, or enough data is read ahead of the computation.
-function claim_chunk!(loop::PrefetchedLoop)::Maybe{Tuple{Int, Int}}
-    if loop.n_reading[] >= MemoryMappings.N_PREFETCH_READERS ||
-       loop.next_read_position[] > loop.n_positions ||
-       loop.next_position[] > loop.n_positions
-        return nothing
-    end
-
-    return lock(loop.chunks_lock) do
-        first_position = loop.next_read_position[]
-        if first_position > loop.n_positions || loop.n_reading[] >= MemoryMappings.N_PREFETCH_READERS
-            return nothing
-        end
-
-        next_position = loop.next_position[]
-        while !isempty(loop.chunks) && loop.chunks[1].is_read && loop.chunks[1].last_position < next_position
-            popfirst!(loop.chunks)
-        end
-        n_bytes_ahead = 0
-        for chunk in loop.chunks
-            n_bytes_ahead += chunk.n_bytes
-        end
-        if n_bytes_ahead >= MemoryMappings.PREFETCH_WINDOW_BYTES
-            return nothing
-        end
-
-        last_position = first_position
-        n_bytes = position_n_bytes(loop, first_position)
-        while last_position < loop.n_positions && n_bytes < MemoryMappings.PREFETCH_CHUNK_BYTES
-            last_position += 1
-            n_bytes += position_n_bytes(loop, last_position)
-        end
-
-        push!(loop.chunks, PrefetchChunk(last_position, n_bytes, false))
-        loop.next_read_position[] = last_position + 1
-        atomic_add!(loop.n_reading, 1)
-        return (first_position, last_position)
-    end
-end
-
-# Read the data of the positions from `first_position` to `last_position` into memory, through the `buffer`. Then
-# record that their chunk was read, so the positions up to the end of the first chunks that were read are ready.
-function read_chunk!(loop::PrefetchedLoop, first_position::Int, last_position::Int, buffer::Vector{UInt8})::Nothing
-    for array_index in eachindex(loop.ranges_of_position(first_position))
-        merged_range = UInt(1):UInt(0)
-        for position in first_position:last_position
-            range = loop.ranges_of_position(position)[array_index]
-            if isempty(range)
-                continue
-            elseif !isempty(merged_range) &&
-                   first(range) <= last(merged_range) + 1 &&
-                   last(range) >= first(merged_range)
-                merged_range = min(first(merged_range), first(range)):max(last(merged_range), last(range))
-            else
-                prefetch_address_range(merged_range, buffer)
-                merged_range = range
-            end
-        end
-        prefetch_address_range(merged_range, buffer)
-    end
-
-    lock(loop.chunks_lock) do
-        for chunk in loop.chunks
-            if chunk.last_position == last_position
-                chunk.is_read = true
-                break
-            end
-        end
-        ready_position = loop.ready_position[]
-        for chunk in loop.chunks
-            if !chunk.is_read
-                break
-            end
-            ready_position = max(ready_position, chunk.last_position)
-        end
-        loop.ready_position[] = ready_position
-        atomic_sub!(loop.n_reading, 1)
-        return nothing
-    end
-
-    wake_prefetching_workers(loop)
-    return nothing
-end
-
-# Read the memory-mapped `addresses` into memory, through the `buffer`. Addresses that aren't memory-mapped are skipped.
-function prefetch_address_range(addresses::AbstractUnitRange{<:Integer}, buffer::Vector{UInt8})::Nothing
-    if !isempty(addresses)
-        file_range = mapped_file_range(UInt(first(addresses)):UInt(last(addresses)))
-        if file_range !== nothing
-            path, offset = file_range
-            prefetch_file_range(path, offset, length(addresses), buffer)
-        end
-    end
-    return nothing
-end
-
-# Claim the next position to compute, or return `nothing` if it isn't read yet, or if enough workers compute while data
-# is read. These leave hardware threads idle for the kernel, which reads the data.
-function claim_ready_position!(loop::PrefetchedLoop)::Maybe{Int}
-    while true
-        position = loop.next_position[]
-        if position > loop.ready_position[]
-            return nothing
-        end
-        is_reading = loop.n_reading[] > 0 || loop.next_read_position[] <= loop.n_positions
-        if is_reading && loop.n_computing[] >= max(1, nthreads() ÷ 2)
-            return nothing
-        end
-        if atomic_cas!(loop.next_position, position, position + 1) == position
-            atomic_add!(loop.n_computing, 1)
-            return position
-        end
-    end
-end
-
-# Change the `version` of the `loop`, and wake the workers that wait for it to change.
-function wake_prefetching_workers(loop::PrefetchedLoop)::Nothing
-    atomic_add!(loop.version, 1)
-    if loop.n_waiting[] > 0
-        lock(loop.version_condition) do
-            notify(loop.version_condition)
-            return nothing
-        end
-    end
-    return nothing
-end
-
-# Wait until the `version` of the `loop` is no longer the `version`. Waiting spins, then blocks.
-function wait_for_prefetching_change(loop::PrefetchedLoop, version::Integer)::Nothing
-    atomic_add!(loop.n_waiting, 1)
-    try
-        if !spin_until(() -> loop.version[] != version)
-            lock(loop.version_condition) do
-                while loop.version[] == version
-                    wait(loop.version_condition)
-                end
-                return nothing
-            end
-        end
-    finally
-        atomic_sub!(loop.n_waiting, 1)
-    end
-    return nothing
-end
-
-# Run the positions of the `loop` as a worker, which each time reads the next chunk, computes the next position whose
-# chunk was read, or waits for one of these to become possible. A failure stops the claims of all the workers.
-function run_prefetching_worker(run_position::Function, loop::PrefetchedLoop)::Nothing
-    buffer = loop.buffer_per_thread[threadid()]
-    try
-        while true
-            version = loop.version[]
-            chunk = claim_chunk!(loop)
-            if chunk !== nothing
-                read_chunk!(loop, chunk[1], chunk[2], buffer)
-                continue
-            end
-
-            position = claim_ready_position!(loop)
-            if position !== nothing
-                try
-                    run_position(position)
-                finally
-                    atomic_sub!(loop.n_computing, 1)
-                    wake_prefetching_workers(loop)
-                end
-                continue
-            end
-
-            if loop.next_position[] > loop.n_positions
-                return nothing
-            end
-            wait_for_prefetching_change(loop, version)
-        end
-    catch
-        loop.next_position[] = loop.n_positions + 1
-        wake_prefetching_workers(loop)
-        rethrow()
-    end
-end
-
-# Run a top-level loop whose workers read its data ahead of time, with one worker per thread. A worker then helps the
-# open nested loops until all the workers are done.
-function run_prefetched_loop(run_position::Function, loop::PrefetchedLoop)::Nothing
-    n_active = Atomic{Int}(nthreads())
-    is_done = Atomic{Bool}(false)
-    @threads :static for _ in 1:nthreads()
-        try
-            run_prefetching_worker(run_position, loop)
-        finally
-            if atomic_sub!(n_active, 1) == 1
-                is_done[] = true
-                wake_idle_workers()
-            end
-        end
-        help_open_loops!(is_done)
-    end
-    return nothing
-end
-
 """
     start_hang_watchdog(; idle_seconds::Real = 60, check_seconds::Real = 5)::Timer
 
@@ -738,24 +464,6 @@ function parallel_loop_wo_rng(
     progress::Maybe{AbstractProgress} = nothing,
     progress_chunk::Maybe{Integer} = nothing,
 )::Nothing
-    run_parallel_loop(body, indices, nothing; name, policy, order, weights, nested, progress, progress_chunk)
-    return nothing
-end
-
-# Run the parallel loop of `parallel_loop_wo_rng`. If it is a top-level `:greedy_sticky` loop and has a
-# `prefetched_loop`, its workers read its memory-mapped data ahead of time.
-function run_parallel_loop(
-    body::Function,
-    indices::AbstractVector{<:Integer},
-    prefetched_loop::Maybe{PrefetchedLoop};
-    name::AbstractString,
-    policy::Symbol,
-    order::Maybe{AbstractVector{<:Integer}},
-    weights::Maybe{AbstractVector{<:Integer}},
-    nested::Bool,
-    progress::Maybe{AbstractProgress},
-    progress_chunk::Maybe{Integer},
-)::Nothing
     @assert policy in (:greedy, :static, :dynamic, :greedy_sticky, :serial)
 
     if weights !== nothing
@@ -898,11 +606,7 @@ function run_parallel_loop(
                     saved_blas_threads = BLAS.get_num_threads()
                     BLAS.set_num_threads(1)
                     try
-                        if prefetched_loop !== nothing && loop_policy == :greedy_sticky
-                            run_prefetched_loop(iteration_body, prefetched_loop)
-                        else
-                            run_top_level_loop(iteration_body, n_index_positions, loop_policy)
-                        end
+                        run_top_level_loop(iteration_body, n_index_positions, loop_policy)
                     finally
                         BLAS.set_num_threads(saved_blas_threads)
                     end
@@ -1384,13 +1088,8 @@ created before the other loop allocates nothing. The caller runs some of its col
 of its own thread, so these readers must not be the ones the iteration of the other loop uses.
 
 The columns are visited in order, one at a time. So a destination written in column order (e.g. a packed matrix) holds
-few columns at a time, and lazy or memory-mapped data is read from start to end.
-
-If [`PREFETCH_MAPPED_DATA`](@ref TanayLabUtilities.MemoryMappings.PREFETCH_MAPPED_DATA) (on old Linux kernels), the
-threads of a top-level `:greedy_sticky` loop read the memory-mapped data of the columns ahead of the columns that need
-it (see [`column_memory_ranges`](@ref)). While they read, at most half of the threads visit columns, which leaves the
-kernel enough idle hardware threads to read the data quickly. The `name`, the `policy`, the `nested` flag, the
-`progress` and the `progress_chunk` are passed to [`parallel_loop_wo_rng`](@ref).
+few columns at a time, and lazy or memory-mapped data is read from start to end. The `name`, the `policy`, the `nested`
+flag, the `progress` and the `progress_chunk` are passed to [`parallel_loop_wo_rng`](@ref).
 
 ```jldoctest
 using SparseArrays
@@ -1483,51 +1182,12 @@ function foreach_column_through_readers(
     progress::Maybe{AbstractProgress},
     progress_chunk::Maybe{Integer},
 )::Nothing
-    prefetched_loop = nothing
-    if MemoryMappings.PREFETCH_MAPPED_DATA &&
-       policy == :greedy_sticky &&
-       nthreads() > 1 &&
-       !is_in_parallel_loop() &&
-       length(columns) > 1
-        column_reader = column_reader_per_thread[1]
-        prefetched_loop =
-            new_prefetched_loop(position -> column_memory_ranges(column_reader, columns[position]), length(columns))
-    end
-
-    run_parallel_loop(
-        1:length(columns),
-        prefetched_loop;
-        name,
-        policy,
-        order = nothing,
-        weights = nothing,
-        nested,
-        progress,
-        progress_chunk,
-    ) do position
+    parallel_loop_wo_rng(1:length(columns); name, policy, nested, progress, progress_chunk) do position
         column_index = columns[position]
         visit(position, column_index, read_column(column_reader_per_thread[threadid()], column_index))
         return nothing
     end
     return nothing
-end
-
-# The ranges of memory addresses that hold the column `column_index` of the matrix of the `column_reader`, in the array
-# it reads (see `column_memory_ranges`).
-function column_memory_ranges(column_reader::PlainColumnReader, column_index::Integer)::Maybe{Tuple}
-    return column_memory_ranges(column_reader.storage, column_index)
-end
-
-function column_memory_ranges(column_reader::CopiedColumnReader, column_index::Integer)::Maybe{Tuple}
-    return column_memory_ranges(column_reader.storage, column_index)
-end
-
-function column_memory_ranges(column_reader::LazyColumnReader, column_index::Integer)::Maybe{Tuple}
-    return column_memory_ranges(column_reader.lazy_matrix, column_index)
-end
-
-function column_memory_ranges(column_reader::ViewColumnReader, column_index::Integer)::Maybe{Tuple}
-    return column_memory_ranges(column_reader.parent_reader, column_reader.parent_column_indices[column_index])
 end
 
 """
@@ -1550,40 +1210,6 @@ The result is valid until the next call with the same `scratch`. See [`parallel_
 columns it may return.
 """
 function read_column! end
-
-"""
-    column_memory_ranges(matrix::AbstractMatrix, column_index::Integer)::Maybe{Tuple{Vararg{UnitRange{UInt}}}}
-
-The ranges of memory addresses that hold the values of the column `column_index` of the `matrix`, or `nothing` if they
-aren't known. There is one range per array that holds the data of the matrix, in the same order for every column: one
-for a dense matrix, and two for a sparse matrix (its `rowval`, then its `nzval`). A lazy matrix type adds a method
-returning the memory of the encoded data of the column. [`parallel_foreach_column`](@ref) reads the memory-mapped
-ranges ahead of the columns that need them.
-"""
-function column_memory_ranges(::AbstractMatrix, ::Integer)::Nothing
-    return nothing
-end
-
-function column_memory_ranges(matrix::DenseMatrix{T}, column_index::Integer)::Tuple{UnitRange{UInt}} where {T}
-    n_rows = size(matrix, 1)
-    first_address = UInt(pointer(matrix, (column_index - 1) * n_rows + 1))
-    return (first_address:(first_address + n_rows * sizeof(T) - 1),)
-end
-
-function column_memory_ranges(
-    matrix::SparseMatrixCSC{T, I},
-    column_index::Integer,
-)::NTuple{2, UnitRange{UInt}} where {T, I}
-    column_pointers = SparseArrays.getcolptr(matrix)
-    first_stored = Int(column_pointers[column_index])
-    n_stored = Int(column_pointers[column_index + 1]) - first_stored
-    first_row_address = UInt(pointer(rowvals(matrix), first_stored))
-    first_value_address = UInt(pointer(nonzeros(matrix), first_stored))
-    return (
-        first_row_address:(first_row_address + n_stored * sizeof(I) - 1),
-        first_value_address:(first_value_address + n_stored * sizeof(T) - 1),
-    )
-end
 
 """
     fill_column!(fill::Function, matrix::AbstractMatrix, column_index::Integer)::Nothing
