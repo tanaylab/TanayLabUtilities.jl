@@ -894,6 +894,7 @@ end
             flush(io)
             remap_with_small_pages!(bytes, io, 150)
             @test bytes[101:150] == collect(UInt8, 101:150)
+            @test occursin(" nh", vm_flags_at(pointer(bytes)))
             bytes[150] = 0
             finalize(bytes)
             return nothing

@@ -121,9 +121,8 @@ function mmap_file(
         @assert n_bytes <= reserved_bytes
         base = reserve_addresses(reserved_bytes)
         if n_bytes > 0
-            map_file_at(base, io, n_bytes, protection)
+            map_file_with_small_pages(io, n_bytes, 0, protection, base)
         end
-        disable_huge_pages(base, reserved_bytes)
         return wrap_mapping(Vector{UInt8}, base, reserved_bytes, reserved_bytes)
     end
 
@@ -132,22 +131,41 @@ function mmap_file(
     end
     page_offset = offset % Mmap.PAGESIZE  # NOLINT
     mapped_bytes = n_bytes + page_offset
-    base = ccall(
+    base = map_file_with_small_pages(io, mapped_bytes, offset - page_offset, protection, nothing)
+    return wrap_mapping(ArrayT, base, mapped_bytes, dims)
+end
+
+# Map `n_bytes` of the file `io`, starting at the (page-aligned) `file_offset`, and turn off transparent huge pages for
+# them. Every file mapping is made here. If `base` is given, map them there, replacing whatever was mapped there.
+# Otherwise, map them wherever the kernel chooses. Return the address of the mapping.
+function map_file_with_small_pages(
+    io::IOStream,
+    n_bytes::Integer,
+    file_offset::Integer,
+    protection::Cint,
+    base::Maybe{Ptr{Cvoid}},
+)::Ptr{Cvoid}
+    mapped = ccall(
         :mmap,
         Ptr{Cvoid},
         (Ptr{Cvoid}, Csize_t, Cint, Cint, Cint, Int64),
-        Ptr{Cvoid}(0),
-        Csize_t(mapped_bytes),
+        base === nothing ? Ptr{Cvoid}(0) : base,
+        Csize_t(n_bytes),
         protection,
-        MAP_SHARED_FLAG,
+        base === nothing ? MAP_SHARED_FLAG : MAP_SHARED_FLAG | MAP_FIXED_FLAG,
         file_descriptor(io),
-        Int64(offset - page_offset),
+        Int64(file_offset),
     )
-    if reinterpret(Int, base) == -1
-        error("mmap of $(n_bytes) bytes at offset $(offset) failed: $(Base.Libc.strerror()): $(io.name)")  # UNTESTED
+    if reinterpret(Int, mapped) == -1 || (base !== nothing && mapped != base)
+        error("mmap of $(n_bytes) bytes at offset $(file_offset) failed: $(Base.Libc.strerror()): $(io.name)")  # UNTESTED
     end
-    disable_huge_pages(base, mapped_bytes)
-    return wrap_mapping(ArrayT, base, mapped_bytes, dims)
+    @static if Sys.islinux()
+        result = ccall(:madvise, Cint, (Ptr{Cvoid}, Csize_t, Cint), mapped, Csize_t(n_bytes), MADV_NOHUGEPAGE)
+        if result != 0
+            error("madvise of $(n_bytes) bytes at $(mapped) failed: $(Base.Libc.strerror())")  # UNTESTED
+        end
+    end
+    return mapped
 end
 
 # Reserve `n_bytes` of address space as an anonymous `PROT_NONE` mapping. It takes no RAM and no file space. On failure
@@ -179,35 +197,6 @@ function try_reserve_addresses(n_bytes::Integer)::Ptr{Cvoid}
     )
 end
 
-# Map the first `n_bytes` of the file at `base`, replacing whatever was mapped there.
-function map_file_at(base::Ptr{Cvoid}, io::IOStream, n_bytes::Integer, protection::Cint)::Nothing
-    mapped = ccall(
-        :mmap,
-        Ptr{Cvoid},
-        (Ptr{Cvoid}, Csize_t, Cint, Cint, Cint, Int64),
-        base,
-        Csize_t(n_bytes),
-        protection,
-        MAP_SHARED_FLAG | MAP_FIXED_FLAG,
-        file_descriptor(io),
-        Int64(0),
-    )
-    if mapped != base
-        error("mmap of $(n_bytes) bytes at $(base) failed: $(Base.Libc.strerror())")  # UNTESTED
-    end
-    return nothing
-end
-
-function disable_huge_pages(base::Ptr{Cvoid}, n_bytes::Integer)::Nothing
-    @static if Sys.islinux()
-        result = ccall(:madvise, Cint, (Ptr{Cvoid}, Csize_t, Cint), base, Csize_t(n_bytes), MADV_NOHUGEPAGE)
-        if result != 0
-            error("madvise of $(n_bytes) bytes at $(base) failed: $(Base.Libc.strerror())")  # UNTESTED
-        end
-    end
-    return nothing
-end
-
 # Wrap the `mapped_bytes` at `base` as an array, which starts at the end of the page offset. The array's finalizer
 # unmaps them.
 function wrap_mapping(
@@ -235,7 +224,7 @@ array doesn't change.
 function remap_with_small_pages!(array::Vector{UInt8}, io::IOStream, n_bytes::Integer)::Nothing
     @assert n_bytes <= length(array)
     if n_bytes > 0
-        map_file_at(Ptr{Cvoid}(pointer(array)), io, n_bytes, mapping_protection(io))
+        map_file_with_small_pages(io, n_bytes, 0, mapping_protection(io), Ptr{Cvoid}(pointer(array)))
     end
     return nothing
 end
