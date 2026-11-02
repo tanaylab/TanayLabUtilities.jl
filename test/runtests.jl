@@ -1142,6 +1142,12 @@ end
         @test visits == explicit_order
         # Length mismatch on order.
         @test_throws AssertionError parallel_loop_wo_rng(_ -> nothing, 1:5; order = [1, 2, 3])
+        # A single position has nothing to balance under `:static`.
+        single_order = [1]
+        parallel_loop_wo_rng(1:1; order = single_order, policy = :static) do _
+            return nothing
+        end
+        @test single_order == [1]
     end
 
     @testset ":greedy_sticky degrades to :static when work fits in one chunk" begin
@@ -1377,6 +1383,16 @@ end
                 return nothing
             end
             @test all(is_view_per_column)
+        end
+
+        @testset "sparse columns are visited in order" begin
+            growing_values = sparse(Float64[row <= column ? 1 : 0 for row in 1:7, column in 1:5])
+            visited_columns = Int[]
+            parallel_foreach_column(growing_values; policy = :serial) do _, column_index, _
+                push!(visited_columns, column_index)
+                return nothing
+            end
+            @test visited_columns == 1:5
         end
 
         @testset "column subsets are visited by position" begin
@@ -1675,7 +1691,7 @@ end
                 @test n_more_columns_bytes(matrix) < 1000
             end
 
-            # A sparse matrix allocates its default weights, one per column. Its views allocate nothing more.
+            # The views of a sparse matrix allocate nothing more than the matrix.
             for sparse_view in (view(sparse_wide_values, [1, 3, 6], :), view(sparse_wide_values, [6, 1, 3], :))
                 @test n_more_columns_bytes(sparse_view) - n_more_columns_bytes(sparse_wide_values) < 1000
             end

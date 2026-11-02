@@ -103,15 +103,14 @@ end
 mutable struct ClaimedLoop
     run_position::Function
     n_positions::Int
-    is_guided::Bool
     next_position::Atomic{Int}
     n_active::Atomic{Int}
     is_idle_event::Event
     failure::Maybe{CapturedException}
 end
 
-function ClaimedLoop(run_position::Function, n_positions::Integer, is_guided::Bool, n_active::Integer)::ClaimedLoop
-    return ClaimedLoop(run_position, n_positions, is_guided, Atomic{Int}(1), Atomic{Int}(n_active), Event(), nothing)
+function ClaimedLoop(run_position::Function, n_positions::Integer, n_active::Integer)::ClaimedLoop
+    return ClaimedLoop(run_position, n_positions, Atomic{Int}(1), Atomic{Int}(n_active), Event(), nothing)
 end
 
 const OPEN_LOOPS = ClaimedLoop[]
@@ -121,32 +120,22 @@ const OPEN_LOOPS_VERSION = Atomic{Int}(0)
 # About the cost of blocking a task and waking it up again, which is how long a wait spins before it blocks.
 const SPIN_LIMIT_NS = 5_000
 
-# Claim the next positions of the `loop`, or an empty range if none are left. A guided claim takes a share of the
-# remaining positions, so the chunks shrink towards the end of the loop. Otherwise each claim is a single position.
-function claim_positions!(loop::ClaimedLoop)::UnitRange{Int}
-    while true
-        first_position = loop.next_position[]
-        if first_position > loop.n_positions
-            return 1:0
-        end
-        n_claimed = loop.is_guided ? max(1, (loop.n_positions - first_position + 1) ÷ (2 * nthreads())) : 1
-        if atomic_cas!(loop.next_position, first_position, first_position + n_claimed) == first_position
-            return first_position:(first_position + n_claimed - 1)
-        end
-    end
+# Claim the next position of the `loop`, or return `nothing` if none are left. A fetch-and-add never retries, so a claim
+# costs one atomic operation.
+function claim_position!(loop::ClaimedLoop)::Maybe{Int}
+    position = atomic_add!(loop.next_position, 1)
+    return position <= loop.n_positions ? position : nothing
 end
 
 # Run claimed positions of the `loop` until none are left. A failure stops the claims of all the tasks.
 function run_claimed_positions!(run_position::Function, loop::ClaimedLoop)::Nothing
     try
         while true
-            positions = claim_positions!(loop)
-            if isempty(positions)
+            position = claim_position!(loop)
+            if position === nothing
                 return nothing
             end
-            for position in positions
-                run_position(position)
-            end
+            run_position(position)
         end
     catch
         loop.next_position[] = loop.n_positions + 1
@@ -228,14 +217,11 @@ function wake_idle_workers()::Nothing
 end
 
 # Run a nested loop. Its caller runs its positions using `run_position`, while idle workers of the top-level loop help
-# using `help_position`. The caller returns only after the helpers are done, and throws the failure of any of them.
-function run_nested_loop(
-    run_position::Function,
-    help_position::Function,
-    n_positions::Integer,
-    is_guided::Bool,
-)::Nothing
-    loop = ClaimedLoop(help_position, n_positions, is_guided, 1)
+# using `help_position`. The caller returns only after the helpers are done, and throws the failure of any of them. The
+# loop stays in `OPEN_LOOPS` until then, so a report of a hang shows a caller waiting for its helpers. Helpers skip it
+# once it has no positions left.
+function run_nested_loop(run_position::Function, help_position::Function, n_positions::Integer)::Nothing
+    loop = ClaimedLoop(help_position, n_positions, 1)
     lock(OPEN_LOOPS_CONDITION) do
         push!(OPEN_LOOPS, loop)
         return nothing
@@ -245,14 +231,14 @@ function run_nested_loop(
     try
         run_claimed_positions!(run_position, loop)
     finally
+        if atomic_sub!(loop.n_active, 1) != 1 && !spin_until(() -> loop.n_active[] == 0)
+            wait(loop.is_idle_event)
+        end
         lock(OPEN_LOOPS_CONDITION) do
             loop_index = findfirst(open_loop -> open_loop === loop, OPEN_LOOPS)
             @assert loop_index !== nothing
             deleteat!(OPEN_LOOPS, loop_index)
             return nothing
-        end
-        if atomic_sub!(loop.n_active, 1) != 1 && !spin_until(() -> loop.n_active[] == 0)
-            wait(loop.is_idle_event)
         end
     end
 
@@ -273,9 +259,9 @@ end
 
 # Run a top-level loop with one worker per thread. A worker runs its own positions, then helps the open nested loops
 # until all the positions of the top-level loop are done.
-function run_top_level_loop(run_position::Function, n_positions::Integer, policy::Symbol, is_guided::Bool)::Nothing
+function run_top_level_loop(run_position::Function, n_positions::Integer, policy::Symbol)::Nothing
     is_static = policy == :static
-    loop = ClaimedLoop(run_position, n_positions, is_guided, is_static ? nthreads() : 0)
+    loop = ClaimedLoop(run_position, n_positions, is_static ? nthreads() : 0)
     is_done = Atomic{Bool}(false)
 
     function run_worker(worker_index::Integer)::Nothing
@@ -404,8 +390,7 @@ by `@threads` with the `policy`. The `policy` is one of:
     migrate across threads at yield points, so `threadid()`-indexed scratch is unsafe under those.
   - `:serial` - run the loop on the calling thread (useful for debugging).
 
-Without an `order` (or `weights`), each claim takes a guided chunk of the remaining positions, which shrinks towards the
-end of the loop. With one, each claim takes a single position, keeping the order.
+Each claim takes a single position, so the positions are claimed in their order.
 
 If `order` is specified, it must be a permutation of the *positions* of `indices` - that is, a length-`length(indices)`
 vector whose values are a permutation of `1:length(indices)`. The body still receives the corresponding
@@ -536,10 +521,6 @@ function parallel_loop_wo_rng(
     iteration_indices = order === nothing ? indices : view(indices, order)
     n_index_positions = length(iteration_indices)
 
-    # Without an explicit order, claims take guided chunks. With one, they take a position at a time, so the
-    # heaviest-first order is kept.
-    is_guided = order === nothing
-
     # Per-position progress step. Built after the `:static` round-robin shuffle so `step_per_position[k]` matches the
     # `iteration_indices[k]` actually visited at step `k`. `nothing` when no `weights` were given, in which case the
     # iteration body falls back to `+1` per step (or to `progress_chunk` throttling).
@@ -619,13 +600,13 @@ function parallel_loop_wo_rng(
                         return nothing
                     end
 
-                    run_nested_loop(caller_iteration_body, iteration_body, n_index_positions, is_guided)
+                    run_nested_loop(caller_iteration_body, iteration_body, n_index_positions)
 
                 else
                     saved_blas_threads = BLAS.get_num_threads()
                     BLAS.set_num_threads(1)
                     try
-                        run_top_level_loop(iteration_body, n_index_positions, loop_policy, is_guided)
+                        run_top_level_loop(iteration_body, n_index_positions, loop_policy)
                     finally
                         BLAS.set_num_threads(saved_blas_threads)
                     end
@@ -1059,7 +1040,6 @@ end
         contiguous::Bool = false,
         name::AbstractString = ".columns",
         policy::Symbol = :greedy_sticky,
-        weights::Maybe{AbstractVector{<:Integer}} = nothing,
         progress::Maybe{AbstractProgress} = nothing,
         progress_chunk::Maybe{Integer} = nothing,
         nested::Bool = false,
@@ -1107,9 +1087,9 @@ with [`new_column_reader_per_thread`](@ref), and pass them as `column_reader_per
 created before the other loop allocates nothing. The caller runs some of its columns in its own task, through the reader
 of its own thread, so these readers must not be the ones the iteration of the other loop uses.
 
-For a sparse matrix, the `weights` default to the number of stored values in each of the `columns`, unless a
-`progress_chunk` is given. The `weights`, the `name`, the `policy`, the `nested` flag, the `progress` and the
-`progress_chunk` are passed to [`parallel_loop_wo_rng`](@ref).
+The columns are visited in order, one at a time. So a destination written in column order (e.g. a packed matrix) holds
+few columns at a time, and lazy or memory-mapped data is read from start to end. The `name`, the `policy`, the `nested`
+flag, the `progress` and the `progress_chunk` are passed to [`parallel_loop_wo_rng`](@ref).
 
 ```jldoctest
 using SparseArrays
@@ -1133,7 +1113,6 @@ function parallel_foreach_column(
     contiguous::Bool = false,
     name::AbstractString = ".columns",
     policy::Symbol = :greedy_sticky,
-    weights::Maybe{AbstractVector{<:Integer}} = nothing,
     progress::Maybe{AbstractProgress} = nothing,
     progress_chunk::Maybe{Integer} = nothing,
     nested::Bool = false,
@@ -1143,22 +1122,6 @@ function parallel_foreach_column(
     @assert column_reader_per_thread === nothing || column_reader_per_thread[1].matrix === matrix
     if isempty(columns)
         return nothing
-    end
-
-    canonical_matrix = canonical_array(matrix)
-    stored_matrix = canonical_matrix
-    stored_columns = columns
-    if canonical_matrix isa SubArray && is_read_by_parent_columns(canonical_matrix)
-        stored_matrix = parent(canonical_matrix)
-        stored_columns = view(parentindices(canonical_matrix)[2], columns)
-    end
-
-    # A local of its own keeps the type of the default weights concrete.
-    weight_per_position = weights
-    if weight_per_position === nothing && progress_chunk === nothing && stored_matrix isa AbstractSparseMatrixCSC
-        column_pointers = SparseArrays.getcolptr(stored_matrix)
-        weight_per_position =
-            [Int(column_pointers[column_index + 1] - column_pointers[column_index]) for column_index in stored_columns]
     end
 
     if column_reader_per_thread === nothing
@@ -1171,7 +1134,6 @@ function parallel_foreach_column(
         name,
         policy,
         nested,
-        weights = weight_per_position,
         progress,
         progress_chunk,
     )
@@ -1217,11 +1179,10 @@ function foreach_column_through_readers(
     name::AbstractString,
     policy::Symbol,
     nested::Bool,
-    weights::Maybe{AbstractVector{<:Integer}},
     progress::Maybe{AbstractProgress},
     progress_chunk::Maybe{Integer},
 )::Nothing
-    parallel_loop_wo_rng(1:length(columns); name, policy, nested, weights, progress, progress_chunk) do position
+    parallel_loop_wo_rng(1:length(columns); name, policy, nested, progress, progress_chunk) do position
         column_index = columns[position]
         visit(position, column_index, read_column(column_reader_per_thread[threadid()], column_index))
         return nothing

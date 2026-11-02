@@ -75,9 +75,9 @@ an open `io`. The `io` form avoids opening the file again, when mapping several 
 grows the file, and turns off transparent huge pages. It is recorded for [`mapped_file_position`](@ref) until the array
 is garbage collected.
 
-If `reserved_bytes` is given, the array is a `Vector{UInt8}` of `reserved_bytes` of address space. The first `dims` bytes
-of the file are mapped at its start, and the rest can't be accessed until [`remap_with_small_pages!`](@ref) maps more of
-the file there. The `offset` must be zero.
+If `reserved_bytes` is given, the array is a `Vector{UInt8}` of `reserved_bytes` of address space. The first `dims`
+bytes of the file are mapped at its start, and the rest can't be accessed until [`remap_with_small_pages!`](@ref) maps
+more of the file there. The `offset` must be zero.
 """
 function mmap_with_small_pages(
     path::AbstractString,
