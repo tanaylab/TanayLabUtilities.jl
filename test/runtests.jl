@@ -796,6 +796,106 @@ end
     @test cached_ispath("/")
 end
 
+# The `VmFlags` line of the mapping in `/proc/self/smaps` that contains the `address`.
+function vm_flags_at(address::Ptr)::String
+    is_in_mapping = false
+    for line in eachline("/proc/self/smaps")
+        range_match = match(r"^([0-9a-f]+)-([0-9a-f]+) ", line)
+        if range_match !== nothing
+            is_in_mapping =
+                parse(UInt, range_match[1]; base = 16) <= UInt(address) < parse(UInt, range_match[2]; base = 16)
+        elseif is_in_mapping && startswith(line, "VmFlags:")
+            return line
+        end
+    end
+    return ""  # UNTESTED
+end
+
+function mapped_address_of_dropped_array(path::AbstractString)::UInt
+    array = mmap_with_small_pages(path, Vector{Float64}, 10)
+    return UInt(pointer(array))
+end
+
+@testset "memory_mappings" begin
+    path = joinpath(mktempdir(), "values.bin")
+    write(path, collect(Float64, 1:1000))
+
+    @testset "a vector at an offset" begin
+        vector = mmap_with_small_pages(path, Vector{Float64}, 100, 24)
+        @test vector == collect(Float64, 4:103)
+        @test mapped_file_position(pointer(vector)) == (path, 24)
+        @test mapped_file_position(pointer(vector, 5)) == (path, 56)
+        @test mapped_file_position(pointer(vector) - 25) === nothing
+        @test mapped_file_position(pointer(vector) + 800) === nothing
+        @test mapped_file_position(0) === nothing
+        @test occursin(" nh", vm_flags_at(pointer(vector)))
+    end
+
+    @testset "a writable matrix" begin
+        matrix = mmap_with_small_pages(path, Matrix{Float64}, (10, 20); mode = "r+")
+        @test matrix[3, 2] == 13
+        matrix[3, 2] = -13
+        finalize(matrix)
+        @test reinterpret(Float64, read(path, 13 * 8))[13] == -13
+        mmap_with_small_pages(path, Matrix{Float64}, (10, 20); mode = "r+")[3, 2] = 13
+    end
+
+    @testset "sections of an open file" begin
+        open(path, "r") do io
+            first = mmap_with_small_pages(io, Vector{Float64}, 10)
+            second = mmap_with_small_pages(io, Vector{Float64}, 10, 8000 - 80)
+            @test first == collect(Float64, 1:10)
+            @test second == collect(Float64, 991:1000)
+            @test mapped_file_position(pointer(first)) == (realpath(path), 0)
+            @test mapped_file_position(pointer(second, 2)) == (realpath(path), 8000 - 72)
+            borrowed_io = Base.fdio(Int(Base.cconvert(Cint, fd(io))))
+            @test mmap_with_small_pages(borrowed_io, Vector{Float64}, 2, 16) == [3.0, 4.0]
+            return nothing
+        end
+    end
+
+    @testset "the rest of the file" begin
+        @test length(mmap_with_small_pages(path, Vector{UInt8})) == 8000
+        @test mmap_with_small_pages(path, Vector{Float64}, nothing, 7984) == [999.0, 1000.0]
+    end
+
+    @testset "no elements" begin
+        @test length(mmap_with_small_pages(path, Vector{Float64}, 0)) == 0
+    end
+
+    @testset "past the end" begin
+        @test_throws "past the end of the file" mmap_with_small_pages(path, Vector{Float64}, 1000, 8)
+    end
+
+    @testset "collected" begin
+        address = mapped_address_of_dropped_array(path)
+        GC.gc()
+        GC.gc()
+        @test mapped_file_position(address) === nothing
+    end
+
+    @testset "reserved" begin
+        grown_path = joinpath(mktempdir(), "grown.bin")
+        write(grown_path, collect(UInt8, 1:100))
+        open(grown_path, "r+") do io
+            bytes = mmap_with_small_pages(io, Vector{UInt8}, 100; reserved_bytes = 1 << 20)
+            @test length(bytes) == 1 << 20
+            @test bytes[1:100] == collect(UInt8, 1:100)
+            @test occursin(" nh", vm_flags_at(pointer(bytes)))
+            seekend(io)
+            write(io, collect(UInt8, 101:150))
+            flush(io)
+            remap_with_small_pages!(bytes, io, 150)
+            @test bytes[101:150] == collect(UInt8, 101:150)
+            @test mapped_file_position(pointer(bytes, 121)) == (realpath(grown_path), 120)
+            bytes[150] = 0
+            finalize(bytes)
+            return nothing
+        end
+        @test read(grown_path)[150] == 0
+    end
+end
+
 @testset "grouped_correlations" begin
     # Reference: per-series Pearson correlation between fixed and variable, averaged over series,
     # using the same zero-variance-as-0 convention as the incremental code.

@@ -97,8 +97,8 @@ include("grouped_correlations.jl")
 include("chi_squared.jl")
 @reexport using .ChiSquared
 
-include("old_linux_mmap.jl")
-@reexport using .OldLinuxMmap
+include("memory_mappings.jl")
+@reexport using .MemoryMappings
 
 include("bits_loops.jl")
 @reexport using .BitsLoops
