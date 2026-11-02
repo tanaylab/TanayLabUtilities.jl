@@ -6,6 +6,7 @@ module ParallelLoops
 export ColumnReader
 export DebugProgress
 export DebugProgressUnknown
+export column_memory_ranges
 export column_scratch
 export copy_columns!
 export fill_column!
@@ -1210,6 +1211,39 @@ The result is valid until the next call with the same `scratch`. See [`parallel_
 columns it may return.
 """
 function read_column! end
+
+"""
+    column_memory_ranges(matrix::AbstractMatrix, column_index::Integer)::Maybe{Tuple{Vararg{UnitRange{UInt}}}}
+
+The ranges of memory addresses that hold the values of the column `column_index` of the `matrix`, or `nothing` if they
+aren't known. There is one range per array that holds the data of the matrix, in the same order for every column: one
+for a dense matrix, and two for a sparse matrix (its `rowval`, then its `nzval`). A lazy matrix type adds a method
+returning the memory of the encoded data of the column.
+"""
+function column_memory_ranges(::AbstractMatrix, ::Integer)::Nothing
+    return nothing
+end
+
+function column_memory_ranges(matrix::DenseMatrix{T}, column_index::Integer)::Tuple{UnitRange{UInt}} where {T}
+    n_rows = size(matrix, 1)
+    first_address = UInt(pointer(matrix, (column_index - 1) * n_rows + 1))
+    return (first_address:(first_address + n_rows * sizeof(T) - 1),)
+end
+
+function column_memory_ranges(
+    matrix::SparseMatrixCSC{T, I},
+    column_index::Integer,
+)::NTuple{2, UnitRange{UInt}} where {T, I}
+    column_pointers = SparseArrays.getcolptr(matrix)
+    first_stored = Int(column_pointers[column_index])
+    n_stored = Int(column_pointers[column_index + 1]) - first_stored
+    first_row_address = UInt(pointer(rowvals(matrix), first_stored))
+    first_value_address = UInt(pointer(nonzeros(matrix), first_stored))
+    return (
+        first_row_address:(first_row_address + n_stored * sizeof(I) - 1),
+        first_value_address:(first_value_address + n_stored * sizeof(T) - 1),
+    )
+end
 
 """
     fill_column!(fill::Function, matrix::AbstractMatrix, column_index::Integer)::Nothing

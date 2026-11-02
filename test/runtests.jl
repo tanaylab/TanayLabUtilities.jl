@@ -854,6 +854,26 @@ end
         end
     end
 
+    @testset "column_memory_ranges" begin
+        matrix = mmap_with_small_pages(path, Matrix{Float64}, (10, 20))
+        (column_range,) = column_memory_ranges(matrix, 3)
+        @test length(column_range) == 80
+        @test mapped_file_position(first(column_range)) == (path, 160)
+
+        rows_path = joinpath(dirname(path), "rows.bin")
+        write(rows_path, Int64[1, 1, 2, 5])
+        rows = mmap_with_small_pages(rows_path, Vector{Int64}, 4)
+        values = mmap_with_small_pages(path, Vector{Float64}, 4, 800)
+        sparse_matrix = SparseMatrixCSC(5, 3, [1, 2, 2, 5], rows, values)
+        rows_range, values_range = column_memory_ranges(sparse_matrix, 3)
+        @test length(rows_range) == 24
+        @test mapped_file_position(first(rows_range)) == (rows_path, 8)
+        @test mapped_file_position(first(values_range)) == (path, 808)
+        @test all(isempty, column_memory_ranges(sparse_matrix, 2))
+
+        @test column_memory_ranges(falses(3, 4), 2) === nothing
+    end
+
     @testset "the rest of the file" begin
         @test length(mmap_with_small_pages(path, Vector{UInt8})) == 8000
         @test mmap_with_small_pages(path, Vector{Float64}, nothing, 7984) == [999.0, 1000.0]

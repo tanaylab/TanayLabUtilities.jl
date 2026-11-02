@@ -10,6 +10,7 @@ TanayLabUtilities.ParallelLoops.new_column_reader_per_thread
 TanayLabUtilities.ParallelLoops.read_column
 TanayLabUtilities.ParallelLoops.column_scratch
 TanayLabUtilities.ParallelLoops.read_column!
+TanayLabUtilities.ParallelLoops.column_memory_ranges
 TanayLabUtilities.ParallelLoops.fill_column!
 TanayLabUtilities.ParallelLoops.copy_columns!
 TanayLabUtilities.ParallelLoops.is_in_parallel_loop
