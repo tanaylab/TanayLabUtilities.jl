@@ -6,7 +6,8 @@ few bytes would read 2 MB. This defeats the point of memory-mapping a large file
 are used. So every mapping made here turns off transparent huge pages.
 
 Every mapping is also recorded in a process-wide registry, which maps its addresses back to its file and offset (see
-[`mapped_file_position`](@ref)). The entry is removed when the mapped array is garbage collected.
+[`mapped_file_position`](@ref)). The entry is removed when the mapped array is garbage collected. Parallel loops use it
+to read the memory-mapped data they need ahead of time (see [`PREFETCH_MAPPED_DATA`](@ref)).
 """
 module MemoryMappings
 
@@ -50,6 +51,50 @@ const MAPPINGS = SortedDict{UInt, MappedRange}()
 # A spin lock disables finalizers while it is held, so a finalizer can't run inside the critical section on that thread.
 # It never switches tasks, so a finalizer may take it.
 const MAPPINGS_LOCK = Threads.SpinLock()
+
+"""
+Whether parallel loops read the memory-mapped data of their positions ahead of time (see
+[`parallel_foreach_column`](@ref TanayLabUtilities.ParallelLoops.parallel_foreach_column)).
+
+Linux kernels before 5.7 handle the page faults of one process one at a time. Many threads reading memory-mapped data
+from a network disk through their page faults get about 100 MB/s. Reading it ahead with `pread` gets about 500 MB/s, and
+the page faults then find the data in memory. This is `true` on such kernels, and `false` otherwise. It can be set by
+the `TLU_PREFETCH_MAPPED_DATA` environment variable.
+"""
+PREFETCH_MAPPED_DATA::Bool = false
+
+"""
+The number of threads of a parallel loop that read memory-mapped data ahead of time at once (see
+[`PREFETCH_MAPPED_DATA`](@ref)). More threads in one process read more slowly.
+"""
+N_PREFETCH_READERS::Int = 8
+
+"""
+The number of bytes of memory-mapped data that a thread reads ahead of time at once (see
+[`PREFETCH_MAPPED_DATA`](@ref)).
+"""
+PREFETCH_CHUNK_BYTES::Int = 8 * 1024 * 1024
+
+"""
+The number of bytes of memory-mapped data that a parallel loop reads ahead of its computation (see
+[`PREFETCH_MAPPED_DATA`](@ref)). Reading further ahead could evict data from memory before it is used.
+"""
+PREFETCH_WINDOW_BYTES::Int = 1024 * 1024 * 1024
+
+function __init__()::Nothing
+    global PREFETCH_MAPPED_DATA
+    prefetch_mapped_data = get(ENV, "TLU_PREFETCH_MAPPED_DATA", nothing)
+    if prefetch_mapped_data !== nothing
+        PREFETCH_MAPPED_DATA = parse(Bool, prefetch_mapped_data)  # UNTESTED
+    else
+        @static if Sys.islinux()
+            version = split(read("/proc/version", String), " ")[3]
+            major, minor = parse.(Int, split(version, ".")[1:2])
+            PREFETCH_MAPPED_DATA = (major, minor) < (5, 7)
+        end
+    end
+    return nothing
+end
 
 """
     mmap_with_small_pages(
@@ -291,18 +336,52 @@ Return the path of the file mapped at the `address`, and the offset in the file 
 no mapping made by [`mmap_with_small_pages`](@ref) contains the `address`.
 """
 function mapped_file_position(address::Union{Ptr, Integer})::Maybe{Tuple{String, UInt64}}
-    address = UInt(address)
+    return mapped_file_range(UInt(address):UInt(address))
+end
+
+# Return the path of the file mapped at the `addresses`, and the offset in the file of their first byte, or `nothing`
+# if no single mapping contains them all.
+function mapped_file_range(addresses::UnitRange{UInt})::Maybe{Tuple{String, UInt64}}
     return lock(MAPPINGS_LOCK) do
-        token = searchsortedlast(MAPPINGS, address)
+        token = searchsortedlast(MAPPINGS, first(addresses))
         if token == beforestartsemitoken(MAPPINGS)
             return nothing
         end
         start, mapped_range = deref((MAPPINGS, token))
-        if address >= start + mapped_range.n_bytes
+        if last(addresses) >= start + mapped_range.n_bytes
             return nothing
         end
-        return (mapped_range.path, mapped_range.file_offset + UInt64(address - start))
+        return (mapped_range.path, mapped_range.file_offset + UInt64(first(addresses) - start))
     end
+end
+
+# Read the `n_bytes` at the `offset` of the file at the `path` through the `buffer`, so they are in memory when they are
+# used. This doesn't stop other threads from collecting garbage. A failure is only logged, since the data is still read
+# when it is used.
+function prefetch_file_range(path::String, offset::UInt64, n_bytes::Integer, buffer::Vector{UInt8})::Nothing
+    try
+        open(path, "r") do io
+            file = file_descriptor(io)
+            n_read = 0
+            while n_read < n_bytes
+                n_wanted = min(length(buffer), n_bytes - n_read)
+                result = GC.@preserve buffer @ccall gc_safe = true pread(  # NOLINT
+                    file::Cint,
+                    pointer(buffer)::Ptr{UInt8},
+                    n_wanted::Csize_t,
+                    (offset + n_read)::Int64,
+                )::Cssize_t
+                if result > 0
+                    n_read += result
+                elseif result == 0 || Libc.errno() != Libc.EINTR  # UNTESTED
+                    return nothing  # UNTESTED
+                end
+            end
+        end
+    catch exception
+        @warn "failed to read ahead $(n_bytes) bytes at $(offset) of: $(path)" exception  # UNTESTED
+    end
+    return nothing
 end
 
 end  # module

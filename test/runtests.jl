@@ -874,6 +874,85 @@ end
         @test column_memory_ranges(falses(3, 4), 2) === nothing
     end
 
+    @testset "prefetched loops" begin
+        MemoryMappings = TanayLabUtilities.MemoryMappings
+        ParallelLoops = TanayLabUtilities.ParallelLoops
+        saved_settings = (
+            MemoryMappings.PREFETCH_MAPPED_DATA,
+            MemoryMappings.N_PREFETCH_READERS,
+            MemoryMappings.PREFETCH_CHUNK_BYTES,
+            MemoryMappings.PREFETCH_WINDOW_BYTES,
+        )
+        MemoryMappings.PREFETCH_MAPPED_DATA = true
+        MemoryMappings.N_PREFETCH_READERS = 2
+        MemoryMappings.PREFETCH_CHUNK_BYTES = 4096
+        MemoryMappings.PREFETCH_WINDOW_BYTES = 16384
+        try
+            matrix_path = joinpath(mktempdir(), "matrix.bin")
+            values = Float64[row + column / 1000 for row in 1:128, column in 1:300]
+            write(matrix_path, values)
+            matrix = mmap_with_small_pages(matrix_path, Matrix{Float64}, (128, 300))
+            expected_sums = vec(sum(values; dims = 1))
+
+            @test column_sums(matrix) == expected_sums
+            @test column_sums(matrix; columns = [1, 50, 299]) == expected_sums[[1, 50, 299]]
+            @test_throws "failed column" parallel_foreach_column(matrix) do position, _, _
+                if position == 150
+                    error("failed column")
+                end
+                return nothing
+            end
+
+            sparse_values = sparse(Float64[column % 3 == 0 ? 0 : row + column for row in 1:128, column in 1:300])
+            rows_path = joinpath(dirname(matrix_path), "rows.bin")
+            nonzeros_path = joinpath(dirname(matrix_path), "nonzeros.bin")
+            write(rows_path, Vector{Int64}(rowvals(sparse_values)))
+            write(nonzeros_path, nonzeros(sparse_values))
+            mapped_sparse = SparseMatrixCSC(
+                128,
+                300,
+                SparseArrays.getcolptr(sparse_values),
+                mmap_with_small_pages(rows_path, Vector{Int64}),
+                mmap_with_small_pages(nonzeros_path, Vector{Float64}),
+            )
+            @test column_sums(mapped_sparse) == vec(sum(sparse_values; dims = 1))
+
+            @test ParallelLoops.new_prefetched_loop(position -> column_memory_ranges(values, position), 300) === nothing
+
+            loop = ParallelLoops.new_prefetched_loop(position -> column_memory_ranges(matrix, position), 300)
+            is_ready_per_position = fill(false, 300)
+            is_within_limits = Threads.Atomic{Bool}(true)
+            ParallelLoops.run_parallel_loop(
+                1:300,
+                loop;
+                name = ".prefetched",
+                policy = :greedy_sticky,
+                order = nothing,
+                weights = nothing,
+                nested = false,
+                progress = nothing,
+                progress_chunk = nothing,
+            ) do position
+                is_ready_per_position[position] = position <= loop.ready_position[]
+                is_reading = loop.n_reading[] > 0 || loop.next_read_position[] <= 300
+                if loop.n_reading[] > MemoryMappings.N_PREFETCH_READERS ||
+                   (is_reading && loop.n_computing[] > max(1, Threads.nthreads() ÷ 2))
+                    is_within_limits[] = false
+                end
+                return nothing
+            end
+            @test all(is_ready_per_position)
+            @test is_within_limits[]
+        finally
+            (
+                MemoryMappings.PREFETCH_MAPPED_DATA,
+                MemoryMappings.N_PREFETCH_READERS,
+                MemoryMappings.PREFETCH_CHUNK_BYTES,
+                MemoryMappings.PREFETCH_WINDOW_BYTES,
+            ) = saved_settings
+        end
+    end
+
     @testset "the rest of the file" begin
         @test length(mmap_with_small_pages(path, Vector{UInt8})) == 8000
         @test mmap_with_small_pages(path, Vector{Float64}, nothing, 7984) == [999.0, 1000.0]

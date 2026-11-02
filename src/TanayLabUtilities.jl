@@ -55,6 +55,9 @@ include("cross_validations.jl")
 include("global_weak_cache.jl")
 @reexport using .GlobalWeakCache
 
+include("memory_mappings.jl")
+@reexport using .MemoryMappings
+
 include("parallel_loops.jl")
 @reexport using .ParallelLoops
 
@@ -96,9 +99,6 @@ include("grouped_correlations.jl")
 
 include("chi_squared.jl")
 @reexport using .ChiSquared
-
-include("memory_mappings.jl")
-@reexport using .MemoryMappings
 
 include("bits_loops.jl")
 @reexport using .BitsLoops
